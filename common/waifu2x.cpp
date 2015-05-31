@@ -465,9 +465,10 @@ eWaifu2xError waifu2x(int argc, char** argv, const std::vector<InputOutputPathPa
 	int fileCount = 0;
 	for (const auto &p : file_paths)
 	{
-		progress_func(file_paths.size(), fileCount);
+		if (progress_func)
+			progress_func(file_paths.size(), fileCount);
 
-		if (cancel_func())
+		if (cancel_func && cancel_func())
 			return eWaifu2xError_Cancel;
 
 		const auto &input_file = p.first;
@@ -509,7 +510,7 @@ eWaifu2xError waifu2x(int argc, char** argv, const std::vector<InputOutputPathPa
 			im = im(cv::Rect(offset, offset, image_size.width, image_size.height));
 		}
 
-		if (cancel_func())
+		if (cancel_func && cancel_func())
 			return eWaifu2xError_Cancel;
 
 		const int scale2 = ceil(log2(scale_ratio));
@@ -538,7 +539,7 @@ eWaifu2xError waifu2x(int argc, char** argv, const std::vector<InputOutputPathPa
 				continue;
 		}
 
-		if (cancel_func())
+		if (cancel_func && cancel_func())
 			return eWaifu2xError_Cancel;
 
 		// 再構築した輝度画像とCreateZoomColorImage()で作成した色情報をマージして通常の画像に変換し、書き込む
@@ -577,7 +578,8 @@ eWaifu2xError waifu2x(int argc, char** argv, const std::vector<InputOutputPathPa
 		fileCount++;
 	}
 
-	progress_func(file_paths.size(), fileCount);
+	if (progress_func)
+		progress_func(file_paths.size(), fileCount);
 
 	return eWaifu2xError_OK;
 }
