@@ -24,13 +24,19 @@
 #pragma comment(lib, "libprotoc.lib")
 #endif
 
-const auto block_size = 128;
-const auto offset = 0;
-const auto layer_num = 7;
+// 一度に処理する画像の幅
+const int block_size = 128;
+// 一度に何ブロック分処理するか
+const int batch_size = 1;
+// 入力画像のオフセット
+const int offset = 0;
+// srcnn.prototxtで定義されたレイヤーの数
+const int layer_num = 7;
+
 const auto output_size = block_size - offset * 2;
-
+// ネットワークに入力する画像のサイズ(出力画像の幅はlayer_num * 2だけ小さくなる)
 const auto block_width_height = block_size + layer_num * 2;
-
+// srcnn.prototxtで定義された入力する画像のサイズ
 const auto original_width_height = 128 + layer_num * 2;
 
 const int ConvertMode = CV_RGB2YUV;
@@ -337,6 +343,9 @@ eWaifu2xError ReconstructImage(boost::shared_ptr<caffe::Net<float>> net, cv::Mat
 	const auto Width = im.size().width;
 	const auto Line = im.step1();
 
+	assert(Width % output_size == 0);
+	assert(Height % output_size == 0);
+
 	assert(im.channels() == 1);
 
 	float *imptr = (float *)im.data;
@@ -353,17 +362,37 @@ eWaifu2xError ReconstructImage(boost::shared_ptr<caffe::Net<float>> net, cv::Mat
 			net->layer_by_name("conv7_layer"));
 		assert(conv7_layer);
 
-		// ネットワークに入力する画像のサイズ(出力画像の幅はlayer_num * 2だけ小さくなる)
-		const int block_width = block_size + layer_num * 2;
+		
 
-		std::vector<float> block(block_width * block_width, 0.0f);
+		input_layer->set_batch_size(batch_size);
+
+		const int WidthNum = Width / output_size;
+		const int HeightNum = Height / output_size;
+
+		const int BlockNum = WidthNum * HeightNum;
+
+		const int input_block_plane_size = block_width_height * block_width_height;
+		const int output_block_plane_size = block_size * block_size;
+
+		std::vector<float> block(input_block_plane_size * batch_size, 0.0f);
 		std::vector<float> dummy_data(block.size(), 0.0f);
 
 		// 画像は(消費メモリの都合上)output_size*output_sizeに分けて再構築する
-		for (int h = 0; h < Height; h += output_size)
+		for (int num = 0; num < BlockNum; num += batch_size)
 		{
-			for (int w = 0; w < Width; w += output_size)
+			const int processNum = (BlockNum - num) >= batch_size ? batch_size : BlockNum - num;
+
+			if (processNum < batch_size)
+				input_layer->set_batch_size(processNum);
+
+			for (int n = 0; n < processNum; n++)
 			{
+				const int wn = (num + n) % WidthNum;
+				const int hn = (num + n) / WidthNum;
+
+				const int w = wn * output_size;
+				const int h = hn * output_size;
+
 				if (w + block_size <= Width && h + block_size <= Height)
 				{
 					{
@@ -375,43 +404,55 @@ eWaifu2xError ReconstructImage(boost::shared_ptr<caffe::Net<float>> net, cv::Mat
 
 						// 画像を直列に変換
 						{
-							float *fptr = block.data();
+							float *fptr = block.data() + (input_block_plane_size * n);
 							const float *uptr = (const float *)someborderimg.data;
 
 							const auto Line = someborderimg.step1();
 
-							for (int i = 0; i < block_width; i++)
-								memcpy(fptr + i * block_width, uptr + i * Line, block_width * sizeof(float));
+							if (block_width_height == Line)
+								memcpy(fptr, uptr, block_width_height * block_width_height * sizeof(float));
+							else
+							{
+								for (int i = 0; i < block_width_height; i++)
+									memcpy(fptr + i * block_width_height, uptr + i * Line, block_width_height * sizeof(float));
+							}
 						}
 					}
-
-					// ネットワークに画像を入力
-					input_layer->Reset(block.data(), dummy_data.data(), block.size());
-
-					// 計算
-					auto out = net->ForwardPrefilled(nullptr);
-
-					auto b = out[0];
-
-					assert(b->count() == block_size * block_size);
-
-					const float *ptr = nullptr;
-
-					if (caffe::Caffe::mode() == caffe::Caffe::CPU)
-						ptr = b->cpu_data();
-					else
-						ptr = b->gpu_data();
-
-					// 結果を入力画像にコピー(後に処理する部分とここで上書きする部分は被らないから、入力画像を上書きしても大丈夫)
-
-					caffe::caffe_copy(block_size * block_size, ptr, block.data());
-
-					{
-						float *fptr = block.data();
-						for (int i = 0; i < block_size; i++)
-							memcpy(imptr + (h + i) * Line + w, fptr + i * block_size, block_size * sizeof(float));
-					}
 				}
+			}
+
+			// ネットワークに画像を入力
+			input_layer->Reset(block.data(), dummy_data.data(), block.size());
+
+			// 計算
+			auto out = net->ForwardPrefilled(nullptr);
+
+			auto b = out[0];
+
+			assert(b->count() == output_block_plane_size * processNum);
+
+			const float *ptr = nullptr;
+
+			if (caffe::Caffe::mode() == caffe::Caffe::CPU)
+				ptr = b->cpu_data();
+			else
+				ptr = b->gpu_data();
+
+			caffe::caffe_copy(output_block_plane_size * processNum, ptr, block.data());
+
+			for (int n = 0; n < processNum; n++)
+			{
+				const int wn = (num + n) % WidthNum;
+				const int hn = (num + n) / WidthNum;
+
+				const int w = wn * output_size;
+				const int h = hn * output_size;
+
+				const float *fptr = block.data() + (output_block_plane_size * n);
+
+				// 結果を入力画像にコピー(後に処理する部分とここで上書きする部分は被らないから、入力画像を上書きしても大丈夫)
+				for (int i = 0; i < block_size; i++)
+					caffe::caffe_copy(block_size, fptr + i * block_size, imptr + (h + i) * Line + w);
 			}
 		}
 	}
@@ -422,6 +463,8 @@ eWaifu2xError ReconstructImage(boost::shared_ptr<caffe::Net<float>> net, cv::Mat
 
 	return eWaifu2xError_OK;
 }
+
+#include <boost/timer.hpp>
 
 eWaifu2xError waifu2x(int argc, char** argv, const std::vector<InputOutputPathPair> &file_paths,
 	const std::string &mode, const int noise_level, const double scale_ratio, const std::string &model_dir, const std::string &process,
