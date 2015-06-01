@@ -88,6 +88,7 @@ private:
 		uint64_t InitTime;
 		uint64_t cuDNNCheckTime;
 		uint64_t ProcessTime;
+		std::string Process;
 	};
 
 private:
@@ -272,12 +273,13 @@ private:
 			SendMessage(GetDlgItem(dh, IDC_PROGRESS), PBM_SETPOS, ProgressFileNow, 0);
 		};
 
-		const auto TimeFunc = [this](const uint64_t InitTime, const uint64_t cuDNNCheckTime, const uint64_t ProcessTime)
+		const auto TimeFunc = [this](const uint64_t InitTime, const uint64_t cuDNNCheckTime, const uint64_t ProcessTime, const std::string &Process)
 		{
 			stWaifu2xTime t;
 			t.InitTime = InitTime;
 			t.cuDNNCheckTime = cuDNNCheckTime;
 			t.ProcessTime = ProcessTime;
+			t.Process = Process;
 
 			SendMessage(dh, WM_TIME_WAIFU2X, (WPARAM)&t, 0);
 		};
@@ -373,6 +375,18 @@ public:
 		char *ptr = msg;
 
 		{
+			std::string p(tp->Process);
+			if (p == "cpu")
+				p = "CPU";
+			else if (p == "gpu")
+				p = "GPU";
+			else if (p == "cudnn")
+				p = "cuDNN";
+
+			ptr += sprintf(ptr, "使用プロセッサーモード: %s\r\n", p.c_str());
+		}
+
+		{
 			uint64_t t = tp->ProcessTime;
 			const int msec = t % 1000; t /= 1000;
 			const int sec = t % 60; t /= 60;
@@ -390,6 +404,7 @@ public:
 			ptr += sprintf(ptr, "初期化時間: %02d:%02d:%02d.%d\r\n", hour, min, sec, msec);
 		}
 
+		if (tp->Process == "gpu" || tp->Process == "cudnn")
 		{
 			uint64_t t = tp->cuDNNCheckTime;
 			const int msec = t % 1000; t /= 1000;

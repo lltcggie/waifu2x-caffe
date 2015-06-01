@@ -649,7 +649,7 @@ eWaifu2xError waifu2x(int argc, char** argv, const std::vector<InputOutputPathPa
 	if (time_func)
 		time_func(std::chrono::duration_cast<std::chrono::milliseconds>(InitTime).count()
 		, std::chrono::duration_cast<std::chrono::milliseconds>(cuDNNCheckTime).count()
-		, std::chrono::duration_cast<std::chrono::milliseconds>(ProcessTime).count());
+		, std::chrono::duration_cast<std::chrono::milliseconds>(ProcessTime).count(), process_fix);
 
 	return eWaifu2xError_OK;
 }

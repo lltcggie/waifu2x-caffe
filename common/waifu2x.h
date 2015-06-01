@@ -23,7 +23,7 @@ typedef std::pair<std::string, std::string> InputOutputPathPair;
 typedef std::pair<InputOutputPathPair, eWaifu2xError> PathAndErrorPair;
 typedef std::function<bool()> waifu2xCancelFunc;
 typedef std::function<void(const int ProgressFileMax, const int ProgressFileNow)> waifu2xProgressFunc;
-typedef std::function<void(const uint64_t InitTime, const uint64_t cuDNNCheckTime, const uint64_t ProcessTime)> waifu2xTimeFunc;
+typedef std::function<void(const uint64_t InitTime, const uint64_t cuDNNCheckTime, const uint64_t ProcessTime, const std::string &Process)> waifu2xTimeFunc;
 
 bool can_use_cuDNN();
 
