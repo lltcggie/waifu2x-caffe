@@ -439,7 +439,7 @@ eWaifu2xError waifu2x(int argc, char** argv, const std::vector<InputOutputPathPa
 		const std::string model_path = (mode_dir_path / "srcnn.prototxt").string();
 		const std::string param_path = (mode_dir_path / ("noise" + std::to_string(noise_level) + "_model.json")).string();
 
-		ret = ConstractNet(net_noise, model_path, process);
+		ret = ConstractNet(net_noise, model_path, process_fix);
 		if (ret != eWaifu2xError_OK)
 			return ret;
 
@@ -453,7 +453,7 @@ eWaifu2xError waifu2x(int argc, char** argv, const std::vector<InputOutputPathPa
 		const std::string model_path = (mode_dir_path / "srcnn.prototxt").string();
 		const std::string param_path = (mode_dir_path / "scale2.0x_model.json").string();
 
-		ret = ConstractNet(net_scale, model_path, process);
+		ret = ConstractNet(net_scale, model_path, process_fix);
 		if (ret != eWaifu2xError_OK)
 			return ret;
 
