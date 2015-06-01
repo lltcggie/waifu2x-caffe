@@ -355,6 +355,8 @@ public:
 
 		EnableWindow(GetDlgItem(dh, IDC_BUTTON_CANCEL), TRUE);
 		EnableWindow(GetDlgItem(dh, IDC_BUTTON_EXEC), FALSE);
+
+		SetWindowTextA(GetDlgItem(hWnd, IDC_EDIT_LOG), "");
 	}
 
 	void WaitThreadExit(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
