@@ -17,6 +17,7 @@
 #define WM_FAILD_CREATE_DIR (WM_APP + 5)
 #define WM_END_WAIFU2X (WM_APP + 6)
 #define WM_END_THREAD (WM_APP + 7)
+#define WM_TIME_WAIFU2X (WM_APP + 8)
 
 const size_t AR_PATH_MAX(1024);
 
@@ -81,6 +82,13 @@ private:
 
 	std::string autoSetAddName;
 	bool isLastError;
+
+	struct stWaifu2xTime
+	{
+		uint64_t InitTime;
+		uint64_t cuDNNCheckTime;
+		uint64_t ProcessTime;
+	};
 
 private:
 	std::string AddName() const
@@ -264,11 +272,21 @@ private:
 			SendMessage(GetDlgItem(dh, IDC_PROGRESS), PBM_SETPOS, ProgressFileNow, 0);
 		};
 
+		const auto TimeFunc = [this](const uint64_t InitTime, const uint64_t cuDNNCheckTime, const uint64_t ProcessTime)
+		{
+			stWaifu2xTime t;
+			t.InitTime = InitTime;
+			t.cuDNNCheckTime = cuDNNCheckTime;
+			t.ProcessTime = ProcessTime;
+
+			SendMessage(dh, WM_TIME_WAIFU2X, (WPARAM)&t, 0);
+		};
+
 		std::vector<PathAndErrorPair> errors;
 		const eWaifu2xError ret = waifu2x(__argc, __argv, file_paths, mode, noise_level, scale_ratio, "models", process, errors, [this]()
 		{
 			return cancelFlag;
-		}, ProgessFunc);
+		}, ProgessFunc, TimeFunc);
 
 		SendMessage(dh, WM_END_WAIFU2X, (WPARAM)&ret, (LPARAM)&errors);
 
@@ -345,6 +363,43 @@ public:
 
 		if (!isLastError)
 			MessageBeep(MB_ICONASTERISK);
+	}
+
+	void Waifu2xTime(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
+	{
+		const stWaifu2xTime *tp = (const stWaifu2xTime *)wParam;
+
+		char msg[1024*2];
+		char *ptr = msg;
+
+		{
+			uint64_t t = tp->ProcessTime;
+			const int msec = t % 1000; t /= 1000;
+			const int sec = t % 60; t /= 60;
+			const int min = t % 60; t /= 60;
+			const int hour = (int)t;
+			ptr += sprintf(ptr, "処理時間: %02d:%02d:%02d.%d\r\n", hour, min, sec, msec);
+		}
+
+		{
+			uint64_t t = tp->InitTime;
+			const int msec = t % 1000; t /= 1000;
+			const int sec = t % 60; t /= 60;
+			const int min = t % 60; t /= 60;
+			const int hour = (int)t;
+			ptr += sprintf(ptr, "初期化時間: %02d:%02d:%02d.%d\r\n", hour, min, sec, msec);
+		}
+
+		{
+			uint64_t t = tp->cuDNNCheckTime;
+			const int msec = t % 1000; t /= 1000;
+			const int sec = t % 60; t /= 60;
+			const int min = t % 60; t /= 60;
+			const int hour = (int)t;
+			ptr += sprintf(ptr, "cuDNNチェック時間: %02d:%02d:%02d.%d", hour, min, sec, msec);
+		}
+
+		SetWindowTextA(GetDlgItem(hWnd, IDC_EDIT_LOG), msg);
 	}
 
 	void OnDialogEnd(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
@@ -594,6 +649,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	cDialog.SetEventCallBack(SetClassFunc(DialogEvent::OnFaildCreateDir, &cDialogEvent), NULL, WM_FAILD_CREATE_DIR);
 	cDialog.SetEventCallBack(SetClassFunc(DialogEvent::OnEndWaifu2x, &cDialogEvent), NULL, WM_END_WAIFU2X);
 	cDialog.SetEventCallBack(SetClassFunc(DialogEvent::WaitThreadExit, &cDialogEvent), NULL, WM_END_THREAD);
+	cDialog.SetEventCallBack(SetClassFunc(DialogEvent::Waifu2xTime, &cDialogEvent), NULL, WM_TIME_WAIFU2X);
 
 	// ダイアログを表示
 	cDialog.DoModal(hInstance, IDD_DIALOG);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdint.h>
 #include <string>
 #include <vector>
 #include <utility>
@@ -22,6 +23,7 @@ typedef std::pair<std::string, std::string> InputOutputPathPair;
 typedef std::pair<InputOutputPathPair, eWaifu2xError> PathAndErrorPair;
 typedef std::function<bool()> waifu2xCancelFunc;
 typedef std::function<void(const int ProgressFileMax, const int ProgressFileNow)> waifu2xProgressFunc;
+typedef std::function<void(const uint64_t InitTime, const uint64_t cuDNNCheckTime, const uint64_t ProcessTime)> waifu2xTimeFunc;
 
 bool can_use_cuDNN();
 
@@ -29,4 +31,4 @@ bool can_use_cuDNN();
 // process: cpu or gpu or cudnn
 eWaifu2xError waifu2x(int argc, char** argv,
 	const std::vector<InputOutputPathPair> &file_paths, const std::string &mode, const int noise_level, const double scale_ratio, const std::string &model_dir, const std::string &process,
-	std::vector<PathAndErrorPair> &errors, const waifu2xCancelFunc cancel_func = nullptr, const waifu2xProgressFunc progress_func = nullptr);
+	std::vector<PathAndErrorPair> &errors, const waifu2xCancelFunc cancel_func = nullptr, const waifu2xProgressFunc progress_func = nullptr, const waifu2xTimeFunc time_func = nullptr);

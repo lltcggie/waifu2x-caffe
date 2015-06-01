@@ -7,6 +7,7 @@
 #include <tclap/CmdLine.h>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
+#include <chrono>
 
 #if defined(WIN32) || defined(WIN64)
 #include <Windows.h>
@@ -406,10 +407,12 @@ eWaifu2xError ReconstructImage(boost::shared_ptr<caffe::Net<float>> net, cv::Mat
 
 eWaifu2xError waifu2x(int argc, char** argv, const std::vector<InputOutputPathPair> &file_paths,
 	const std::string &mode, const int noise_level, const double scale_ratio, const std::string &model_dir, const std::string &process,
-	std::vector<PathAndErrorPair> &errors, const waifu2xCancelFunc cancel_func, const waifu2xProgressFunc progress_func)
+	std::vector<PathAndErrorPair> &errors, const waifu2xCancelFunc cancel_func, const waifu2xProgressFunc progress_func, const waifu2xTimeFunc time_func)
 {
 	if (scale_ratio <= 0.0)
 		return eWaifu2xError_InvalidParameter;
+
+	const auto StartTime = std::chrono::system_clock::now();
 
 	eWaifu2xError ret;
 
@@ -424,6 +427,8 @@ eWaifu2xError waifu2x(int argc, char** argv, const std::vector<InputOutputPathPa
 		caffe::GlobalInit(&tmpargc, &tmpargv);
 	});
 
+	const auto cuDNNCheckStartTime = std::chrono::system_clock::now();
+
 	std::string process_fix(process);
 	if (process_fix == "gpu")
 	{
@@ -431,6 +436,8 @@ eWaifu2xError waifu2x(int argc, char** argv, const std::vector<InputOutputPathPa
 		if (can_use_cuDNN())
 			process_fix = "cudnn";
 	}
+
+	const auto cuDNNCheckEndTime = std::chrono::system_clock::now();
 
 	boost::filesystem::path mode_dir_path(model_dir);
 	if (!mode_dir_path.is_absolute()) // model_dirが相対パスなら絶対パスに直す
@@ -483,6 +490,8 @@ eWaifu2xError waifu2x(int argc, char** argv, const std::vector<InputOutputPathPa
 		if (ret != eWaifu2xError_OK)
 			return ret;
 	}
+
+	const auto InitEndTime = std::chrono::system_clock::now();
 
 	int fileCount = 0;
 	for (const auto &p : file_paths)
@@ -631,6 +640,16 @@ eWaifu2xError waifu2x(int argc, char** argv, const std::vector<InputOutputPathPa
 
 	if (progress_func)
 		progress_func(file_paths.size(), fileCount);
+
+	const auto ProcessEndTime = std::chrono::system_clock::now();
+
+	const auto cuDNNCheckTime = (cuDNNCheckEndTime - cuDNNCheckStartTime);
+	const auto InitTime = (InitEndTime - StartTime) - cuDNNCheckTime;
+	const auto ProcessTime = (ProcessEndTime - InitEndTime);
+	if (time_func)
+		time_func(std::chrono::duration_cast<std::chrono::milliseconds>(InitTime).count()
+		, std::chrono::duration_cast<std::chrono::milliseconds>(cuDNNCheckTime).count()
+		, std::chrono::duration_cast<std::chrono::milliseconds>(ProcessTime).count());
 
 	return eWaifu2xError_OK;
 }
