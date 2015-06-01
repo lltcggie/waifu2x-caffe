@@ -93,7 +93,7 @@ private:
 private:
 	std::string AddName() const
 	{
-		std::string addstr("_" + mode);
+		std::string addstr("(" + mode + ")");
 
 		if (mode.find("noise") != mode.npos || mode.find("auto_scale") != mode.npos)
 			addstr += "(Level" + std::to_string(noise_level) + ")";
