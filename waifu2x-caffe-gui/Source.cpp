@@ -147,7 +147,7 @@ private:
 
 			char *ptr = nullptr;
 			scale_ratio = strtod(buf, &ptr);
-			if (!ptr || *ptr != '\0')
+			if (!ptr || *ptr != '\0' || scale_ratio <= 0.0)
 			{
 				scale_ratio = 2.0;
 				ret = false;
@@ -186,7 +186,7 @@ private:
 
 			char *ptr = nullptr;
 			crop_size = strtol (buf, &ptr, 10);
-			if (!ptr || *ptr != '\0')
+			if (!ptr || *ptr != '\0' || crop_size <= 0)
 			{
 				crop_size = 128;
 				ret = false;
