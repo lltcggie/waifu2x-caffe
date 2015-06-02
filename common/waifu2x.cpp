@@ -26,20 +26,10 @@
 #pragma comment(lib, "libprotoc.lib")
 #endif
 
-// 一度に処理する画像の幅
-const int block_size = 128;
-// 一度に何ブロック分処理するか
-const int batch_size = 1;
 // 入力画像のオフセット
 const int offset = 0;
 // srcnn.prototxtで定義されたレイヤーの数
 const int layer_num = 7;
-
-const auto output_size = block_size - offset * 2;
-// ネットワークに入力する画像のサイズ(出力画像の幅はlayer_num * 2だけ小さくなる)
-const auto block_width_height = block_size + layer_num * 2;
-// srcnn.prototxtで定義された入力する画像のサイズ
-const auto original_width_height = 128 + layer_num * 2;
 
 const int ConvertMode = CV_RGB2YUV;
 const int ConvertInverseMode = CV_YUV2RGB;
@@ -336,8 +326,8 @@ Waifu2x::eWaifu2xError Waifu2x::ConstractNet(boost::shared_ptr<caffe::Net<float>
 		{
 			if (layer_param->mutable_memory_data_param()->width() == original_width_height && layer_param->mutable_memory_data_param()->height() == original_width_height)
 			{
-				layer_param->mutable_memory_data_param()->set_width(block_width_height);
-				layer_param->mutable_memory_data_param()->set_height(block_width_height);
+				layer_param->mutable_memory_data_param()->set_width(block_size);
+				layer_param->mutable_memory_data_param()->set_height(block_size);
 			}
 		}
 	}
@@ -382,8 +372,8 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 
 		const int BlockNum = WidthNum * HeightNum;
 
-		const int input_block_plane_size = block_width_height * block_width_height;
-		const int output_block_plane_size = block_size * block_size;
+		const int input_block_plane_size = block_size * block_size;
+		const int output_block_plane_size = crop_size * crop_size;
 
 		std::vector<float> block(input_block_plane_size * batch_size, 0.0f);
 		std::vector<float> dummy_data(block.size(), 0.0f);
@@ -404,10 +394,10 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 				const int w = wn * output_size;
 				const int h = hn * output_size;
 
-				if (w + block_size <= Width && h + block_size <= Height)
+				if (w + crop_size <= Width && h + crop_size <= Height)
 				{
 					{
-						cv::Mat someimg = im(cv::Rect(w, h, block_size, block_size));
+						cv::Mat someimg = im(cv::Rect(w, h, crop_size, crop_size));
 						cv::Mat someborderimg;
 						// 画像を中央にパディング。余白はcv::BORDER_REPLICATEで埋める
 						cv::copyMakeBorder(someimg, someborderimg, layer_num, layer_num, layer_num, layer_num, cv::BORDER_REPLICATE);
@@ -420,12 +410,12 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 
 							const auto Line = someborderimg.step1();
 
-							if (block_width_height == Line)
-								memcpy(fptr, uptr, block_width_height * block_width_height * sizeof(float));
+							if (block_size == Line)
+								memcpy(fptr, uptr, block_size * block_size * sizeof(float));
 							else
 							{
-								for (int i = 0; i < block_width_height; i++)
-									memcpy(fptr + i * block_width_height, uptr + i * Line, block_width_height * sizeof(float));
+								for (int i = 0; i < block_size; i++)
+									memcpy(fptr + i * block_size, uptr + i * Line, block_size * sizeof(float));
 							}
 						}
 					}
@@ -462,8 +452,8 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 				const float *fptr = block.data() + (output_block_plane_size * n);
 
 				// 結果を入力画像にコピー(後に処理する部分とここで上書きする部分は被らないから、入力画像を上書きしても大丈夫)
-				for (int i = 0; i < block_size; i++)
-					caffe::caffe_copy(block_size, fptr + i * block_size, imptr + (h + i) * Line + w);
+				for (int i = 0; i < crop_size; i++)
+					caffe::caffe_copy(crop_size, fptr + i * crop_size, imptr + (h + i) * Line + w);
 			}
 		}
 	}
@@ -475,7 +465,8 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 	return eWaifu2xError_OK;
 }
 
-Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &Mode, const int NoiseLevel, const double ScaleRatio, const std::string &ModelDir, const std::string &Process)
+Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &Mode, const int NoiseLevel, const double ScaleRatio, const std::string &ModelDir, const std::string &Process,
+	const int CropSize, const int BatchSize)
 {
 	Waifu2x::eWaifu2xError ret;
 
@@ -490,6 +481,13 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 	scale_ratio = ScaleRatio;
 	model_dir = ModelDir;
 	process = Process;
+
+	crop_size = CropSize;
+	batch_size = BatchSize;
+
+	output_size = crop_size - offset * 2;
+	block_size = crop_size + layer_num * 2;
+	original_width_height = 128 + layer_num * 2;
 
 	std::call_once(waifu2x_once_flag, [argc, argv]()
 	{

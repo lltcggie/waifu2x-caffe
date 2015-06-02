@@ -37,6 +37,20 @@ public:
 private:
 	bool is_inited;
 
+	// 一度に処理する画像の幅
+	int crop_size;
+	// 一度に何ブロック分処理するか
+	int batch_size;
+
+	// ネットに入力する画像のサイズ
+	int block_size;
+	// ブロック変換後の出力サイズ
+	int output_size;
+	// ネットワークに入力する画像のサイズ(出力画像の幅はlayer_num * 2だけ小さくなる)
+	int block_width_height;
+	// srcnn.prototxtで定義された入力する画像のサイズ
+	int original_width_height;
+
 	std::string mode;
 	int noise_level;
 	double scale_ratio;
@@ -64,7 +78,8 @@ public:
 
 	// mode: noise or scale or noise_scale or auto_scale
 	// process: cpu or gpu or cudnn
-	eWaifu2xError init(int argc, char** argv, const std::string &mode, const int noise_level, const double scale_ratio, const std::string &model_dir, const std::string &process);
+	eWaifu2xError init(int argc, char** argv, const std::string &mode, const int noise_level, const double scale_ratio, const std::string &model_dir, const std::string &process,
+		const int crop_size = 128, const int batch_size = 1);
 
 	void destroy();
 

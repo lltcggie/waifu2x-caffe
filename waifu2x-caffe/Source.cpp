@@ -99,6 +99,14 @@ int main(int argc, char** argv)
 	TCLAP::ValueArg<std::string> cmdProcess("p", "process", "process mode",
 		false, "gpu", &cmdProcessConstraint, cmd);
 
+	TCLAP::ValueArg<int> cmdCropSizeFile("c", "crop_size",
+		"input image split size", false,
+		128, "int", cmd);
+
+	TCLAP::ValueArg<int> cmdBatchSizeFile("b", "batch_size",
+		"input batch size", false,
+		1, "int", cmd);
+
 	// definition of command line argument : end
 
 	TCLAP::Arg::enableIgnoreMismatched();
@@ -229,7 +237,8 @@ int main(int argc, char** argv)
 
 	Waifu2x::eWaifu2xError ret;
 	Waifu2x w;
-	ret = w.init(argc, argv, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), cmdModelPath.getValue(), cmdProcess.getValue());
+	ret = w.init(argc, argv, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), cmdModelPath.getValue(), cmdProcess.getValue(),
+		cmdCropSizeFile.getValue(), cmdBatchSizeFile.getValue());
 	switch (ret)
 	{
 	case Waifu2x::eWaifu2xError_InvalidParameter:

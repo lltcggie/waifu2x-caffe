@@ -77,6 +77,9 @@ private:
 	std::string outputExt;
 	std::string inputFileExt;
 
+	int crop_size;
+	int batch_size;
+
 	std::thread processThread;
 	std::atomic_bool cancelFlag;
 
@@ -282,7 +285,7 @@ private:
 		Waifu2x::eWaifu2xError ret;
 
 		Waifu2x w;
-		ret = w.init(__argc, __argv, mode, noise_level, scale_ratio, "models", process);
+		ret = w.init(__argc, __argv, mode, noise_level, scale_ratio, "models", process, crop_size, batch_size);
 		if(ret != Waifu2x::eWaifu2xError_OK)
 			SendMessage(dh, WM_ON_WAIFU2X_ERROR, (WPARAM)&ret, 0);
 		else
@@ -397,7 +400,8 @@ private:
 	}
 
 public:
-	DialogEvent() : dh(nullptr), mode("noise_scale"), noise_level(1), scale_ratio(2.0), process("gpu"), outputExt("png"), inputFileExt("png:jpg:jpeg:tif:tiff:bmp"), isLastError(false)
+	DialogEvent() : dh(nullptr), mode("noise_scale"), noise_level(1), scale_ratio(2.0), process("gpu"), outputExt("png"), inputFileExt("png:jpg:jpeg:tif:tiff:bmp"),
+		crop_size(128), batch_size(1), isLastError(false)
 	{
 	}
 
