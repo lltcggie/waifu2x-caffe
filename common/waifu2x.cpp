@@ -453,7 +453,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 
 				// 結果を入力画像にコピー(後に処理する部分とここで上書きする部分は被らないから、入力画像を上書きしても大丈夫)
 				for (int i = 0; i < crop_size; i++)
-					caffe::caffe_copy(crop_size, fptr + i * crop_size, imptr + (h + i) * Line + w);
+					memcpy(imptr + (h + i) * Line + w, fptr + i * crop_size, crop_size * sizeof(float));
 			}
 		}
 	}
