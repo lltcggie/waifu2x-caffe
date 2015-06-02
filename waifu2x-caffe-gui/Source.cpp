@@ -152,7 +152,7 @@ private:
 				scale_ratio = 2.0;
 				ret = false;
 
-				MessageBox(dh, TEXT("拡大率は数字である必要があります"), TEXT("エラー"), MB_OK | MB_ICONERROR);
+				MessageBox(dh, TEXT("拡大率は0.0より大きい正数である必要があります"), TEXT("エラー"), MB_OK | MB_ICONERROR);
 			}
 		}
 
@@ -177,6 +177,22 @@ private:
 			buf[_countof(buf) - 1] = '\0';
 
 			inputFileExt = buf;
+		}
+
+		{
+			char buf[AR_PATH_MAX] = "";
+			GetWindowTextA(GetDlgItem(dh, IDC_EDIT_CROP_SIZE), buf, _countof(buf));
+			buf[_countof(buf) - 1] = '\0';
+
+			char *ptr = nullptr;
+			crop_size = strtol (buf, &ptr, 10);
+			if (!ptr || *ptr != '\0')
+			{
+				crop_size = 128;
+				ret = false;
+
+				MessageBox(dh, TEXT("分割サイズは0より大きい整数である必要があります"), TEXT("エラー"), MB_OK | MB_ICONERROR);
+			}
 		}
 
 		return ret;
@@ -559,6 +575,7 @@ public:
 		SetWindowTextA(GetDlgItem(hWnd, IDC_EDIT_SCALE_RATIO), text);
 		SetWindowTextA(GetDlgItem(hWnd, IDC_EDIT_OUT_EXT), outputExt.c_str());
 		SetWindowTextA(GetDlgItem(hWnd, IDC_EDIT_INPUT_EXT_LIST), inputFileExt.c_str());
+		SetWindowTextA(GetDlgItem(hWnd, IDC_EDIT_CROP_SIZE), std::to_string(crop_size).c_str());
 	}
 
 	void Cancel(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
