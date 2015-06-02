@@ -391,8 +391,14 @@ eWaifu2xError ReconstructImage(boost::shared_ptr<caffe::Net<float>> net, cv::Mat
 						ptr = b->gpu_data();
 
 					// 結果を入力画像にコピー(後に処理する部分とここで上書きする部分は被らないから、入力画像を上書きしても大丈夫)
-					for (int i = 0; i < block_size; i++)
-						caffe::caffe_copy(block_size, ptr + i * block_size, imptr + (h + i) * Line + w);
+
+					caffe::caffe_copy(block_size * block_size, ptr, block.data());
+
+					{
+						float *fptr = block.data();
+						for (int i = 0; i < block_size; i++)
+							memcpy(imptr + (h + i) * Line + w, fptr + i * block_size, block_size * sizeof(float));
+					}
 				}
 			}
 		}
