@@ -29,6 +29,10 @@ const auto offset = 0;
 const auto layer_num = 7;
 const auto output_size = block_size - offset * 2;
 
+const auto block_width_height = block_size + layer_num * 2;
+
+const auto original_width_height = 128 + layer_num * 2;
+
 const int ConvertMode = CV_RGB2YUV;
 const int ConvertInverseMode = CV_YUV2RGB;
 
@@ -310,6 +314,14 @@ eWaifu2xError ConstractNet(boost::shared_ptr<caffe::Net<float>> &net, const std:
 				layer_param->mutable_relu_param()->set_engine(caffe::ReLUParameter_Engine_CUDNN);
 			else
 				layer_param->mutable_relu_param()->set_engine(caffe::ReLUParameter_Engine_CAFFE);
+		}
+		else if (type == "MemoryData")
+		{
+			if (layer_param->mutable_memory_data_param()->width() == original_width_height && layer_param->mutable_memory_data_param()->height() == original_width_height)
+			{
+				layer_param->mutable_memory_data_param()->set_width(block_width_height);
+				layer_param->mutable_memory_data_param()->set_height(block_width_height);
+			}
 		}
 	}
 
