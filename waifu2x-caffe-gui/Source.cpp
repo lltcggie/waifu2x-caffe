@@ -5,6 +5,7 @@
 #include <string>
 #include <thread>
 #include <atomic>
+#include <chrono>
 #include <boost/filesystem.hpp>
 #include <boost/tokenizer.hpp>
 #include <boost/foreach.hpp>
@@ -15,9 +16,8 @@
 #include "CControl.h"
 
 #define WM_FAILD_CREATE_DIR (WM_APP + 5)
-#define WM_END_WAIFU2X (WM_APP + 6)
+#define WM_ON_WAIFU2X_ERROR (WM_APP + 6)
 #define WM_END_THREAD (WM_APP + 7)
-#define WM_TIME_WAIFU2X (WM_APP + 8)
 
 const size_t AR_PATH_MAX(1024);
 
@@ -83,13 +83,12 @@ private:
 	std::string autoSetAddName;
 	bool isLastError;
 
-	struct stWaifu2xTime
-	{
-		uint64_t InitTime;
-		uint64_t cuDNNCheckTime;
-		uint64_t ProcessTime;
-		std::string Process;
-	};
+	std::string logMessage;
+
+	std::string usedProcess;
+	std::chrono::system_clock::duration cuDNNCheckTime;
+	std::chrono::system_clock::duration InitTime;
+	std::chrono::system_clock::duration ProcessTime;
 
 private:
 	std::string AddName() const
@@ -184,7 +183,7 @@ private:
 	{
 		const boost::filesystem::path input_path(boost::filesystem::absolute(input_str));
 
-		std::vector<InputOutputPathPair> file_paths;
+		std::vector<std::pair<std::string, std::string>> file_paths;
 		if (boost::filesystem::is_directory(input_path)) // input_pathがフォルダならそのディレクトリ以下の画像ファイルを一括変換
 		{
 			boost::filesystem::path output_path(output_str);
@@ -273,24 +272,46 @@ private:
 			SendMessage(GetDlgItem(dh, IDC_PROGRESS), PBM_SETPOS, ProgressFileNow, 0);
 		};
 
-		const auto TimeFunc = [this](const uint64_t InitTime, const uint64_t cuDNNCheckTime, const uint64_t ProcessTime, const std::string &Process)
+		const auto cuDNNCheckStartTime = std::chrono::system_clock::now();
+
+		if (process == "gpu")
+			Waifu2x::can_use_cuDNN();
+
+		const auto cuDNNCheckEndTime = std::chrono::system_clock::now();
+
+		Waifu2x::eWaifu2xError ret;
+
+		Waifu2x w;
+		ret = w.init(__argc, __argv, mode, noise_level, scale_ratio, "models", process);
+		if(ret != Waifu2x::eWaifu2xError_OK)
+			SendMessage(dh, WM_ON_WAIFU2X_ERROR, (WPARAM)&ret, 0);
+		else
 		{
-			stWaifu2xTime t;
-			t.InitTime = InitTime;
-			t.cuDNNCheckTime = cuDNNCheckTime;
-			t.ProcessTime = ProcessTime;
-			t.Process = Process;
+			const auto InitEndTime = std::chrono::system_clock::now();
 
-			SendMessage(dh, WM_TIME_WAIFU2X, (WPARAM)&t, 0);
-		};
+			for (const auto &p : file_paths)
+			{
+				ret = w.waifu2x(p.first, p.second, [this]()
+				{
+					return cancelFlag;
+				});
 
-		std::vector<PathAndErrorPair> errors;
-		const eWaifu2xError ret = waifu2x(__argc, __argv, file_paths, mode, noise_level, scale_ratio, "models", process, errors, [this]()
-		{
-			return cancelFlag;
-		}, ProgessFunc, TimeFunc);
+				if (ret != Waifu2x::eWaifu2xError_OK)
+				{
+					SendMessage(dh, WM_ON_WAIFU2X_ERROR, (WPARAM)&ret, (LPARAM)&p);
 
-		SendMessage(dh, WM_END_WAIFU2X, (WPARAM)&ret, (LPARAM)&errors);
+					if (ret == Waifu2x::eWaifu2xError_Cancel)
+						break;
+				}
+			}
+
+			const auto ProcessEndTime = std::chrono::system_clock::now();
+
+			cuDNNCheckTime = cuDNNCheckEndTime - cuDNNCheckStartTime;
+			InitTime = InitEndTime - cuDNNCheckEndTime;
+			ProcessTime = ProcessEndTime - InitEndTime;
+			usedProcess = w.used_process();
+		}
 
 		PostMessage(dh, WM_END_THREAD, 0, 0);
 	}
@@ -315,6 +336,64 @@ private:
 				SetWindowTextA(GetDlgItem(dh, IDC_EDIT_OUTPUT), new_out_path.string().c_str());
 			}
 		}
+	}
+
+	void AddLogMessage(const char *msg)
+	{
+		if (logMessage.length() == 0)
+			logMessage += msg;
+		else
+			logMessage += std::string("\r\n") + msg;
+
+		SetWindowTextA(GetDlgItem(dh, IDC_EDIT_LOG), logMessage.c_str());
+	}
+
+	void Waifu2xTime()
+	{
+		char msg[1024 * 2];
+		char *ptr = msg;
+
+		{
+			std::string p(usedProcess);
+			if (p == "cpu")
+				p = "CPU";
+			else if (p == "gpu")
+				p = "GPU";
+			else if (p == "cudnn")
+				p = "cuDNN";
+
+			ptr += sprintf(ptr, "使用プロセッサーモード: %s\r\n", p.c_str());
+		}
+
+		{
+			uint64_t t = std::chrono::duration_cast<std::chrono::milliseconds>(ProcessTime).count();
+			const int msec = t % 1000; t /= 1000;
+			const int sec = t % 60; t /= 60;
+			const int min = t % 60; t /= 60;
+			const int hour = (int)t;
+			ptr += sprintf(ptr, "処理時間: %02d:%02d:%02d.%d\r\n", hour, min, sec, msec);
+		}
+
+		{
+			uint64_t t = std::chrono::duration_cast<std::chrono::milliseconds>(InitTime).count();
+			const int msec = t % 1000; t /= 1000;
+			const int sec = t % 60; t /= 60;
+			const int min = t % 60; t /= 60;
+			const int hour = (int)t;
+			ptr += sprintf(ptr, "初期化時間: %02d:%02d:%02d.%d\r\n", hour, min, sec, msec);
+		}
+
+		if (process == "gpu" || process == "cudnn")
+		{
+			uint64_t t = std::chrono::duration_cast<std::chrono::milliseconds>(cuDNNCheckTime).count();
+			const int msec = t % 1000; t /= 1000;
+			const int sec = t % 60; t /= 60;
+			const int min = t % 60; t /= 60;
+			const int hour = (int)t;
+			ptr += sprintf(ptr, "cuDNNチェック時間: %02d:%02d:%02d.%d", hour, min, sec, msec);
+		}
+
+		AddLogMessage(msg);
 	}
 
 public:
@@ -357,6 +436,7 @@ public:
 		EnableWindow(GetDlgItem(dh, IDC_BUTTON_EXEC), FALSE);
 
 		SetWindowTextA(GetDlgItem(hWnd, IDC_EDIT_LOG), "");
+		logMessage.clear();
 	}
 
 	void WaitThreadExit(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
@@ -366,57 +446,15 @@ public:
 		EnableWindow(GetDlgItem(dh, IDC_BUTTON_EXEC), TRUE);
 
 		if (!isLastError)
+		{
+			if (!cancelFlag)
+				AddLogMessage("変換に成功しました");
+
+			Waifu2xTime();
 			MessageBeep(MB_ICONASTERISK);
-	}
-
-	void Waifu2xTime(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
-	{
-		const stWaifu2xTime *tp = (const stWaifu2xTime *)wParam;
-
-		char msg[1024*2];
-		char *ptr = msg;
-
-		{
-			std::string p(tp->Process);
-			if (p == "cpu")
-				p = "CPU";
-			else if (p == "gpu")
-				p = "GPU";
-			else if (p == "cudnn")
-				p = "cuDNN";
-
-			ptr += sprintf(ptr, "使用プロセッサーモード: %s\r\n", p.c_str());
 		}
-
-		{
-			uint64_t t = tp->ProcessTime;
-			const int msec = t % 1000; t /= 1000;
-			const int sec = t % 60; t /= 60;
-			const int min = t % 60; t /= 60;
-			const int hour = (int)t;
-			ptr += sprintf(ptr, "処理時間: %02d:%02d:%02d.%d\r\n", hour, min, sec, msec);
-		}
-
-		{
-			uint64_t t = tp->InitTime;
-			const int msec = t % 1000; t /= 1000;
-			const int sec = t % 60; t /= 60;
-			const int min = t % 60; t /= 60;
-			const int hour = (int)t;
-			ptr += sprintf(ptr, "初期化時間: %02d:%02d:%02d.%d\r\n", hour, min, sec, msec);
-		}
-
-		if (tp->Process == "gpu" || tp->Process == "cudnn")
-		{
-			uint64_t t = tp->cuDNNCheckTime;
-			const int msec = t % 1000; t /= 1000;
-			const int sec = t % 60; t /= 60;
-			const int min = t % 60; t /= 60;
-			const int hour = (int)t;
-			ptr += sprintf(ptr, "cuDNNチェック時間: %02d:%02d:%02d.%d", hour, min, sec, msec);
-		}
-
-		SetWindowTextA(GetDlgItem(hWnd, IDC_EDIT_LOG), msg);
+		else
+			MessageBoxA(dh, "エラーが発生しました", "エラー", MB_OK | MB_ICONERROR);
 	}
 
 	void OnDialogEnd(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
@@ -441,63 +479,63 @@ public:
 		isLastError = true;
 	}
 
-	void OnEndWaifu2x(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
+	void OnWaifu2xError(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 	{
-		const eWaifu2xError ret = *(const eWaifu2xError *)wParam;
-		const std::vector<PathAndErrorPair> &errors = *(const std::vector<PathAndErrorPair> *)lParam;
+		const Waifu2x::eWaifu2xError ret = *(const Waifu2x::eWaifu2xError *)wParam;
 
-		if ((ret != eWaifu2xError_OK) || errors.size() > 0)
+		if (ret != Waifu2x::eWaifu2xError_OK)
 		{
 			char msg[1024] = "";
 
-			switch (ret)
+			if (lParam == 0)
 			{
-			case eWaifu2xError_Cancel:
-				sprintf(msg, "キャンセルされました");
-				break;
-			case eWaifu2xError_InvalidParameter:
-				sprintf(msg, "パラメータが不正です");
-				break;
-			case eWaifu2xError_FailedOpenModelFile:
-				sprintf(msg, "モデルファイルが開けませんでした");
-				break;
-			case eWaifu2xError_FailedParseModelFile:
-				sprintf(msg, "モデルファイルが壊れています");
-				break;
-			case eWaifu2xError_FailedConstructModel:
-				sprintf(msg, "ネットワークの構築に失敗しました");
-				break;
-			}
-
-			if (ret == eWaifu2xError_OK)
-			{
-				// 全てのエラーを表示することは出来ないので最初の一つだけ表示
-
-				const auto &fp = errors[0].first;
-
-				bool isBreak = false;
-				switch (errors[0].second)
+				switch (ret)
 				{
-				case eWaifu2xError_InvalidParameter:
+				case Waifu2x::eWaifu2xError_Cancel:
+					sprintf(msg, "キャンセルされました");
+					break;
+				case Waifu2x::eWaifu2xError_InvalidParameter:
 					sprintf(msg, "パラメータが不正です");
 					break;
-				case eWaifu2xError_FailedOpenInputFile:
-					//sprintf(msg, "入力画像「%s」が開けませんでした", fp.first.c_str());
-					sprintf(msg, "入力画像が開けませんでした");
+				case Waifu2x::eWaifu2xError_FailedOpenModelFile:
+					sprintf(msg, "モデルファイルが開けませんでした");
 					break;
-				case eWaifu2xError_FailedOpenOutputFile:
-					//sprintf(msg, "出力画像「%s」が書き込めませんでした", fp.second.c_str());
-					sprintf(msg, "出力画像が書き込めませんでした");
+				case Waifu2x::eWaifu2xError_FailedParseModelFile:
+					sprintf(msg, "モデルファイルが壊れています");
 					break;
-				case eWaifu2xError_FailedProcessCaffe:
+				case Waifu2x::eWaifu2xError_FailedConstructModel:
+					sprintf(msg, "ネットワークの構築に失敗しました");
+					break;
+				}
+			}
+			else
+			{
+				const auto &fp = *(const std::pair<std::string, std::string> *)lParam;
+
+				switch (ret)
+				{
+				case Waifu2x::eWaifu2xError_Cancel:
+					sprintf(msg, "キャンセルされました");
+					break;
+				case Waifu2x::eWaifu2xError_InvalidParameter:
+					sprintf(msg, "パラメータが不正です");
+					break;
+				case Waifu2x::eWaifu2xError_FailedOpenInputFile:
+					sprintf(msg, "入力画像「%s」が開けませんでした", fp.first.c_str());
+					break;
+				case Waifu2x::eWaifu2xError_FailedOpenOutputFile:
+					sprintf(msg, "出力画像を「%s」に書き込めませんでした", fp.second.c_str());
+					break;
+				case Waifu2x::eWaifu2xError_FailedProcessCaffe:
 					sprintf(msg, "補間処理に失敗しました");
 					break;
 				}
 			}
 
-			MessageBoxA(dh, msg, "エラー", MB_OK | MB_ICONERROR);
+			AddLogMessage(msg);
 
-			isLastError = true;
+			if (ret != Waifu2x::eWaifu2xError_Cancel)
+				isLastError = true;
 		}
 	}
 
@@ -530,7 +568,7 @@ public:
 
 	void CheckCUDNN(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 	{
-		if (can_use_cuDNN())
+		if (Waifu2x::can_use_cuDNN())
 			MessageBox(dh, TEXT("cuDNNが使えます"), TEXT("結果"), MB_OK | MB_ICONINFORMATION);
 		else
 			MessageBox(dh, TEXT("cuDNNは使えません"), TEXT("結果"), MB_OK | MB_ICONERROR);
@@ -664,9 +702,8 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	cDialog.SetEventCallBack(SetClassFunc(DialogEvent::Create, &cDialogEvent), NULL, WM_INITDIALOG);
 	cDialog.SetEventCallBack(SetClassFunc(DialogEvent::OnDialogEnd, &cDialogEvent), NULL, WM_CLOSE);
 	cDialog.SetEventCallBack(SetClassFunc(DialogEvent::OnFaildCreateDir, &cDialogEvent), NULL, WM_FAILD_CREATE_DIR);
-	cDialog.SetEventCallBack(SetClassFunc(DialogEvent::OnEndWaifu2x, &cDialogEvent), NULL, WM_END_WAIFU2X);
+	cDialog.SetEventCallBack(SetClassFunc(DialogEvent::OnWaifu2xError, &cDialogEvent), NULL, WM_ON_WAIFU2X_ERROR);
 	cDialog.SetEventCallBack(SetClassFunc(DialogEvent::WaitThreadExit, &cDialogEvent), NULL, WM_END_THREAD);
-	cDialog.SetEventCallBack(SetClassFunc(DialogEvent::Waifu2xTime, &cDialogEvent), NULL, WM_TIME_WAIFU2X);
 
 	// ダイアログを表示
 	cDialog.DoModal(hInstance, IDD_DIALOG);

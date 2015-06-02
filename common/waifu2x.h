@@ -5,30 +5,71 @@
 #include <vector>
 #include <utility>
 #include <functional>
+#include <boost/shared_ptr.hpp>
+#include <opencv2/opencv.hpp>
 
-enum eWaifu2xError
+
+namespace caffe
 {
-	eWaifu2xError_OK = 0,
-	eWaifu2xError_Cancel,
-	eWaifu2xError_InvalidParameter,
-	eWaifu2xError_FailedOpenInputFile,
-	eWaifu2xError_FailedOpenOutputFile,
-	eWaifu2xError_FailedOpenModelFile,
-	eWaifu2xError_FailedParseModelFile,
-	eWaifu2xError_FailedConstructModel,
-	eWaifu2xError_FailedProcessCaffe,
+	template <typename Dtype>
+	class Net;
 };
 
-typedef std::pair<std::string, std::string> InputOutputPathPair;
-typedef std::pair<InputOutputPathPair, eWaifu2xError> PathAndErrorPair;
-typedef std::function<bool()> waifu2xCancelFunc;
-typedef std::function<void(const int ProgressFileMax, const int ProgressFileNow)> waifu2xProgressFunc;
-typedef std::function<void(const uint64_t InitTime, const uint64_t cuDNNCheckTime, const uint64_t ProcessTime, const std::string &Process)> waifu2xTimeFunc;
+class Waifu2x
+{
+public:
+	enum eWaifu2xError
+	{
+		eWaifu2xError_OK = 0,
+		eWaifu2xError_Cancel,
+		eWaifu2xError_NotInitialized,
+		eWaifu2xError_InvalidParameter,
+		eWaifu2xError_FailedOpenInputFile,
+		eWaifu2xError_FailedOpenOutputFile,
+		eWaifu2xError_FailedOpenModelFile,
+		eWaifu2xError_FailedParseModelFile,
+		eWaifu2xError_FailedConstructModel,
+		eWaifu2xError_FailedProcessCaffe,
+	};
 
-bool can_use_cuDNN();
+	typedef std::function<bool()> waifu2xCancelFunc;
 
-// mode: noise or scale or noise_scale or auto_scale
-// process: cpu or gpu or cudnn
-eWaifu2xError waifu2x(int argc, char** argv,
-	const std::vector<InputOutputPathPair> &file_paths, const std::string &mode, const int noise_level, const double scale_ratio, const std::string &model_dir, const std::string &process,
-	std::vector<PathAndErrorPair> &errors, const waifu2xCancelFunc cancel_func = nullptr, const waifu2xProgressFunc progress_func = nullptr, const waifu2xTimeFunc time_func = nullptr);
+private:
+	bool is_inited;
+
+	std::string mode;
+	int noise_level;
+	double scale_ratio;
+	std::string model_dir;
+	std::string process;
+
+	boost::shared_ptr<caffe::Net<float>> net_noise;
+	boost::shared_ptr<caffe::Net<float>> net_scale;
+
+private:
+	eWaifu2xError LoadImage(cv::Mat &float_image, const std::string &input_file);
+	eWaifu2xError CreateBrightnessImage(const cv::Mat &float_image, cv::Mat &im);
+	eWaifu2xError PaddingImage(const cv::Mat &input, cv::Mat &output);
+	eWaifu2xError Zoom2xAndPaddingImage(const cv::Mat &input, cv::Mat &output, cv::Size_<int> &zoom_size);
+	eWaifu2xError CreateZoomColorImage(const cv::Mat &float_image, const cv::Size_<int> &zoom_size, std::vector<cv::Mat> &cubic_planes);
+	eWaifu2xError LoadParameter(boost::shared_ptr<caffe::Net<float>> net, const std::string &param_path);
+	eWaifu2xError ConstractNet(boost::shared_ptr<caffe::Net<float>> &net, const std::string &model_path, const std::string &process);
+	eWaifu2xError ReconstructImage(boost::shared_ptr<caffe::Net<float>> net, cv::Mat &im);
+
+public:
+	Waifu2x();
+	~Waifu2x();
+
+	static bool can_use_cuDNN();
+
+	// mode: noise or scale or noise_scale or auto_scale
+	// process: cpu or gpu or cudnn
+	eWaifu2xError init(int argc, char** argv, const std::string &mode, const int noise_level, const double scale_ratio, const std::string &model_dir, const std::string &process);
+
+	void destroy();
+
+	eWaifu2xError waifu2x(const std::string &input_file, const std::string &output_file,
+		const waifu2xCancelFunc cancel_func = nullptr);
+
+	const std::string& used_process() const;
+};

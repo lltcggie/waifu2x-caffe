@@ -11,6 +11,8 @@
 
 #if defined(WIN32) || defined(WIN64)
 #include <Windows.h>
+
+#undef LoadImage
 #endif
 
 #ifdef _MSC_VER
@@ -42,12 +44,21 @@ const auto original_width_height = 128 + layer_num * 2;
 const int ConvertMode = CV_RGB2YUV;
 const int ConvertInverseMode = CV_YUV2RGB;
 
-std::once_flag waifu2x_once_flag;
-std::once_flag waifu2x_cudnn_once_flag;
+static std::once_flag waifu2x_once_flag;
+static std::once_flag waifu2x_cudnn_once_flag;
 
+
+Waifu2x::Waifu2x() : is_inited(false)
+{
+}
+
+Waifu2x::~Waifu2x()
+{
+	destroy();
+}
 
 // cuDNNが使えるかチェック。現状Windowsのみ
-bool can_use_cuDNN()
+bool Waifu2x::can_use_cuDNN()
 {
 	static bool cuDNNFlag = false;
 	std::call_once(waifu2x_cudnn_once_flag, [&]()
@@ -80,7 +91,7 @@ bool can_use_cuDNN()
 }
 
 // 画像を読み込んで値を0.0f～1.0fの範囲に変換
-eWaifu2xError LoadImage(cv::Mat &float_image, const std::string &input_file)
+Waifu2x::eWaifu2xError Waifu2x::LoadImage(cv::Mat &float_image, const std::string &input_file)
 {
 	cv::Mat original_image = cv::imread(input_file, cv::IMREAD_UNCHANGED);
 	if (original_image.empty())
@@ -115,7 +126,7 @@ eWaifu2xError LoadImage(cv::Mat &float_image, const std::string &input_file)
 }
 
 // 画像から輝度の画像を取り出す
-eWaifu2xError CreateBrightnessImage(const cv::Mat &float_image, cv::Mat &im)
+Waifu2x::eWaifu2xError Waifu2x::CreateBrightnessImage(const cv::Mat &float_image, cv::Mat &im)
 {
 	cv::Mat converted_color;
 	cv::cvtColor(float_image, converted_color, ConvertMode);
@@ -131,7 +142,7 @@ eWaifu2xError CreateBrightnessImage(const cv::Mat &float_image, cv::Mat &im)
 
 // 入力画像の(Photoshopでいう)キャンバスサイズをoutput_sizeの倍数に変更
 // 画像は左上配置、余白はcv::BORDER_REPLICATEで埋める
-eWaifu2xError PaddingImage(const cv::Mat &input, cv::Mat &output)
+Waifu2x::eWaifu2xError Waifu2x::PaddingImage(const cv::Mat &input, cv::Mat &output)
 {
 	const auto h_blocks = (int)floor(input.size().width / output_size) + (input.size().width % output_size == 0 ? 0 : 1);
 	const auto w_blocks = (int)floor(input.size().height / output_size) + (input.size().height % output_size == 0 ? 0 : 1);
@@ -148,7 +159,7 @@ eWaifu2xError PaddingImage(const cv::Mat &input, cv::Mat &output)
 }
 
 // 画像をcv::INTER_NEARESTで二倍に拡大して、PaddingImage()でパディングする
-eWaifu2xError Zoom2xAndPaddingImage(const cv::Mat &input, cv::Mat &output, cv::Size_<int> &zoom_size)
+Waifu2x::eWaifu2xError Waifu2x::Zoom2xAndPaddingImage(const cv::Mat &input, cv::Mat &output, cv::Size_<int> &zoom_size)
 {
 	zoom_size = input.size();
 	zoom_size.width *= 2;
@@ -161,7 +172,7 @@ eWaifu2xError Zoom2xAndPaddingImage(const cv::Mat &input, cv::Mat &output, cv::S
 }
 
 // 入力画像をzoom_sizeの大きさにcv::INTER_CUBICで拡大し、色情報のみを残す
-eWaifu2xError CreateZoomColorImage(const cv::Mat &float_image, const cv::Size_<int> &zoom_size, std::vector<cv::Mat> &cubic_planes)
+Waifu2x::eWaifu2xError Waifu2x::CreateZoomColorImage(const cv::Mat &float_image, const cv::Size_<int> &zoom_size, std::vector<cv::Mat> &cubic_planes)
 {
 	cv::Mat zoom_cubic_image;
 	cv::resize(float_image, zoom_cubic_image, zoom_size, 0.0, 0.0, cv::INTER_CUBIC);
@@ -180,7 +191,7 @@ eWaifu2xError CreateZoomColorImage(const cv::Mat &float_image, const cv::Size_<i
 }
 
 // 学習したパラメータをファイルから読み込む
-eWaifu2xError LoadParameter(boost::shared_ptr<caffe::Net<float>> net, const std::string &param_path)
+Waifu2x::eWaifu2xError Waifu2x::LoadParameter(boost::shared_ptr<caffe::Net<float>> net, const std::string &param_path)
 {
 	rapidjson::Document d;
 	std::vector<char> jsonBuf;
@@ -295,7 +306,7 @@ eWaifu2xError LoadParameter(boost::shared_ptr<caffe::Net<float>> net, const std:
 
 // モデルファイルからネットワークを構築
 // processでcudnnが指定されなかった場合はcuDNNが呼び出されないように変更する
-eWaifu2xError ConstractNet(boost::shared_ptr<caffe::Net<float>> &net, const std::string &model_path, const std::string &process)
+Waifu2x::eWaifu2xError Waifu2x::ConstractNet(boost::shared_ptr<caffe::Net<float>> &net, const std::string &model_path, const std::string &process)
 {
 	caffe::NetParameter param;
 	if (!caffe::ReadProtoFromTextFile(model_path, &param))
@@ -337,7 +348,7 @@ eWaifu2xError ConstractNet(boost::shared_ptr<caffe::Net<float>> &net, const std:
 }
 
 // ネットワークを使って画像を再構築する
-eWaifu2xError ReconstructImage(boost::shared_ptr<caffe::Net<float>> net, cv::Mat &im, const waifu2xProgressFunc func)
+Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<float>> net, cv::Mat &im)
 {
 	const auto Height = im.size().height;
 	const auto Width = im.size().width;
@@ -464,18 +475,21 @@ eWaifu2xError ReconstructImage(boost::shared_ptr<caffe::Net<float>> net, cv::Mat
 	return eWaifu2xError_OK;
 }
 
-#include <boost/timer.hpp>
-
-eWaifu2xError waifu2x(int argc, char** argv, const std::vector<InputOutputPathPair> &file_paths,
-	const std::string &mode, const int noise_level, const double scale_ratio, const std::string &model_dir, const std::string &process,
-	std::vector<PathAndErrorPair> &errors, const waifu2xCancelFunc cancel_func, const waifu2xProgressFunc progress_func, const waifu2xTimeFunc time_func)
+Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &Mode, const int NoiseLevel, const double ScaleRatio, const std::string &ModelDir, const std::string &Process)
 {
-	if (scale_ratio <= 0.0)
+	Waifu2x::eWaifu2xError ret;
+
+	if (is_inited)
+		return eWaifu2xError_OK;
+
+	if (ScaleRatio <= 0.0)
 		return eWaifu2xError_InvalidParameter;
 
-	const auto StartTime = std::chrono::system_clock::now();
-
-	eWaifu2xError ret;
+	mode = Mode;
+	noise_level = NoiseLevel;
+	scale_ratio = ScaleRatio;
+	model_dir = ModelDir;
+	process = Process;
 
 	std::call_once(waifu2x_once_flag, [argc, argv]()
 	{
@@ -490,12 +504,11 @@ eWaifu2xError waifu2x(int argc, char** argv, const std::vector<InputOutputPathPa
 
 	const auto cuDNNCheckStartTime = std::chrono::system_clock::now();
 
-	std::string process_fix(process);
-	if (process_fix == "gpu")
+	if (process == "gpu")
 	{
 		// cuDNNが使えそうならcuDNNを使う
 		if (can_use_cuDNN())
-			process_fix = "cudnn";
+			process = "cudnn";
 	}
 
 	const auto cuDNNCheckEndTime = std::chrono::system_clock::now();
@@ -516,20 +529,17 @@ eWaifu2xError waifu2x(int argc, char** argv, const std::vector<InputOutputPathPa
 	if (!boost::filesystem::exists(mode_dir_path))
 		return eWaifu2xError_FailedOpenModelFile;
 
-	if (process_fix == "cpu")
+	if (process == "cpu")
 		caffe::Caffe::set_mode(caffe::Caffe::CPU);
 	else
 		caffe::Caffe::set_mode(caffe::Caffe::GPU);
-
-	boost::shared_ptr<caffe::Net<float>> net_noise;
-	boost::shared_ptr<caffe::Net<float>> net_scale;
 
 	if (mode == "noise" || mode == "noise_scale" || mode == "auto_scale")
 	{
 		const std::string model_path = (mode_dir_path / "srcnn.prototxt").string();
 		const std::string param_path = (mode_dir_path / ("noise" + std::to_string(noise_level) + "_model.json")).string();
 
-		ret = ConstractNet(net_noise, model_path, process_fix);
+		ret = ConstractNet(net_noise, model_path, process);
 		if (ret != eWaifu2xError_OK)
 			return ret;
 
@@ -543,7 +553,7 @@ eWaifu2xError waifu2x(int argc, char** argv, const std::vector<InputOutputPathPa
 		const std::string model_path = (mode_dir_path / "srcnn.prototxt").string();
 		const std::string param_path = (mode_dir_path / "scale2.0x_model.json").string();
 
-		ret = ConstractNet(net_scale, model_path, process_fix);
+		ret = ConstractNet(net_scale, model_path, process);
 		if (ret != eWaifu2xError_OK)
 			return ret;
 
@@ -552,165 +562,145 @@ eWaifu2xError waifu2x(int argc, char** argv, const std::vector<InputOutputPathPa
 			return ret;
 	}
 
-	const auto InitEndTime = std::chrono::system_clock::now();
+	is_inited = true;
 
-	int fileCount = 0;
-	for (const auto &p : file_paths)
+	return eWaifu2xError_OK;
+}
+
+void Waifu2x::destroy()
+{
+	net_noise.reset();
+	net_scale.reset();
+
+	is_inited = false;
+}
+
+Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std::string &output_file,
+	const waifu2xCancelFunc cancel_func)
+{
+	Waifu2x::eWaifu2xError ret;
+
+	if (!is_inited)
+		return eWaifu2xError_NotInitialized;
+
+	cv::Mat float_image;
+	ret = LoadImage(float_image, input_file);
+	if (ret != eWaifu2xError_OK)
+		return ret;
+
+	cv::Mat im;
+	CreateBrightnessImage(float_image, im);
+
+	cv::Size_<int> image_size = im.size();
+
+	const boost::filesystem::path ip(input_file);
+	const boost::filesystem::path ipext(ip.extension());
+
+	const bool isJpeg = boost::iequals(ipext.string(), ".jpg") || boost::iequals(ipext.string(), ".jpeg");
+
+	const bool isReconstructNoise = mode == "noise" || mode == "noise_scale" || (mode == "auto_scale" && isJpeg);
+	const bool isReconstructScale = mode == "scale" || mode == "noise_scale";
+
+	if (isReconstructNoise)
 	{
-		if (progress_func)
-			progress_func(file_paths.size(), fileCount);
+		PaddingImage(im, im);
 
-		if (cancel_func && cancel_func())
-			return eWaifu2xError_Cancel;
-
-		const auto &input_file = p.first;
-		const auto &output_file = p.second;
-
-		cv::Mat float_image;
-		ret = LoadImage(float_image, input_file);
+		ret = ReconstructImage(net_noise, im);
 		if (ret != eWaifu2xError_OK)
+			return ret;
+
+		// パディングを取り払う
+		im = im(cv::Rect(offset, offset, image_size.width, image_size.height));
+	}
+
+	if (cancel_func && cancel_func())
+		return eWaifu2xError_Cancel;
+
+	const int scale2 = ceil(log2(scale_ratio));
+	const double shrinkRatio = scale_ratio / std::pow(2.0, (double)scale2);
+
+	if (isReconstructScale)
+	{
+		bool isError = false;
+		for (int i = 0; i < scale2; i++)
 		{
-			errors.emplace_back(p, ret);
-			continue;
-		}
+			Zoom2xAndPaddingImage(im, im, image_size);
 
-		cv::Mat im;
-		CreateBrightnessImage(float_image, im);
-
-		cv::Size_<int> image_size = im.size();
-
-		const boost::filesystem::path ip(input_file);
-		const boost::filesystem::path ipext(ip.extension());
-
-		const bool isJpeg = boost::iequals(ipext.string(), ".jpg") || boost::iequals(ipext.string(), ".jpeg");
-
-		const bool isReconstructNoise = mode == "noise" || mode == "noise_scale" || (mode == "auto_scale" && isJpeg);
-		const bool isReconstructScale = mode == "scale" || mode == "noise_scale";
-
-		if (isReconstructNoise)
-		{
-			PaddingImage(im, im);
-
-			ret = ReconstructImage(net_noise, im, progress_func);
+			ret = ReconstructImage(net_scale, im);
 			if (ret != eWaifu2xError_OK)
-			{
-				errors.emplace_back(p, ret);
-				continue;
-			}
+				return ret;
 
 			// パディングを取り払う
 			im = im(cv::Rect(offset, offset, image_size.width, image_size.height));
 		}
-
-		if (cancel_func && cancel_func())
-			return eWaifu2xError_Cancel;
-
-		const int scale2 = ceil(log2(scale_ratio));
-		const double shrinkRatio = scale_ratio / std::pow(2.0, (double)scale2);
-
-		if (isReconstructScale)
-		{
-			bool isError = false;
-			for (int i = 0; i < scale2; i++)
-			{
-				Zoom2xAndPaddingImage(im, im, image_size);
-
-				ret = ReconstructImage(net_scale, im, progress_func);
-				if (ret != eWaifu2xError_OK)
-				{
-					errors.emplace_back(p, ret);
-					isError = true;
-					break;
-				}
-
-				// パディングを取り払う
-				im = im(cv::Rect(offset, offset, image_size.width, image_size.height));
-			}
-
-			if (isError)
-				continue;
-		}
-
-		if (cancel_func && cancel_func())
-			return eWaifu2xError_Cancel;
-
-		// 再構築した輝度画像とCreateZoomColorImage()で作成した色情報をマージして通常の画像に変換し、書き込む
-
-		std::vector<cv::Mat> color_planes;
-		CreateZoomColorImage(float_image, image_size, color_planes);
-
-		cv::Mat alpha;
-		if (float_image.channels() == 4)
-		{
-			std::vector<cv::Mat> planes;
-			cv::split(float_image, planes);
-			alpha = planes[3];
-
-			cv::resize(alpha, alpha, image_size, 0.0, 0.0, cv::INTER_CUBIC);
-		}
-
-		float_image.release();
-
-		color_planes[0] = im;
-		im.release();
-
-		cv::Mat converted_image;
-		cv::merge(color_planes, converted_image);
-		color_planes.clear();
-
-		cv::Mat process_image;
-		cv::cvtColor(converted_image, process_image, ConvertInverseMode);
-		converted_image.release();
-
-		// アルファチャンネルがあったら、アルファを付加してカラーからアルファの影響を抜く
-		if (!alpha.empty())
-		{
-			std::vector<cv::Mat> planes;
-			cv::split(process_image, planes);
-			process_image.release();
-
-			planes.push_back(alpha);
-
-			cv::Mat w2 = planes[3];
-
-			planes[0] = (planes[0] - 1.0).mul(1.0 / w2) + 1.0;
-			planes[1] = (planes[1] - 1.0).mul(1.0 / w2) + 1.0;
-			planes[2] = (planes[2] - 1.0).mul(1.0 / w2) + 1.0;
-
-			cv::merge(planes, process_image);
-		}
-
-		const cv::Size_<int> ns(image_size.width * shrinkRatio, image_size.height * shrinkRatio);
-		if (image_size.width != ns.width || image_size.height != ns.height)
-			cv::resize(process_image, process_image, ns, 0.0, 0.0, cv::INTER_LINEAR);
-
-		cv::Mat write_iamge;
-		process_image.convertTo(write_iamge, CV_8U, 255.0);
-		process_image.release();
-
-		if (!cv::imwrite(output_file, write_iamge))
-		{
-			errors.emplace_back(p, eWaifu2xError_FailedOpenOutputFile);
-			continue;
-		}
-
-		write_iamge.release();
-
-		fileCount++;
 	}
 
-	if (progress_func)
-		progress_func(file_paths.size(), fileCount);
+	if (cancel_func && cancel_func())
+		return eWaifu2xError_Cancel;
 
-	const auto ProcessEndTime = std::chrono::system_clock::now();
+	// 再構築した輝度画像とCreateZoomColorImage()で作成した色情報をマージして通常の画像に変換し、書き込む
 
-	const auto cuDNNCheckTime = (cuDNNCheckEndTime - cuDNNCheckStartTime);
-	const auto InitTime = (InitEndTime - StartTime) - cuDNNCheckTime;
-	const auto ProcessTime = (ProcessEndTime - InitEndTime);
-	if (time_func)
-		time_func(std::chrono::duration_cast<std::chrono::milliseconds>(InitTime).count()
-		, std::chrono::duration_cast<std::chrono::milliseconds>(cuDNNCheckTime).count()
-		, std::chrono::duration_cast<std::chrono::milliseconds>(ProcessTime).count(), process_fix);
+	std::vector<cv::Mat> color_planes;
+	CreateZoomColorImage(float_image, image_size, color_planes);
+
+	cv::Mat alpha;
+	if (float_image.channels() == 4)
+	{
+		std::vector<cv::Mat> planes;
+		cv::split(float_image, planes);
+		alpha = planes[3];
+
+		cv::resize(alpha, alpha, image_size, 0.0, 0.0, cv::INTER_CUBIC);
+	}
+
+	float_image.release();
+
+	color_planes[0] = im;
+	im.release();
+
+	cv::Mat converted_image;
+	cv::merge(color_planes, converted_image);
+	color_planes.clear();
+
+	cv::Mat process_image;
+	cv::cvtColor(converted_image, process_image, ConvertInverseMode);
+	converted_image.release();
+
+	// アルファチャンネルがあったら、アルファを付加してカラーからアルファの影響を抜く
+	if (!alpha.empty())
+	{
+		std::vector<cv::Mat> planes;
+		cv::split(process_image, planes);
+		process_image.release();
+
+		planes.push_back(alpha);
+
+		cv::Mat w2 = planes[3];
+
+		planes[0] = (planes[0] - 1.0).mul(1.0 / w2) + 1.0;
+		planes[1] = (planes[1] - 1.0).mul(1.0 / w2) + 1.0;
+		planes[2] = (planes[2] - 1.0).mul(1.0 / w2) + 1.0;
+
+		cv::merge(planes, process_image);
+	}
+
+	const cv::Size_<int> ns(image_size.width * shrinkRatio, image_size.height * shrinkRatio);
+	if (image_size.width != ns.width || image_size.height != ns.height)
+		cv::resize(process_image, process_image, ns, 0.0, 0.0, cv::INTER_LINEAR);
+
+	cv::Mat write_iamge;
+	process_image.convertTo(write_iamge, CV_8U, 255.0);
+	process_image.release();
+
+	if (!cv::imwrite(output_file, write_iamge))
+		return eWaifu2xError_FailedOpenOutputFile;
+
+	write_iamge.release();
 
 	return eWaifu2xError_OK;
+}
+
+const std::string& Waifu2x::used_process() const
+{
+	return process;
 }

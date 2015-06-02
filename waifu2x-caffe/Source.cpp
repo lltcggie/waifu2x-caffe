@@ -120,7 +120,7 @@ int main(int argc, char** argv)
 	if (outputExt.length() > 0 && outputExt[0] != '.')
 		outputExt = "." + outputExt;
 
-	std::vector<InputOutputPathPair> file_paths;
+	std::vector<std::pair<std::string, std::string>> file_paths;
 	if (boost::filesystem::is_directory(input_path)) // input_pathがフォルダならそのディレクトリ以下の画像ファイルを一括変換
 	{
 		boost::filesystem::path output_path;
@@ -227,51 +227,58 @@ int main(int argc, char** argv)
 		file_paths.emplace_back(cmdInputFile.getValue(), outputFileName);
 	}
 
-	std::vector<PathAndErrorPair> errors;
-
-	const eWaifu2xError ret = waifu2x(argc, argv, file_paths, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), cmdModelPath.getValue(), cmdProcess.getValue(), errors);
-	if (ret != eWaifu2xError_OK || errors.size() > 0)
+	Waifu2x::eWaifu2xError ret;
+	Waifu2x w;
+	ret = w.init(argc, argv, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), cmdModelPath.getValue(), cmdProcess.getValue());
+	switch (ret)
 	{
-		switch (ret)
-		{
-		case eWaifu2xError_InvalidParameter:
-			printf("エラー: パラメータが不正です\n");
-			break;
-		case eWaifu2xError_FailedOpenModelFile:
-			printf("エラー: モデルファイルが開けませんでした\n");
-			break;
-		case eWaifu2xError_FailedParseModelFile:
-			printf("エラー: モデルファイルが壊れています\n");
-			break;
-		case eWaifu2xError_FailedConstructModel:
-			printf("エラー: ネットワークの構築に失敗しました\n");
-			break;
-		}
+	case Waifu2x::eWaifu2xError_InvalidParameter:
+		printf("エラー: パラメータが不正です\n");
+		return 1;
+	case Waifu2x::eWaifu2xError_FailedOpenModelFile:
+		printf("エラー: モデルファイルが開けませんでした\n");
+		return 1;
+	case Waifu2x::eWaifu2xError_FailedParseModelFile:
+		printf("エラー: モデルファイルが壊れています\n");
+		return 1;
+	case Waifu2x::eWaifu2xError_FailedConstructModel:
+		printf("エラー: ネットワークの構築に失敗しました\n");
+		return 1;
+	}
 
-		for (const auto &ep : errors)
+	bool isError = false;
+	for (const auto &p : file_paths)
+	{
+		const Waifu2x::eWaifu2xError ret = w.waifu2x(p.first, p.second);
+		if (ret != Waifu2x::eWaifu2xError_OK)
 		{
-			const auto &fp = ep.first;
-
-			switch (ep.second)
+			switch (ret)
 			{
-			case eWaifu2xError_InvalidParameter:
+			case Waifu2x::eWaifu2xError_InvalidParameter:
 				printf("エラー: パラメータが不正です\n");
 				break;
-			case eWaifu2xError_FailedOpenInputFile:
-				printf("エラー: 入力画像「%s」が開けませんでした\n", fp.first.c_str());
+			case Waifu2x::eWaifu2xError_FailedOpenInputFile:
+				printf("エラー: 入力画像「%s」が開けませんでした\n", p.first.c_str());
 				break;
-			case eWaifu2xError_FailedOpenOutputFile:
-				printf("エラー: 出力画像「%s」が書き込めませんでした\n", fp.second.c_str());
+			case Waifu2x::eWaifu2xError_FailedOpenOutputFile:
+				printf("エラー: 出力画像「%s」が書き込めませんでした\n", p.second.c_str());
 				break;
-			case eWaifu2xError_FailedProcessCaffe:
+			case Waifu2x::eWaifu2xError_FailedProcessCaffe:
 				printf("エラー: 補間処理に失敗しました\n");
 				break;
 			}
-		}
 
-		printf("変換に失敗しました\n");
+			isError = true;
+		}
+	}
+
+	if (isError)
+	{
+		printf("変換に失敗したファイルがあります\n");
 		return 1;
 	}
+
+	printf("変換に成功しました\n");
 
 	return 0;
 }
