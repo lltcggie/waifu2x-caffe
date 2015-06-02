@@ -434,6 +434,7 @@ public:
 
 		EnableWindow(GetDlgItem(dh, IDC_BUTTON_CANCEL), TRUE);
 		EnableWindow(GetDlgItem(dh, IDC_BUTTON_EXEC), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_BUTTON_CHECK_CUDNN), FALSE);
 
 		SetWindowTextA(GetDlgItem(hWnd, IDC_EDIT_LOG), "");
 		logMessage.clear();
@@ -444,6 +445,7 @@ public:
 		processThread.join();
 		EnableWindow(GetDlgItem(dh, IDC_BUTTON_CANCEL), FALSE);
 		EnableWindow(GetDlgItem(dh, IDC_BUTTON_EXEC), TRUE);
+		EnableWindow(GetDlgItem(dh, IDC_BUTTON_CHECK_CUDNN), TRUE);
 
 		if (!isLastError)
 		{
