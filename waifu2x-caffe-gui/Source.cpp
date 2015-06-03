@@ -766,7 +766,8 @@ public:
 				std::string outputFileName = szTmp;
 
 				const auto tailDot = outputFileName.find_last_of('.');
-				outputFileName.erase(tailDot, outputFileName.length());
+				if (tailDot != outputFileName.npos)
+					outputFileName.erase(tailDot, outputFileName.length());
 
 				const std::string addstr(AddName());
 				autoSetAddName = addstr;
