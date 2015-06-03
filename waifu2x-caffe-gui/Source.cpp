@@ -9,6 +9,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/tokenizer.hpp>
 #include <boost/foreach.hpp>
+#include <boost/math/common_factor_rt.hpp>
+#include <opencv2/opencv.hpp>
 #include "resource.h"
 #include "../common/waifu2x.h"
 
@@ -20,6 +22,9 @@
 #define WM_END_THREAD (WM_APP + 7)
 
 const size_t AR_PATH_MAX(1024);
+
+const int MinCommonDivisor = 50;
+const int DefaultCommonDivisor = 128;
 
 
 // http://stackoverflow.com/questions/10167382/boostfilesystem-get-relative-path
@@ -62,6 +67,26 @@ boost::filesystem::path relativePath(const boost::filesystem::path &path, const 
 	return result;
 }
 
+std::vector<int> CommonDivisorList(const int N)
+{
+	std::vector<int> list;
+
+	const int sq = sqrt(N);
+	for (int i = 1; i <= sq; i++)
+	{
+		if (N % i == 0)
+			list.push_back(i);
+	}
+
+	const int sqs = list.size();
+	for (int i = 0; i < sqs; i++)
+		list.push_back(N / list[i]);
+
+	std::sort(list.begin(), list.end());
+
+	return list;
+}
+
 // ダイアログ用
 class DialogEvent
 {
@@ -79,6 +104,8 @@ private:
 
 	int crop_size;
 	int batch_size;
+
+	std::vector<std::string> extList;
 
 	std::thread processThread;
 	std::atomic_bool cancelFlag;
@@ -106,7 +133,7 @@ private:
 		return addstr;
 	}
 
-	bool SyncMember()
+	bool SyncMember(const bool NotSyncCropSize)
 	{
 		bool ret = true;
 
@@ -177,11 +204,23 @@ private:
 			buf[_countof(buf) - 1] = '\0';
 
 			inputFileExt = buf;
+
+			// input_extention_listを文字列の配列にする
+
+			typedef boost::char_separator<char> char_separator;
+			typedef boost::tokenizer<char_separator> tokenizer;
+
+			char_separator sep(":", "", boost::drop_empty_tokens);
+			tokenizer tokens(inputFileExt, sep);
+
+			for (tokenizer::iterator tok_iter = tokens.begin(); tok_iter != tokens.end(); ++tok_iter)
+				extList.push_back("." + *tok_iter);
 		}
 
+		if (!NotSyncCropSize)
 		{
 			char buf[AR_PATH_MAX] = "";
-			GetWindowTextA(GetDlgItem(dh, IDC_EDIT_CROP_SIZE), buf, _countof(buf));
+			GetWindowTextA(GetDlgItem(dh, IDC_COMBO_CROP_SIZE), buf, _countof(buf));
 			buf[_countof(buf) - 1] = '\0';
 
 			char *ptr = nullptr;
@@ -196,6 +235,95 @@ private:
 		}
 
 		return ret;
+	}
+
+	void SetCropSizeList(const boost::filesystem::path &input_path)
+	{
+		HWND hcrop = GetDlgItem(dh, IDC_COMBO_CROP_SIZE);
+
+		int gcd = 1;
+		if (boost::filesystem::is_directory(input_path))
+		{
+			BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::recursive_directory_iterator(input_path),
+				boost::filesystem::recursive_directory_iterator()))
+			{
+				if (!boost::filesystem::is_directory(p) && std::find(extList.begin(), extList.end(), p.extension().string()) != extList.end())
+				{
+					auto mat = cv::imread(p.string(), cv::IMREAD_UNCHANGED);
+					if (mat.empty())
+						continue;
+
+					auto size = mat.size();
+					mat.release();
+
+					gcd = boost::math::gcd(size.width, size.height);
+				}
+			}
+		}
+		else
+		{
+			auto mat = cv::imread(input_path.string(), cv::IMREAD_UNCHANGED);
+			if (mat.empty())
+				return;
+
+			auto size = mat.size();
+			mat.release();
+
+			gcd = boost::math::gcd(size.width, size.height);
+		}
+
+		while (SendMessage(hcrop, CB_GETCOUNT, 0, 0) != 0)
+			SendMessage(hcrop, CB_DELETESTRING, 0, 0);
+
+		// 最大公約数の約数のリスト取得
+		std::vector<int> list(CommonDivisorList(gcd));
+
+		// MinCommonDivisor未満の約数削除
+		list.erase(std::remove_if(list.begin(), list.end(), [](const int v)
+		{
+			return v < MinCommonDivisor;
+		}
+		), list.end());
+
+		if (list.size() == 0)
+		{
+			// gcdがMinCommonDivisor未満だったら2の累乗を適当に追加していく
+			for (int i = 64; i <= 512; i *= 2)
+				list.push_back(i);
+		}
+		else
+		{
+			int mindiff = INT_MAX;
+			for (int i = 0; i < list.size(); i++)
+				mindiff = std::min(mindiff, abs(DefaultCommonDivisor - list[i]));
+
+			// 全ての公約数とDefaultCommonDivisorとの最小の差が64以上ならDefaultCommonDivisor追加
+			if (mindiff >= 64)
+			{
+				list.push_back(DefaultCommonDivisor);
+
+				std::sort(list.begin(), list.end());
+			}
+		}
+
+		int mindiff = INT_MAX;
+		int defaultIndex = 0;
+		for (int i = 0; i < list.size(); i++)
+		{
+			const int n = list[i];
+
+			std::string str(std::to_string(n));
+			SendMessageA(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
+
+			const int diff = abs(DefaultCommonDivisor - n);
+			if (diff < mindiff)
+			{
+				mindiff = diff;
+				defaultIndex = i;
+			}
+		}
+
+		SendMessage(hcrop, CB_SETCURSEL, defaultIndex, 0);
 	}
 
 	void ProcessWaifu2x()
@@ -220,22 +348,8 @@ private:
 				}
 			}
 
-			std::vector<std::string> extList;
-			{
-				// input_extention_listを文字列の配列にする
-
-				typedef boost::char_separator<char> char_separator;
-				typedef boost::tokenizer<char_separator> tokenizer;
-
-				char_separator sep(":", "", boost::drop_empty_tokens);
-				tokenizer tokens(inputFileExt, sep);
-
-				for (tokenizer::iterator tok_iter = tokens.begin(); tok_iter != tokens.end(); ++tok_iter)
-					extList.push_back("." + *tok_iter);
-			}
-
 			// 変換する画像の入力、出力パスを取得
-			const auto func = [this, &extList, &input_path, &output_path, &file_paths](const boost::filesystem::path &path)
+			const auto func = [this, &input_path, &output_path, &file_paths](const boost::filesystem::path &path)
 			{
 				BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::recursive_directory_iterator(path),
 					boost::filesystem::recursive_directory_iterator()))
@@ -337,7 +451,7 @@ private:
 
 	void ReplaceAddString()
 	{
-		SyncMember();
+		SyncMember(true);
 
 		const boost::filesystem::path output_path(output_str);
 		std::string stem = output_path.stem().string();
@@ -426,7 +540,7 @@ public:
 		if (processThread.joinable())
 			return;
 
-		SyncMember();
+		SyncMember(false);
 
 		if (input_str.length() == 0)
 		{
@@ -575,7 +689,7 @@ public:
 		SetWindowTextA(GetDlgItem(hWnd, IDC_EDIT_SCALE_RATIO), text);
 		SetWindowTextA(GetDlgItem(hWnd, IDC_EDIT_OUT_EXT), outputExt.c_str());
 		SetWindowTextA(GetDlgItem(hWnd, IDC_EDIT_INPUT_EXT_LIST), inputFileExt.c_str());
-		SetWindowTextA(GetDlgItem(hWnd, IDC_EDIT_CROP_SIZE), std::to_string(crop_size).c_str());
+		SetWindowTextA(GetDlgItem(hWnd, IDC_COMBO_CROP_SIZE), std::to_string(crop_size).c_str());
 	}
 
 	void Cancel(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
@@ -623,7 +737,13 @@ public:
 
 			boost::filesystem::path path(szTmp);
 
-			if (!SyncMember())
+			if (!boost::filesystem::exists(path))
+			{
+				MessageBox(dh, TEXT("入力ファイル/フォルダが存在しません"), TEXT("エラー"), MB_OK | MB_ICONERROR);
+				return 0L;
+			}
+
+			if (!SyncMember(true))
 				return 0L;
 
 			if (boost::filesystem::is_directory(path))
@@ -657,6 +777,8 @@ public:
 
 				SetWindowTextA(hWnd, szTmp);
 			}
+
+			SetCropSizeList(path);
 		}
 
 		return 0L;
