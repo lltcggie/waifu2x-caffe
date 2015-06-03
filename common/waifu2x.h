@@ -32,6 +32,14 @@ public:
 		eWaifu2xError_FailedProcessCaffe,
 	};
 
+	enum eWaifu2xcuDNNError
+	{
+		eWaifu2xcuDNNError_OK = 0,
+		eWaifu2xcuDNNError_NotFind,
+		eWaifu2xcuDNNError_OldVersion,
+		eWaifu2xcuDNNError_CannotCreate,
+	};
+
 	typedef std::function<bool()> waifu2xCancelFunc;
 
 private:
@@ -74,7 +82,7 @@ public:
 	Waifu2x();
 	~Waifu2x();
 
-	static bool can_use_cuDNN();
+	static eWaifu2xcuDNNError can_use_cuDNN();
 
 	// mode: noise or scale or noise_scale or auto_scale
 	// process: cpu or gpu or cudnn

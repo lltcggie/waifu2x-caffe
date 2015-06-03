@@ -48,29 +48,42 @@ Waifu2x::~Waifu2x()
 }
 
 // cuDNNが使えるかチェック。現状Windowsのみ
-bool Waifu2x::can_use_cuDNN()
+Waifu2x::eWaifu2xcuDNNError Waifu2x::can_use_cuDNN()
 {
-	static bool cuDNNFlag = false;
+	static eWaifu2xcuDNNError cuDNNFlag = eWaifu2xcuDNNError_NotFind;
 	std::call_once(waifu2x_cudnn_once_flag, [&]()
 	{
 #if defined(WIN32) || defined(WIN64)
 		HMODULE hModule = LoadLibrary(TEXT("cudnn64_65.dll"));
 		if (hModule != NULL)
 		{
-			typedef cudnnStatus_t(*cudnnCreateType)(cudnnHandle_t *);
-			typedef cudnnStatus_t(*cudnnDestroyType)(cudnnHandle_t);
+			typedef cudnnStatus_t(*__stdcall cudnnCreateType)(cudnnHandle_t *);
+			typedef cudnnStatus_t(*__stdcall cudnnDestroyType)(cudnnHandle_t);
+			typedef uint64_t(*__stdcall cudnnGetVersionType)();
 
 			cudnnCreateType cudnnCreateFunc = (cudnnCreateType)GetProcAddress(hModule, "cudnnCreate");
 			cudnnDestroyType cudnnDestroyFunc = (cudnnDestroyType)GetProcAddress(hModule, "cudnnDestroy");
-			if (cudnnCreateFunc != nullptr && cudnnDestroyFunc != nullptr)
+			cudnnGetVersionType cudnnGetVersionFunc = (cudnnGetVersionType)GetProcAddress(hModule, "cudnnGetVersion");
+			if (cudnnCreateFunc != nullptr && cudnnDestroyFunc != nullptr && cudnnGetVersionFunc != nullptr)
 			{
-				cudnnHandle_t h;
-				if (cudnnCreateFunc(&h) == CUDNN_STATUS_SUCCESS)
+				if (cudnnGetVersionFunc() >= 2000)
 				{
-					if (cudnnDestroyFunc(h) == CUDNN_STATUS_SUCCESS)
-						cuDNNFlag = true;
+					cudnnHandle_t h;
+					if (cudnnCreateFunc(&h) == CUDNN_STATUS_SUCCESS)
+					{
+						if (cudnnDestroyFunc(h) == CUDNN_STATUS_SUCCESS)
+							cuDNNFlag = eWaifu2xcuDNNError_OK;
+						else
+							cuDNNFlag = eWaifu2xcuDNNError_CannotCreate;
+					}
+					else
+						cuDNNFlag = eWaifu2xcuDNNError_CannotCreate;
 				}
+				else
+					cuDNNFlag = eWaifu2xcuDNNError_OldVersion;
 			}
+			else
+				cuDNNFlag = eWaifu2xcuDNNError_NotFind;
 
 			FreeLibrary(hModule);
 		}
@@ -505,7 +518,7 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 	if (process == "gpu")
 	{
 		// cuDNNが使えそうならcuDNNを使う
-		if (can_use_cuDNN())
+		if (can_use_cuDNN() == eWaifu2xcuDNNError_OK)
 			process = "cudnn";
 	}
 
