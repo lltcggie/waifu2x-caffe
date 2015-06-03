@@ -323,7 +323,8 @@ private:
 			}
 		}
 
-		SendMessage(hcrop, CB_SETCURSEL, defaultIndex, 0);
+		if (GetWindowTextLength(hcrop) == 0)
+			SendMessage(hcrop, CB_SETCURSEL, defaultIndex, 0);
 	}
 
 	void ProcessWaifu2x()
@@ -689,7 +690,6 @@ public:
 		SetWindowTextA(GetDlgItem(hWnd, IDC_EDIT_SCALE_RATIO), text);
 		SetWindowTextA(GetDlgItem(hWnd, IDC_EDIT_OUT_EXT), outputExt.c_str());
 		SetWindowTextA(GetDlgItem(hWnd, IDC_EDIT_INPUT_EXT_LIST), inputFileExt.c_str());
-		SetWindowTextA(GetDlgItem(hWnd, IDC_COMBO_CROP_SIZE), std::to_string(crop_size).c_str());
 	}
 
 	void Cancel(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
