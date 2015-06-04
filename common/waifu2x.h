@@ -65,8 +65,14 @@ private:
 	std::string model_dir;
 	std::string process;
 
+	bool isCuda;
+
 	boost::shared_ptr<caffe::Net<float>> net_noise;
 	boost::shared_ptr<caffe::Net<float>> net_scale;
+
+	float *block;
+	float *dummy_data;
+	float *out_block;
 
 private:
 	eWaifu2xError LoadImage(cv::Mat &float_image, const std::string &input_file);

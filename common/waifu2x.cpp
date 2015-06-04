@@ -8,6 +8,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 #include <chrono>
+#include <cuda_runtime.h>
 
 #if defined(WIN32) || defined(WIN64)
 #include <Windows.h>
@@ -37,8 +38,31 @@ const int ConvertInverseMode = CV_YUV2RGB;
 static std::once_flag waifu2x_once_flag;
 static std::once_flag waifu2x_cudnn_once_flag;
 
+#ifndef CUDA_CHECK_WAIFU2X
+#define CUDA_CHECK_WAIFU2X(condition) \
+ do { \
+    cudaError_t error = condition; \
+    if(error != cudaSuccess) throw error; \
+ } while (0)
+#endif
 
-Waifu2x::Waifu2x() : is_inited(false)
+#define CUDA_HOST_SAFE_FREE(ptr) \
+	do { \
+		if (ptr) { \
+			cudaFreeHost(ptr); \
+			ptr = nullptr; \
+		} \
+	} while (0)
+
+#define SAFE_DELETE_WAIFU2X(ptr) \
+	do { \
+		if (ptr) { \
+			delete [] ptr; \
+			ptr = nullptr; \
+		} \
+	} while (0)
+
+Waifu2x::Waifu2x() : is_inited(false), isCuda(false), block(nullptr), dummy_data(nullptr), out_block(nullptr)
 {
 }
 
@@ -376,8 +400,6 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 			net->layer_by_name("conv7_layer"));
 		assert(conv7_layer);
 
-		
-
 		input_layer->set_batch_size(batch_size);
 
 		const int WidthNum = Width / output_size;
@@ -387,9 +409,6 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 
 		const int input_block_plane_size = block_size * block_size;
 		const int output_block_plane_size = crop_size * crop_size;
-
-		std::vector<float> block(input_block_plane_size * batch_size, 0.0f);
-		std::vector<float> dummy_data(block.size(), 0.0f);
 
 		// 画像は(消費メモリの都合上)output_size*output_sizeに分けて再構築する
 		for (int num = 0; num < BlockNum; num += batch_size)
@@ -418,7 +437,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 
 						// 画像を直列に変換
 						{
-							float *fptr = block.data() + (input_block_plane_size * n);
+							float *fptr = block + (input_block_plane_size * n);
 							const float *uptr = (const float *)someborderimg.data;
 
 							const auto Line = someborderimg.step1();
@@ -436,7 +455,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 			}
 
 			// ネットワークに画像を入力
-			input_layer->Reset(block.data(), dummy_data.data(), block.size());
+			input_layer->Reset(block, dummy_data, input_block_plane_size * batch_size);
 
 			// 計算
 			auto out = net->ForwardPrefilled(nullptr);
@@ -452,7 +471,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 			else
 				ptr = b->gpu_data();
 
-			caffe::caffe_copy(output_block_plane_size * processNum, ptr, block.data());
+			caffe::caffe_copy(output_block_plane_size * processNum, ptr, out_block);
 
 			for (int n = 0; n < processNum; n++)
 			{
@@ -462,7 +481,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 				const int w = wn * output_size;
 				const int h = hn * output_size;
 
-				const float *fptr = block.data() + (output_block_plane_size * n);
+				const float *fptr = out_block + (output_block_plane_size * n);
 
 				// 結果を入力画像にコピー(後に処理する部分とここで上書きする部分は被らないから、入力画像を上書きしても大丈夫)
 				for (int i = 0; i < crop_size; i++)
@@ -489,91 +508,123 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 	if (ScaleRatio <= 0.0)
 		return eWaifu2xError_InvalidParameter;
 
-	mode = Mode;
-	noise_level = NoiseLevel;
-	scale_ratio = ScaleRatio;
-	model_dir = ModelDir;
-	process = Process;
-
-	crop_size = CropSize;
-	batch_size = BatchSize;
-
-	output_size = crop_size - offset * 2;
-	block_size = crop_size + layer_num * 2;
-	original_width_height = 128 + layer_num * 2;
-
-	std::call_once(waifu2x_once_flag, [argc, argv]()
+	try
 	{
-		assert(argc >= 1);
+		mode = Mode;
+		noise_level = NoiseLevel;
+		scale_ratio = ScaleRatio;
+		model_dir = ModelDir;
+		process = Process;
 
-		int tmpargc = 1;
-		char* tmpargvv[] = { argv[0] };
-		char** tmpargv = tmpargvv;
-		// glog等の初期化
-		caffe::GlobalInit(&tmpargc, &tmpargv);
-	});
+		crop_size = CropSize;
+		batch_size = BatchSize;
 
-	const auto cuDNNCheckStartTime = std::chrono::system_clock::now();
+		output_size = crop_size - offset * 2;
+		block_size = crop_size + layer_num * 2;
+		original_width_height = 128 + layer_num * 2;
 
-	if (process == "gpu")
-	{
-		// cuDNNが使えそうならcuDNNを使う
-		if (can_use_cuDNN() == eWaifu2xcuDNNError_OK)
-			process = "cudnn";
-	}
-
-	const auto cuDNNCheckEndTime = std::chrono::system_clock::now();
-
-	boost::filesystem::path mode_dir_path(model_dir);
-	if (!mode_dir_path.is_absolute()) // model_dirが相対パスなら絶対パスに直す
-	{
-		// まずはカレントディレクトリ下にあるか探す
-		mode_dir_path = boost::filesystem::absolute(model_dir);
-		if (!boost::filesystem::exists(mode_dir_path) && argc >= 1) // 無かったらargv[0]から実行ファイルのあるフォルダを推定し、そのフォルダ下にあるか探す
+		std::call_once(waifu2x_once_flag, [argc, argv]()
 		{
-			boost::filesystem::path a0(argv[0]);
-			if (a0.is_absolute())
-				mode_dir_path = a0.branch_path() / model_dir;
+			assert(argc >= 1);
+
+			int tmpargc = 1;
+			char* tmpargvv[] = { argv[0] };
+			char** tmpargv = tmpargvv;
+			// glog等の初期化
+			caffe::GlobalInit(&tmpargc, &tmpargv);
+		});
+
+		const auto cuDNNCheckStartTime = std::chrono::system_clock::now();
+
+		if (process == "gpu")
+		{
+			// cuDNNが使えそうならcuDNNを使う
+			if (can_use_cuDNN() == eWaifu2xcuDNNError_OK)
+				process = "cudnn";
 		}
+
+		const auto cuDNNCheckEndTime = std::chrono::system_clock::now();
+
+		boost::filesystem::path mode_dir_path(model_dir);
+		if (!mode_dir_path.is_absolute()) // model_dirが相対パスなら絶対パスに直す
+		{
+			// まずはカレントディレクトリ下にあるか探す
+			mode_dir_path = boost::filesystem::absolute(model_dir);
+			if (!boost::filesystem::exists(mode_dir_path) && argc >= 1) // 無かったらargv[0]から実行ファイルのあるフォルダを推定し、そのフォルダ下にあるか探す
+			{
+				boost::filesystem::path a0(argv[0]);
+				if (a0.is_absolute())
+					mode_dir_path = a0.branch_path() / model_dir;
+			}
+		}
+
+		if (!boost::filesystem::exists(mode_dir_path))
+			return eWaifu2xError_FailedOpenModelFile;
+
+		if (process == "cpu")
+		{
+			caffe::Caffe::set_mode(caffe::Caffe::CPU);
+			isCuda = false;
+		}
+		else
+		{
+			caffe::Caffe::set_mode(caffe::Caffe::GPU);
+			isCuda = true;
+		}
+
+		if (mode == "noise" || mode == "noise_scale" || mode == "auto_scale")
+		{
+			const std::string model_path = (mode_dir_path / "srcnn.prototxt").string();
+			const std::string param_path = (mode_dir_path / ("noise" + std::to_string(noise_level) + "_model.json")).string();
+
+			ret = ConstractNet(net_noise, model_path, process);
+			if (ret != eWaifu2xError_OK)
+				return ret;
+
+			ret = LoadParameter(net_noise, param_path);
+			if (ret != eWaifu2xError_OK)
+				return ret;
+		}
+
+		if (mode == "scale" || mode == "noise_scale" || mode == "auto_scale")
+		{
+			const std::string model_path = (mode_dir_path / "srcnn.prototxt").string();
+			const std::string param_path = (mode_dir_path / "scale2.0x_model.json").string();
+
+			ret = ConstractNet(net_scale, model_path, process);
+			if (ret != eWaifu2xError_OK)
+				return ret;
+
+			ret = LoadParameter(net_scale, param_path);
+			if (ret != eWaifu2xError_OK)
+				return ret;
+		}
+
+		const int input_block_plane_size = block_size * block_size;
+		const int output_block_plane_size = crop_size * crop_size;
+
+		if (isCuda)
+		{
+			CUDA_CHECK_WAIFU2X(cudaHostAlloc(&block, sizeof(float) * input_block_plane_size * batch_size, cudaHostAllocWriteCombined));
+			CUDA_CHECK_WAIFU2X(cudaHostAlloc(&dummy_data, sizeof(float) * input_block_plane_size * batch_size, cudaHostAllocWriteCombined));
+			CUDA_CHECK_WAIFU2X(cudaHostAlloc(&out_block, sizeof(float) * output_block_plane_size * batch_size, cudaHostAllocDefault));
+		}
+		else
+		{
+			block = new float[input_block_plane_size * batch_size];
+			dummy_data = new float[input_block_plane_size * batch_size];
+			out_block = new float[output_block_plane_size * batch_size];
+		}
+
+		for (size_t i = 0; i < input_block_plane_size * batch_size; i++)
+			dummy_data[i] = 0.0f;
+
+		is_inited = true;
 	}
-
-	if (!boost::filesystem::exists(mode_dir_path))
-		return eWaifu2xError_FailedOpenModelFile;
-
-	if (process == "cpu")
-		caffe::Caffe::set_mode(caffe::Caffe::CPU);
-	else
-		caffe::Caffe::set_mode(caffe::Caffe::GPU);
-
-	if (mode == "noise" || mode == "noise_scale" || mode == "auto_scale")
+	catch (...)
 	{
-		const std::string model_path = (mode_dir_path / "srcnn.prototxt").string();
-		const std::string param_path = (mode_dir_path / ("noise" + std::to_string(noise_level) + "_model.json")).string();
-
-		ret = ConstractNet(net_noise, model_path, process);
-		if (ret != eWaifu2xError_OK)
-			return ret;
-
-		ret = LoadParameter(net_noise, param_path);
-		if (ret != eWaifu2xError_OK)
-			return ret;
+		return eWaifu2xError_InvalidParameter;
 	}
-
-	if (mode == "scale" || mode == "noise_scale" || mode == "auto_scale")
-	{
-		const std::string model_path = (mode_dir_path / "srcnn.prototxt").string();
-		const std::string param_path = (mode_dir_path / "scale2.0x_model.json").string();
-
-		ret = ConstractNet(net_scale, model_path, process);
-		if (ret != eWaifu2xError_OK)
-			return ret;
-
-		ret = LoadParameter(net_scale, param_path);
-		if (ret != eWaifu2xError_OK)
-			return ret;
-	}
-
-	is_inited = true;
 
 	return eWaifu2xError_OK;
 }
@@ -582,6 +633,19 @@ void Waifu2x::destroy()
 {
 	net_noise.reset();
 	net_scale.reset();
+
+	if (isCuda)
+	{
+		CUDA_HOST_SAFE_FREE(block);
+		CUDA_HOST_SAFE_FREE(dummy_data);
+		CUDA_HOST_SAFE_FREE(out_block);
+	}
+	else
+	{
+		SAFE_DELETE_WAIFU2X(block);
+		SAFE_DELETE_WAIFU2X(dummy_data);
+		SAFE_DELETE_WAIFU2X(out_block);
+	}
 
 	is_inited = false;
 }
