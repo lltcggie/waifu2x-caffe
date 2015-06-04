@@ -41,13 +41,13 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\caffe\build\include;D:\caffe\3rdparty\include;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include;C:\boost_1_56_0;C:\opencv249\build\include;$(SolutionDir)rapidjson\include;$(SolutionDir)include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\caffe\build\lib;D:\caffe\3rdparty\lib;C:\boost_1_56_0\lib64-msvc-12.0;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)caffe\build\include;$(SolutionDir)caffe\3rdparty\include;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include;C:\boost_1_56_0;C:\opencv249\build\include;$(SolutionDir)rapidjson\include;$(SolutionDir)include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)caffe\build\lib;$(SolutionDir)caffe\3rdparty\lib;C:\boost_1_56_0\lib64-msvc-12.0;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>D:\caffe\build\include;D:\caffe\3rdparty\include;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include;C:\boost_1_56_0;C:\opencv249\build\include;$(SolutionDir)rapidjson\include;$(SolutionDir)include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\caffe\build\lib;D:\caffe\3rdparty\lib;C:\boost_1_56_0\lib64-msvc-12.0;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)caffe\build\include;$(SolutionDir)caffe\3rdparty\include;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include;C:\boost_1_56_0;C:\opencv249\build\include;$(SolutionDir)rapidjson\include;$(SolutionDir)include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)caffe\build\lib;$(SolutionDir)caffe\3rdparty\lib;C:\boost_1_56_0\lib64-msvc-12.0;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
