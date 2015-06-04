@@ -492,7 +492,7 @@ private:
 			if (p == "cpu")
 				p = "CPU";
 			else if (p == "gpu")
-				p = "GPU";
+				p = "CUDA";
 			else if (p == "cudnn")
 				p = "cuDNN";
 
