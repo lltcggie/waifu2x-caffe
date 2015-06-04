@@ -5,3 +5,4 @@
 	path = caffe
 	url = https://github.com/lltcggie/caffe.git
 	branch = support_windows
+	ignore = dirty
