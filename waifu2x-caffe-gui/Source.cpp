@@ -285,27 +285,6 @@ private:
 		}
 		), list.end());
 
-		if (list.size() == 0)
-		{
-			// gcd‚ªMinCommonDivisor–¢–‚¾‚Á‚½‚ç2‚Ì—İæ‚ğ“K“–‚É’Ç‰Á‚µ‚Ä‚¢‚­
-			for (int i = 64; i <= 512; i *= 2)
-				list.push_back(i);
-		}
-		else
-		{
-			int mindiff = INT_MAX;
-			for (int i = 0; i < list.size(); i++)
-				mindiff = std::min(mindiff, abs(DefaultCommonDivisor - list[i]));
-
-			// ‘S‚Ä‚ÌŒö–ñ”‚ÆDefaultCommonDivisor‚Æ‚ÌÅ¬‚Ì·‚ª64ˆÈã‚È‚çDefaultCommonDivisor’Ç‰Á
-			if (mindiff >= 64)
-			{
-				list.push_back(DefaultCommonDivisor);
-
-				std::sort(list.begin(), list.end());
-			}
-		}
-
 		int mindiff = INT_MAX;
 		int defaultIndex = 0;
 		for (int i = 0; i < list.size(); i++)
@@ -321,6 +300,15 @@ private:
 				mindiff = diff;
 				defaultIndex = i;
 			}
+		}
+
+		SendMessageA(hcrop, CB_ADDSTRING, 0, (LPARAM)"-----------------------");
+
+		// 2‚Ì—İæ‚ğ“K“–‚É’Ç‰Á‚µ‚Ä‚¢‚­
+		for (int i = 64; i <= 512; i *= 2)
+		{
+			std::string str(std::to_string(i));
+			SendMessageA(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
 		}
 
 		if (GetWindowTextLength(hcrop) == 0)
