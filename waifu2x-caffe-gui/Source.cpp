@@ -529,7 +529,8 @@ public:
 		if (processThread.joinable())
 			return;
 
-		SyncMember(false);
+		if (!SyncMember(false))
+			return;
 
 		if (input_str.length() == 0)
 		{
