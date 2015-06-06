@@ -6,6 +6,8 @@
 #include <thread>
 #include <atomic>
 #include <chrono>
+#include <iostream>
+#include <fstream>
 #include <boost/filesystem.hpp>
 #include <boost/tokenizer.hpp>
 #include <boost/foreach.hpp>
@@ -25,6 +27,8 @@ const size_t AR_PATH_MAX(1024);
 
 const int MinCommonDivisor = 50;
 const int DefaultCommonDivisor = 128;
+
+const char * const CropSizeListName = "crop_size_list.txt";
 
 
 // http://stackoverflow.com/questions/10167382/boostfilesystem-get-relative-path
@@ -92,6 +96,8 @@ class DialogEvent
 {
 private:
 	HWND dh;
+
+	std::vector<int> CropSizeList;
 
 	std::string input_str;
 	std::string output_str;
@@ -304,10 +310,10 @@ private:
 
 		SendMessageA(hcrop, CB_ADDSTRING, 0, (LPARAM)"-----------------------");
 
-		// 2ÇÃó›èÊÇìKìñÇ…í«â¡ÇµÇƒÇ¢Ç≠
-		for (int i = 64; i <= 512; i *= 2)
+		// CropSizeListÇÃílÇí«â¡ÇµÇƒÇ¢Ç≠
+		for (const auto n : CropSizeList)
 		{
-			std::string str(std::to_string(i));
+			std::string str(std::to_string(n));
 			SendMessageA(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
 		}
 
@@ -679,6 +685,19 @@ public:
 		SetWindowTextA(GetDlgItem(hWnd, IDC_EDIT_SCALE_RATIO), text);
 		SetWindowTextA(GetDlgItem(hWnd, IDC_EDIT_OUT_EXT), outputExt.c_str());
 		SetWindowTextA(GetDlgItem(hWnd, IDC_EDIT_INPUT_EXT_LIST), inputFileExt.c_str());
+
+		std::ifstream ifs(CropSizeListName);
+		if (ifs)
+		{
+			std::string str;
+			while (getline(ifs, str))
+			{
+				char *ptr = nullptr;
+				const long n = strtol(str.c_str(), &ptr, 10);
+				if (ptr && *ptr == '\0')
+					CropSizeList.push_back(n);
+			}
+		}
 	}
 
 	void Cancel(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
