@@ -455,7 +455,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 			}
 
 			// ネットワークに画像を入力
-			input_layer->Reset(block, dummy_data, input_block_plane_size * batch_size);
+			input_layer->Reset(block, dummy_data, input_block_plane_size * processNum);
 
 			// 計算
 			auto out = net->ForwardPrefilled(nullptr);
