@@ -9,6 +9,7 @@
 #include <boost/algorithm/string.hpp>
 #include <chrono>
 #include <cuda_runtime.h>
+#include "tinypl.hpp"
 
 #if defined(WIN32) || defined(WIN64)
 #include <Windows.h>
@@ -62,7 +63,7 @@ static std::once_flag waifu2x_cudnn_once_flag;
 		} \
 	} while (0)
 
-Waifu2x::Waifu2x() : is_inited(false), isCuda(false), block(nullptr), dummy_data(nullptr), out_block(nullptr)
+Waifu2x::Waifu2x() : job(1), is_inited(false), isCuda(false)
 {
 }
 
@@ -375,7 +376,7 @@ Waifu2x::eWaifu2xError Waifu2x::ConstractNet(boost::shared_ptr<caffe::Net<float>
 }
 
 // ネットワークを使って画像を再構築する
-Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<float>> net, cv::Mat &im)
+Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(std::vector<boost::shared_ptr<caffe::Net<float>>> nets, cv::Mat &im)
 {
 	const auto Height = im.size().height;
 	const auto Width = im.size().width;
@@ -390,18 +391,6 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 
 	try
 	{
-		const auto input_layer =
-			boost::dynamic_pointer_cast<caffe::MemoryDataLayer<float>>(
-			net->layer_by_name("image_input_layer"));
-		assert(input_layer);
-
-		const auto conv7_layer =
-			boost::dynamic_pointer_cast<caffe::ConvolutionLayer<float>>(
-			net->layer_by_name("conv7_layer"));
-		assert(conv7_layer);
-
-		input_layer->set_batch_size(batch_size);
-
 		const int WidthNum = Width / output_size;
 		const int HeightNum = Height / output_size;
 
@@ -410,9 +399,41 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 		const int input_block_plane_size = block_size * block_size;
 		const int output_block_plane_size = crop_size * crop_size;
 
-		// 画像は(消費メモリの都合上)output_size*output_sizeに分けて再構築する
-		for (int num = 0; num < BlockNum; num += batch_size)
+		const int BatchNum = BlockNum / batch_size + (BlockNum % batch_size != 0 ? 1 : 0);
+
+		for (auto net : nets)
 		{
+			const auto input_layer =
+				boost::dynamic_pointer_cast<caffe::MemoryDataLayer<float>>(
+				net->layer_by_name("image_input_layer"));
+			assert(input_layer);
+
+			input_layer->set_batch_size(batch_size);
+		}
+
+		// 画像は(消費メモリの都合上)output_size*output_sizeに分けて再構築する
+		tinypl::parallel_for(*net_scheduler, 0, BatchNum, [&](const int batch_n)
+		{
+			const auto id = std::this_thread::get_id();
+			const auto net_scheduler_id_map_it = net_scheduler_id_map.find(id);
+
+			assert(net_scheduler_id_map_it != net_scheduler_id_map.end());
+
+			const int index = net_scheduler_id_map_it->second;
+
+			auto net = nets[index];
+
+			float *block = blocks[index];
+			float *dummy_data = dummy_datas[index];
+			float *out_block = out_blocks[index];
+
+			const auto input_layer =
+				boost::dynamic_pointer_cast<caffe::MemoryDataLayer<float>>(
+				net->layer_by_name("image_input_layer"));
+			assert(input_layer);
+
+			const int num = batch_n * batch_size;
+
 			const int processNum = (BlockNum - num) >= batch_size ? batch_size : BlockNum - num;
 
 			if (processNum < batch_size)
@@ -455,7 +476,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 			}
 
 			// ネットワークに画像を入力
-			input_layer->Reset(block, dummy_data, input_block_plane_size * batch_size);
+			input_layer->Reset(block, dummy_data, input_block_plane_size * processNum);
 
 			// 計算
 			auto out = net->ForwardPrefilled(nullptr);
@@ -487,7 +508,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 				for (int i = 0; i < crop_size; i++)
 					memcpy(imptr + (h + i) * Line + w, fptr + i * crop_size, crop_size * sizeof(float));
 			}
-		}
+		});
 	}
 	catch (...)
 	{
@@ -518,6 +539,8 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 
 		crop_size = CropSize;
 		batch_size = BatchSize;
+
+		job = 2;
 
 		output_size = crop_size - offset * 2;
 		block_size = crop_size + layer_num * 2;
@@ -577,13 +600,18 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 			const std::string model_path = (mode_dir_path / "srcnn.prototxt").string();
 			const std::string param_path = (mode_dir_path / ("noise" + std::to_string(noise_level) + "_model.json")).string();
 
-			ret = ConstractNet(net_noise, model_path, process);
-			if (ret != eWaifu2xError_OK)
-				return ret;
+			net_noises.resize(job);
 
-			ret = LoadParameter(net_noise, param_path);
-			if (ret != eWaifu2xError_OK)
-				return ret;
+			for (auto &net_noise : net_noises)
+			{
+				ret = ConstractNet(net_noise, model_path, process);
+				if (ret != eWaifu2xError_OK)
+					return ret;
+
+				ret = LoadParameter(net_noise, param_path);
+				if (ret != eWaifu2xError_OK)
+					return ret;
+			}
 		}
 
 		if (mode == "scale" || mode == "noise_scale" || mode == "auto_scale")
@@ -591,33 +619,62 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 			const std::string model_path = (mode_dir_path / "srcnn.prototxt").string();
 			const std::string param_path = (mode_dir_path / "scale2.0x_model.json").string();
 
-			ret = ConstractNet(net_scale, model_path, process);
-			if (ret != eWaifu2xError_OK)
-				return ret;
+			net_scales.resize(job);
 
-			ret = LoadParameter(net_scale, param_path);
-			if (ret != eWaifu2xError_OK)
-				return ret;
+			for (auto &net_scale : net_scales)
+			{
+				ret = ConstractNet(net_scale, model_path, process);
+				if (ret != eWaifu2xError_OK)
+					return ret;
+
+				ret = LoadParameter(net_scale, param_path);
+				if (ret != eWaifu2xError_OK)
+					return ret;
+			}
 		}
 
 		const int input_block_plane_size = block_size * block_size;
 		const int output_block_plane_size = crop_size * crop_size;
 
+		blocks.resize(job);
+		dummy_datas.resize(job);
+		out_blocks.resize(job);
+
 		if (isCuda)
 		{
-			CUDA_CHECK_WAIFU2X(cudaHostAlloc(&block, sizeof(float) * input_block_plane_size * batch_size, cudaHostAllocWriteCombined));
-			CUDA_CHECK_WAIFU2X(cudaHostAlloc(&dummy_data, sizeof(float) * input_block_plane_size * batch_size, cudaHostAllocWriteCombined));
-			CUDA_CHECK_WAIFU2X(cudaHostAlloc(&out_block, sizeof(float) * output_block_plane_size * batch_size, cudaHostAllocDefault));
+			for (auto &block : blocks) {
+				CUDA_CHECK_WAIFU2X(cudaHostAlloc(&block, sizeof(float) * input_block_plane_size * batch_size, cudaHostAllocWriteCombined));
+			}
+			for (auto &dummy_data : dummy_datas) {
+				CUDA_CHECK_WAIFU2X(cudaHostAlloc(&dummy_data, sizeof(float) * input_block_plane_size * batch_size, cudaHostAllocWriteCombined));
+			}
+			for (auto &out_block : out_blocks) {
+				CUDA_CHECK_WAIFU2X(cudaHostAlloc(&out_block, sizeof(float) * output_block_plane_size * batch_size, cudaHostAllocDefault));
+			}
 		}
 		else
 		{
-			block = new float[input_block_plane_size * batch_size];
-			dummy_data = new float[input_block_plane_size * batch_size];
-			out_block = new float[output_block_plane_size * batch_size];
+			for (auto &block : blocks)
+				block = new float[input_block_plane_size * batch_size];
+			for (auto &dummy_data : dummy_datas)
+				dummy_data = new float[input_block_plane_size * batch_size];
+			for (auto &out_block : out_blocks)
+				out_block = new float[output_block_plane_size * batch_size];
 		}
 
-		for (size_t i = 0; i < input_block_plane_size * batch_size; i++)
-			dummy_data[i] = 0.0f;
+		for (auto dummy_data : dummy_datas)
+		{
+			for (size_t i = 0; i < input_block_plane_size * batch_size; i++)
+				dummy_data[i] = 0.0f;
+		}
+
+		net_scheduler.reset(new tinypl::impl::scheduler(job));
+
+		const auto list = net_scheduler->get_thread_pool_id_list();
+		for (size_t i = 0; i < list.size(); i++)
+			net_scheduler_id_map.emplace(list[i], i);
+
+		net_scheduler_id_map.emplace(std::this_thread::get_id(), list.size());
 
 		is_inited = true;
 	}
@@ -631,20 +688,34 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 
 void Waifu2x::destroy()
 {
-	net_noise.reset();
-	net_scale.reset();
+	net_scheduler.reset();
+
+	net_noises.clear();
+	net_scales.clear();
 
 	if (isCuda)
 	{
-		CUDA_HOST_SAFE_FREE(block);
-		CUDA_HOST_SAFE_FREE(dummy_data);
-		CUDA_HOST_SAFE_FREE(out_block);
+		for (auto &block : blocks) {
+			CUDA_HOST_SAFE_FREE(block);
+		}
+		for (auto &dummy_data : dummy_datas) {
+			CUDA_HOST_SAFE_FREE(dummy_data);
+		}
+		for (auto &out_block : out_blocks) {
+			CUDA_HOST_SAFE_FREE(out_block);
+		}
 	}
 	else
 	{
-		SAFE_DELETE_WAIFU2X(block);
-		SAFE_DELETE_WAIFU2X(dummy_data);
-		SAFE_DELETE_WAIFU2X(out_block);
+		for (auto &block : blocks) {
+			SAFE_DELETE_WAIFU2X(block);
+		}
+		for (auto &dummy_data : dummy_datas) {
+			SAFE_DELETE_WAIFU2X(dummy_data);
+		}
+		for (auto &out_block : out_blocks) {
+			SAFE_DELETE_WAIFU2X(out_block);
+		}
 	}
 
 	is_inited = false;
@@ -680,7 +751,7 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std
 	{
 		PaddingImage(im, im);
 
-		ret = ReconstructImage(net_noise, im);
+		ret = ReconstructImage(net_noises, im);
 		if (ret != eWaifu2xError_OK)
 			return ret;
 
@@ -701,7 +772,7 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std
 		{
 			Zoom2xAndPaddingImage(im, im, image_size);
 
-			ret = ReconstructImage(net_scale, im);
+			ret = ReconstructImage(net_scales, im);
 			if (ret != eWaifu2xError_OK)
 				return ret;
 

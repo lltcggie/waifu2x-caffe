@@ -5,8 +5,11 @@
 #include <vector>
 #include <utility>
 #include <functional>
+#include <memory>
+#include <thread>
 #include <boost/shared_ptr.hpp>
 #include <opencv2/opencv.hpp>
+#include <unordered_map>
 
 
 namespace caffe
@@ -14,6 +17,15 @@ namespace caffe
 	template <typename Dtype>
 	class Net;
 };
+
+namespace tinypl
+{
+	namespace impl
+	{
+		// task scheduler
+		class scheduler;
+	}
+}
 
 class Waifu2x
 {
@@ -64,15 +76,19 @@ private:
 	double scale_ratio;
 	std::string model_dir;
 	std::string process;
+	int job;
 
 	bool isCuda;
 
-	boost::shared_ptr<caffe::Net<float>> net_noise;
-	boost::shared_ptr<caffe::Net<float>> net_scale;
+	std::vector<boost::shared_ptr<caffe::Net<float>>> net_noises;
+	std::vector<boost::shared_ptr<caffe::Net<float>>> net_scales;
 
-	float *block;
-	float *dummy_data;
-	float *out_block;
+	std::vector<float *> blocks;
+	std::vector<float *> dummy_datas;
+	std::vector<float *> out_blocks;
+
+	std::unique_ptr<tinypl::impl::scheduler> net_scheduler;
+	std::unordered_map<std::thread::id, size_t> net_scheduler_id_map;
 
 private:
 	eWaifu2xError LoadImage(cv::Mat &float_image, const std::string &input_file);
@@ -82,7 +98,7 @@ private:
 	eWaifu2xError CreateZoomColorImage(const cv::Mat &float_image, const cv::Size_<int> &zoom_size, std::vector<cv::Mat> &cubic_planes);
 	eWaifu2xError LoadParameter(boost::shared_ptr<caffe::Net<float>> net, const std::string &param_path);
 	eWaifu2xError ConstractNet(boost::shared_ptr<caffe::Net<float>> &net, const std::string &model_path, const std::string &process);
-	eWaifu2xError ReconstructImage(boost::shared_ptr<caffe::Net<float>> net, cv::Mat &im);
+	eWaifu2xError ReconstructImage(std::vector<boost::shared_ptr<caffe::Net<float>>> nets, cv::Mat &im);
 
 public:
 	Waifu2x();
