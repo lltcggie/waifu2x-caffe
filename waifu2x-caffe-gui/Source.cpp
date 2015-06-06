@@ -308,7 +308,8 @@ private:
 			}
 		}
 
-		SendMessageA(hcrop, CB_ADDSTRING, 0, (LPARAM)"-----------------------");
+		if (SendMessageA(hcrop, CB_ADDSTRING, 0, (LPARAM)"-----------------------") == defaultIndex)
+			defaultIndex = 1;
 
 		// CropSizeList‚Ì’l‚ð’Ç‰Á‚µ‚Ä‚¢‚­
 		for (const auto n : CropSizeList)
