@@ -92,6 +92,7 @@
     <ClCompile Include="CControl.cpp" />
     <ClCompile Include="CDialog.cpp" />
     <ClCompile Include="CDialogBase.cpp" />
+    <ClCompile Include="MiniDump.cpp" />
     <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -102,6 +103,7 @@
     <ClInclude Include="CWindow.h" />
     <ClInclude Include="CWindowBase.h" />
     <ClInclude Include="GUICommon.h" />
+    <ClInclude Include="MiniDump.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>

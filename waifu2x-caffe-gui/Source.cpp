@@ -18,6 +18,7 @@
 
 #include "CDialog.h"
 #include "CControl.h"
+#include "MiniDump.h"
 
 #define WM_FAILD_CREATE_DIR (WM_APP + 5)
 #define WM_ON_WAIFU2X_ERROR (WM_APP + 6)
@@ -824,6 +825,8 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	LPSTR     lpCmdLine,
 	int       nCmdShow)
 {
+	//PVOID hVectoredExceptionHandler = AddVectoredExceptionHandler(1, ExceptionHandler);
+
 	// CDialogクラスでダイアログを作成する
 	CDialog cDialog;
 	CDialog cDialog2;
@@ -875,6 +878,8 @@ int WINAPI WinMain(HINSTANCE hInstance,
 
 	// ダイアログを表示
 	cDialog.DoModal(hInstance, IDD_DIALOG);
+
+	//RemoveVectoredExceptionHandler(hVectoredExceptionHandler);
 
 	return 0;
 }

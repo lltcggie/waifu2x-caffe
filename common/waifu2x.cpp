@@ -12,6 +12,7 @@
 
 #if defined(WIN32) || defined(WIN64)
 #include <Windows.h>
+#include "../waifu2x-caffe-gui/MiniDump.h"
 
 #undef LoadImage
 #endif
@@ -527,11 +528,22 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 		{
 			assert(argc >= 1);
 
-			int tmpargc = 1;
 			char* tmpargvv[] = { argv[0] };
+			int tmpargc = sizeof(tmpargvv) / sizeof(tmpargvv[0]);
 			char** tmpargv = tmpargvv;
+
+			FLAGS_minloglevel = 1;
+			FLAGS_logtostderr = 0;
+			FLAGS_log_dir = "./logs";
+
 			// glogìôÇÃèâä˙âª
 			caffe::GlobalInit(&tmpargc, &tmpargv);
+
+			::google::InstallFailureFunction([]()
+			{
+				ExceptionHandler(nullptr, 2);
+				abort();
+			});
 		});
 
 		const auto cuDNNCheckStartTime = std::chrono::system_clock::now();
