@@ -35,8 +35,12 @@ const int layer_num = 7;
 const int ConvertMode = CV_RGB2YUV;
 const int ConvertInverseMode = CV_YUV2RGB;
 
+// 最低限必要なCUDAドライバーのバージョン
+const int MinCudaDriverVersion = 6050;
+
 static std::once_flag waifu2x_once_flag;
 static std::once_flag waifu2x_cudnn_once_flag;
+static std::once_flag waifu2x_cuda_once_flag;
 
 #ifndef CUDA_CHECK_WAIFU2X
 #define CUDA_CHECK_WAIFU2X(condition) \
@@ -115,6 +119,38 @@ Waifu2x::eWaifu2xcuDNNError Waifu2x::can_use_cuDNN()
 	});
 
 	return cuDNNFlag;
+}
+
+// CUDAが使えるかチェック
+Waifu2x::eWaifu2xCudaError Waifu2x::can_use_CUDA()
+{
+	static eWaifu2xCudaError CudaFlag = eWaifu2xCudaError_NotFind;
+	std::call_once(waifu2x_cuda_once_flag, [&]()
+	{
+		int driverVersion = 0;
+		if (cudaDriverGetVersion(&driverVersion) == cudaSuccess)
+		{
+			if (driverVersion > 0)
+			{
+				int runtimeVersion;
+				if (cudaRuntimeGetVersion(&runtimeVersion) == cudaSuccess)
+				{
+					if (runtimeVersion >= MinCudaDriverVersion && driverVersion >= runtimeVersion)
+						CudaFlag = eWaifu2xCudaError_OK;
+					else
+						CudaFlag = eWaifu2xCudaError_OldVersion;
+				}
+				else
+					CudaFlag = eWaifu2xCudaError_NotFind;
+			}
+			else
+				CudaFlag = eWaifu2xCudaError_NotFind;
+		}
+		else
+			CudaFlag = eWaifu2xCudaError_NotFind;
+	});
+
+	return CudaFlag;
 }
 
 // 画像を読み込んで値を0.0f～1.0fの範囲に変換
@@ -538,8 +574,10 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 
 		if (process == "gpu")
 		{
+			if (can_use_CUDA() != eWaifu2xCudaError_OK)
+				return eWaifu2xError_FailedCudaCheck;
 			// cuDNNが使えそうならcuDNNを使う
-			if (can_use_cuDNN() == eWaifu2xcuDNNError_OK)
+			else if (can_use_cuDNN() == eWaifu2xcuDNNError_OK)
 				process = "cudnn";
 		}
 

@@ -30,6 +30,14 @@ public:
 		eWaifu2xError_FailedParseModelFile,
 		eWaifu2xError_FailedConstructModel,
 		eWaifu2xError_FailedProcessCaffe,
+		eWaifu2xError_FailedCudaCheck,
+	};
+
+	enum eWaifu2xCudaError
+	{
+		eWaifu2xCudaError_OK = 0,
+		eWaifu2xCudaError_NotFind,
+		eWaifu2xCudaError_OldVersion,
 	};
 
 	enum eWaifu2xcuDNNError
@@ -89,6 +97,7 @@ public:
 	~Waifu2x();
 
 	static eWaifu2xcuDNNError can_use_cuDNN();
+	static eWaifu2xCudaError can_use_CUDA();
 
 	// mode: noise or scale or noise_scale or auto_scale
 	// process: cpu or gpu or cudnn

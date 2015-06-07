@@ -557,6 +557,20 @@ public:
 			return;
 		}
 
+		if (process == "gpu" || process == "cudnn")
+		{
+			const auto flag = Waifu2x::can_use_CUDA();
+			switch (flag)
+			{
+			case Waifu2x::eWaifu2xCudaError_NotFind:
+				MessageBox(dh, TEXT("GPUで変換出来ません。\r\nCUDAドライバーがインストールされていない可能性があります。\r\nCUDAドライバーをインストールして下さい。"), TEXT("エラー"), MB_OK | MB_ICONERROR);
+				return;
+			case Waifu2x::eWaifu2xCudaError_OldVersion:
+				MessageBox(dh, TEXT("GPUで変換出来ません。\r\nCUDAドライバーのバージョンが古い可能性があります。\r\nCUDAドライバーを更新して下さい。"), TEXT("エラー"), MB_OK | MB_ICONERROR);
+				return;
+			}
+		}
+
 		SendMessage(GetDlgItem(dh, IDC_PROGRESS), PBM_SETPOS, 0, 0);
 		cancelFlag = false;
 		isLastError = false;
@@ -714,19 +728,30 @@ public:
 
 	void CheckCUDNN(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 	{
+		const auto flag = Waifu2x::can_use_CUDA();
+		switch (flag)
+		{
+		case Waifu2x::eWaifu2xCudaError_NotFind:
+			MessageBox(dh, TEXT("cuDNNは使えません。\r\nCUDAドライバーがインストールされていない可能性があります。\r\nCUDAドライバーをインストールして下さい。"), TEXT("結果"), MB_OK | MB_ICONERROR);
+			return;
+		case Waifu2x::eWaifu2xCudaError_OldVersion:
+			MessageBox(dh, TEXT("cuDNNは使えません。\r\nCUDAドライバーのバージョンが古い可能性があります。\r\nCUDAドライバーを更新して下さい。"), TEXT("結果"), MB_OK | MB_ICONERROR);
+			return;
+		}
+
 		switch (Waifu2x::can_use_cuDNN())
 		{
 		case Waifu2x::eWaifu2xcuDNNError_OK:
-			MessageBox(dh, TEXT("cuDNNが使えます"), TEXT("結果"), MB_OK | MB_ICONINFORMATION);
+			MessageBox(dh, TEXT("cuDNNが使えます。"), TEXT("結果"), MB_OK | MB_ICONINFORMATION);
 			break;
 		case Waifu2x::eWaifu2xcuDNNError_NotFind:
-			MessageBox(dh, TEXT("cuDNNは使えません\r\n「cudnn64_65.dll」が見つかりません"), TEXT("結果"), MB_OK | MB_ICONERROR);
+			MessageBox(dh, TEXT("cuDNNは使えません。\r\n「cudnn64_65.dll」が見つかりません。"), TEXT("結果"), MB_OK | MB_ICONERROR);
 			break;
 		case Waifu2x::eWaifu2xcuDNNError_OldVersion:
-			MessageBox(dh, TEXT("cuDNNは使えません\r\n「cudnn64_65.dll」のバージョンが古いです。v2を使って下さい。"), TEXT("結果"), MB_OK | MB_ICONERROR);
+			MessageBox(dh, TEXT("cuDNNは使えません。\r\n「cudnn64_65.dll」のバージョンが古いです。v2を使って下さい。"), TEXT("結果"), MB_OK | MB_ICONERROR);
 			break;
 		case Waifu2x::eWaifu2xcuDNNError_CannotCreate:
-			MessageBox(dh, TEXT("cuDNNは使えません\r\ncuDNNを初期化出来ません"), TEXT("結果"), MB_OK | MB_ICONERROR);
+			MessageBox(dh, TEXT("cuDNNは使えません。\r\ncuDNNを初期化出来ません。"), TEXT("結果"), MB_OK | MB_ICONERROR);
 			break;
 		default:
 			MessageBox(dh, TEXT("cuDNNは使えません"), TEXT("結果"), MB_OK | MB_ICONERROR);
