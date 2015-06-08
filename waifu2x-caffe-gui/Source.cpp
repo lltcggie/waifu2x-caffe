@@ -27,6 +27,7 @@ const size_t AR_PATH_MAX(1024);
 
 const int MinCommonDivisor = 50;
 const int DefaultCommonDivisor = 128;
+const std::pair<int, int> DefaultCommonDivisorRange = {90, 140};
 
 const char * const CropSizeListName = "crop_size_list.txt";
 
@@ -292,7 +293,7 @@ private:
 		), list.end());
 
 		int mindiff = INT_MAX;
-		int defaultIndex = 0;
+		int defaultIndex = -1;
 		for (int i = 0; i < list.size(); i++)
 		{
 			const int n = list[i];
@@ -301,22 +302,33 @@ private:
 			SendMessageA(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
 
 			const int diff = abs(DefaultCommonDivisor - n);
-			if (diff < mindiff)
+			if (DefaultCommonDivisorRange.first <= n && n <= DefaultCommonDivisorRange.second && diff < mindiff)
 			{
 				mindiff = diff;
 				defaultIndex = i;
 			}
 		}
 
-		if (SendMessageA(hcrop, CB_ADDSTRING, 0, (LPARAM)"-----------------------") == defaultIndex)
-			defaultIndex = 1;
+		SendMessageA(hcrop, CB_ADDSTRING, 0, (LPARAM)"-----------------------");
 
 		// CropSizeList‚Ì’l‚ð’Ç‰Á‚µ‚Ä‚¢‚­
+		mindiff = INT_MAX;
+		int defaultListIndex = -1;
 		for (const auto n : CropSizeList)
 		{
 			std::string str(std::to_string(n));
-			SendMessageA(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
+			const int index = SendMessageA(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
+
+			const int diff = abs(DefaultCommonDivisor - n);
+			if (DefaultCommonDivisorRange.first <= n && n <= DefaultCommonDivisorRange.second && diff < mindiff)
+			{
+				mindiff = diff;
+				defaultListIndex = index;
+			}
 		}
+
+		if (defaultIndex == -1)
+			defaultIndex = defaultListIndex;
 
 		if (GetWindowTextLength(hcrop) == 0)
 			SendMessage(hcrop, CB_SETCURSEL, defaultIndex, 0);
