@@ -535,6 +535,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 
 					cv::Mat someborderimg;
 					// 画像を中央にパディング。余白はcv::BORDER_REPLICATEで埋める
+					// 実はimで画素が存在する部分は余白と認識されないが、inner_paddingがlayer_numでouter_paddingが1以上ならそこの部分の画素は結果画像として取り出す部分には影響しない
 					cv::copyMakeBorder(someimg, someborderimg, top, bottom, left, right, cv::BORDER_REPLICATE);
 					someimg.release();
 
