@@ -533,14 +533,10 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 
 					cv::Mat someimg = im(cv::Rect(x, y, width, height));
 
-					cv::Mat someimg_tmp;
-					someimg.copyTo(someimg_tmp);
-					someimg.release();
-
 					cv::Mat someborderimg;
 					// 画像を中央にパディング。余白はcv::BORDER_REPLICATEで埋める
-					cv::copyMakeBorder(someimg_tmp, someborderimg, top, bottom, left, right, cv::BORDER_REPLICATE);
-					someimg_tmp.release();
+					cv::copyMakeBorder(someimg, someborderimg, top, bottom, left, right, cv::BORDER_REPLICATE);
+					someimg.release();
 
 					// 画像を直列に変換
 					{
