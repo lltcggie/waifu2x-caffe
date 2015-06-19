@@ -66,7 +66,7 @@ static std::once_flag waifu2x_cuda_once_flag;
 		} \
 	} while (0)
 
-Waifu2x::Waifu2x() : is_inited(false), isCuda(false), block(nullptr), dummy_data(nullptr), out_block(nullptr)
+Waifu2x::Waifu2x() : is_inited(false), isCuda(false), input_block(nullptr), dummy_data(nullptr), output_block(nullptr)
 {
 }
 
@@ -419,8 +419,8 @@ Waifu2x::eWaifu2xError Waifu2x::ConstractNet(boost::shared_ptr<caffe::Net<float>
 		{
 			if (layer_param->mutable_memory_data_param()->width() == original_width_height && layer_param->mutable_memory_data_param()->height() == original_width_height)
 			{
-				layer_param->mutable_memory_data_param()->set_width(block_size);
-				layer_param->mutable_memory_data_param()->set_height(block_size);
+				layer_param->mutable_memory_data_param()->set_width(input_block_size);
+				layer_param->mutable_memory_data_param()->set_height(input_block_size);
 			}
 		}
 	}
@@ -442,7 +442,10 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 
 	assert(im.channels() == 1);
 
-	float *imptr = (float *)im.data;
+	cv::Mat outim(im.rows, im.cols, im.type());
+
+	// float *imptr = (float *)im.data;
+	float *imptr = (float *)outim.data;
 
 	try
 	{
@@ -463,8 +466,10 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 
 		const int BlockNum = WidthNum * HeightNum;
 
-		const int input_block_plane_size = block_size * block_size;
-		const int output_block_plane_size = crop_size * crop_size;
+		const int input_block_plane_size = input_block_size * input_block_size;
+		const int output_block_plane_size = output_block_size * output_block_size;
+
+		const int output_padding = inner_padding + outer_padding - layer_num;
 
 		// 画像は(消費メモリの都合上)output_size*output_sizeに分けて再構築する
 		for (int num = 0; num < BlockNum; num += batch_size)
@@ -484,34 +489,79 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 
 				if (w + crop_size <= Width && h + crop_size <= Height)
 				{
+					int x, y;
+					x = w - inner_padding;
+					y = h - inner_padding;
+
+					int width, height;
+
+					width = crop_size + inner_padding * 2;
+					height = crop_size + inner_padding * 2;
+
+					int top, bottom, left, right;
+
+					top = outer_padding;
+					bottom = outer_padding;
+					left = outer_padding;
+					right = outer_padding;
+
+					if (x < 0)
 					{
-						cv::Mat someimg = im(cv::Rect(w, h, crop_size, crop_size));
-						cv::Mat someborderimg;
-						// 画像を中央にパディング。余白はcv::BORDER_REPLICATEで埋める
-						cv::copyMakeBorder(someimg, someborderimg, layer_num, layer_num, layer_num, layer_num, cv::BORDER_REPLICATE);
-						someimg.release();
+						left += -x;
+						width -= -x;
+						x = 0;
+					}
 
-						// 画像を直列に変換
+					if (x + width > Width)
+					{
+						right += (x + width) - Width;
+						width = Width - x;
+					}
+
+					if (y < 0)
+					{
+						top += -y;
+						height -= -y;
+						y = 0;
+					}
+
+					if (y + height > Height)
+					{
+						bottom += (y + height) - Height;
+						height = Height - y;
+					}
+
+					cv::Mat someimg = im(cv::Rect(x, y, width, height));
+
+					cv::Mat someimg_tmp;
+					someimg.copyTo(someimg_tmp);
+					someimg.release();
+
+					cv::Mat someborderimg;
+					// 画像を中央にパディング。余白はcv::BORDER_REPLICATEで埋める
+					cv::copyMakeBorder(someimg_tmp, someborderimg, top, bottom, left, right, cv::BORDER_REPLICATE);
+					someimg_tmp.release();
+
+					// 画像を直列に変換
+					{
+						float *fptr = input_block + (input_block_plane_size * n);
+						const float *uptr = (const float *)someborderimg.data;
+
+						const auto Line = someborderimg.step1();
+
+						if (input_block_size == Line)
+							memcpy(fptr, uptr, input_block_size * input_block_size * sizeof(float));
+						else
 						{
-							float *fptr = block + (input_block_plane_size * n);
-							const float *uptr = (const float *)someborderimg.data;
-
-							const auto Line = someborderimg.step1();
-
-							if (block_size == Line)
-								memcpy(fptr, uptr, block_size * block_size * sizeof(float));
-							else
-							{
-								for (int i = 0; i < block_size; i++)
-									memcpy(fptr + i * block_size, uptr + i * Line, block_size * sizeof(float));
-							}
+							for (int i = 0; i < input_block_size; i++)
+								memcpy(fptr + i * input_block_size, uptr + i * Line, input_block_size * sizeof(float));
 						}
 					}
 				}
 			}
 
 			// ネットワークに画像を入力
-			input_layer->Reset(block, dummy_data, input_block_plane_size * processNum);
+			input_layer->Reset(input_block, dummy_data, input_block_plane_size * processNum);
 
 			// 計算
 			auto out = net->ForwardPrefilled(nullptr);
@@ -527,7 +577,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 			else
 				ptr = b->gpu_data();
 
-			caffe::caffe_copy(output_block_plane_size * processNum, ptr, out_block);
+			caffe::caffe_copy(output_block_plane_size * processNum, ptr, output_block);
 
 			for (int n = 0; n < processNum; n++)
 			{
@@ -537,11 +587,11 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 				const int w = wn * output_size;
 				const int h = hn * output_size;
 
-				const float *fptr = out_block + (output_block_plane_size * n);
+				const float *fptr = output_block + (output_block_plane_size * n);
 
 				// 結果を入力画像にコピー(後に処理する部分とここで上書きする部分は被らないから、入力画像を上書きしても大丈夫)
 				for (int i = 0; i < crop_size; i++)
-					memcpy(imptr + (h + i) * Line + w, fptr + i * crop_size, crop_size * sizeof(float));
+					memcpy(imptr + (h + i) * Line + w, fptr + (i + output_padding) * output_block_size + output_padding, crop_size * sizeof(float));
 			}
 		}
 	}
@@ -549,6 +599,8 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 	{
 		return eWaifu2xError_FailedProcessCaffe;
 	}
+
+	im = outim;
 
 	return eWaifu2xError_OK;
 }
@@ -575,9 +627,14 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 		crop_size = CropSize;
 		batch_size = BatchSize;
 
+		inner_padding = layer_num;
+		outer_padding = 1;
+
 		output_size = crop_size - offset * 2;
-		block_size = crop_size + layer_num * 2;
+		input_block_size = crop_size + (inner_padding + outer_padding) * 2;
 		original_width_height = 128 + layer_num * 2;
+
+		output_block_size = crop_size + (inner_padding + outer_padding - layer_num) * 2;
 
 		std::call_once(waifu2x_once_flag, [argc, argv]()
 		{
@@ -658,20 +715,20 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 				return ret;
 		}
 
-		const int input_block_plane_size = block_size * block_size;
-		const int output_block_plane_size = crop_size * crop_size;
+		const int input_block_plane_size = input_block_size * input_block_size;
+		const int output_block_plane_size = output_block_size * output_block_size;
 
 		if (isCuda)
 		{
-			CUDA_CHECK_WAIFU2X(cudaHostAlloc(&block, sizeof(float) * input_block_plane_size * batch_size, cudaHostAllocWriteCombined));
+			CUDA_CHECK_WAIFU2X(cudaHostAlloc(&input_block, sizeof(float) * input_block_plane_size * batch_size, cudaHostAllocWriteCombined));
 			CUDA_CHECK_WAIFU2X(cudaHostAlloc(&dummy_data, sizeof(float) * input_block_plane_size * batch_size, cudaHostAllocWriteCombined));
-			CUDA_CHECK_WAIFU2X(cudaHostAlloc(&out_block, sizeof(float) * output_block_plane_size * batch_size, cudaHostAllocDefault));
+			CUDA_CHECK_WAIFU2X(cudaHostAlloc(&output_block, sizeof(float) * output_block_plane_size * batch_size, cudaHostAllocDefault));
 		}
 		else
 		{
-			block = new float[input_block_plane_size * batch_size];
+			input_block = new float[input_block_plane_size * batch_size];
 			dummy_data = new float[input_block_plane_size * batch_size];
-			out_block = new float[output_block_plane_size * batch_size];
+			output_block = new float[output_block_plane_size * batch_size];
 		}
 
 		for (size_t i = 0; i < input_block_plane_size * batch_size; i++)
@@ -694,15 +751,15 @@ void Waifu2x::destroy()
 
 	if (isCuda)
 	{
-		CUDA_HOST_SAFE_FREE(block);
+		CUDA_HOST_SAFE_FREE(input_block);
 		CUDA_HOST_SAFE_FREE(dummy_data);
-		CUDA_HOST_SAFE_FREE(out_block);
+		CUDA_HOST_SAFE_FREE(output_block);
 	}
 	else
 	{
-		SAFE_DELETE_WAIFU2X(block);
+		SAFE_DELETE_WAIFU2X(input_block);
 		SAFE_DELETE_WAIFU2X(dummy_data);
-		SAFE_DELETE_WAIFU2X(out_block);
+		SAFE_DELETE_WAIFU2X(output_block);
 	}
 
 	is_inited = false;

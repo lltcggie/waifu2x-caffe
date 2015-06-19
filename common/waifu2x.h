@@ -59,7 +59,7 @@ private:
 	int batch_size;
 
 	// ネットに入力する画像のサイズ
-	int block_size;
+	int input_block_size;
 	// ブロック変換後の出力サイズ
 	int output_size;
 	// ネットワークに入力する画像のサイズ(出力画像の幅はlayer_num * 2だけ小さくなる)
@@ -73,14 +73,19 @@ private:
 	std::string model_dir;
 	std::string process;
 
+	int inner_padding;
+	int outer_padding;
+
+	int output_block_size;
+
 	bool isCuda;
 
 	boost::shared_ptr<caffe::Net<float>> net_noise;
 	boost::shared_ptr<caffe::Net<float>> net_scale;
 
-	float *block;
+	float *input_block;
 	float *dummy_data;
-	float *out_block;
+	float *output_block;
 
 private:
 	eWaifu2xError LoadImage(cv::Mat &float_image, const std::string &input_file);
