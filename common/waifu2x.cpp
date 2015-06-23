@@ -253,149 +253,57 @@ Waifu2x::eWaifu2xError Waifu2x::CreateZoomColorImage(const cv::Mat &float_image,
 	return eWaifu2xError_OK;
 }
 
-// 学習したパラメータをファイルから読み込む
-Waifu2x::eWaifu2xError Waifu2x::LoadParameter(boost::shared_ptr<caffe::Net<float>> net, const std::string &param_path)
+// モデルファイルからネットワークを構築
+// processでcudnnが指定されなかった場合はcuDNNが呼び出されないように変更する
+Waifu2x::eWaifu2xError Waifu2x::ConstractNet(boost::shared_ptr<caffe::Net<float>> &net, const std::string &model_path, const std::string &param_path, const std::string &process)
 {
 	const std::string caffemodel_path = param_path + ".caffemodel";
+	const std::string modelbin_path = model_path + ".protobin";
 
 	FILE *fp = fopen(caffemodel_path.c_str(), "rb");
 	const bool isModelExist = fp != nullptr;
 	if (fp) fclose(fp);
 
+	fp = fopen(modelbin_path.c_str(), "rb");
+	const bool isModelBinExist = fp != nullptr;
+	if (fp) fclose(fp);
+
 	caffe::NetParameter param;
-	if (isModelExist && caffe::ReadProtoFromBinaryFile(caffemodel_path, &param))
-		net->CopyTrainedLayersFrom(param);
+	if (isModelExist && isModelBinExist && caffe::ReadProtoFromBinaryFile(modelbin_path, &param))
+	{
+		const auto ret = SetParameter(param);
+		if (ret != eWaifu2xError_OK)
+			return ret;
+
+		net = boost::shared_ptr<caffe::Net<float>>(new caffe::Net<float>(param));
+		net->CopyTrainedLayersFrom(caffemodel_path);
+
+		input_plane = param.input_dim(1);
+	}
 	else
 	{
-		rapidjson::Document d;
-		std::vector<char> jsonBuf;
-
-		try
-		{
-			FILE *fp = fopen(param_path.c_str(), "rb");
-			if (fp == nullptr)
-				return eWaifu2xError_FailedOpenModelFile;
-
-			fseek(fp, 0, SEEK_END);
-			const auto size = ftell(fp);
-			fseek(fp, 0, SEEK_SET);
-
-			jsonBuf.resize(size + 1);
-			fread(jsonBuf.data(), 1, size, fp);
-
-			fclose(fp);
-
-			jsonBuf[jsonBuf.size() - 1] = '\0';
-
-			d.Parse(jsonBuf.data());
-		}
-		catch (...)
-		{
-			return eWaifu2xError_FailedParseModelFile;
-		}
-
-		std::vector<boost::shared_ptr<caffe::Layer<float>>> list;
-		auto &v = net->layers();
-		for (auto &l : v)
-		{
-			auto lk = l->type();
-			auto &bv = l->blobs();
-			if (bv.size() > 0)
-				list.push_back(l);
-		}
-
-		try
-		{
-			std::vector<float> weightList;
-			std::vector<float> biasList;
-
-			int count = 0;
-			for (auto it = d.Begin(); it != d.End(); ++it)
-			{
-				const auto &weight = (*it)["weight"];
-				const auto nInputPlane = (*it)["nInputPlane"].GetInt();
-				const auto nOutputPlane = (*it)["nOutputPlane"].GetInt();
-				const auto kW = (*it)["kW"].GetInt();
-				const auto &bias = (*it)["bias"];
-
-				auto leyer = list[count];
-
-				auto &b0 = leyer->blobs()[0];
-				auto &b1 = leyer->blobs()[1];
-
-				float *b0Ptr = nullptr;
-				float *b1Ptr = nullptr;
-
-				if (caffe::Caffe::mode() == caffe::Caffe::CPU)
-				{
-					b0Ptr = b0->mutable_cpu_data();
-					b1Ptr = b1->mutable_cpu_data();
-				}
-				else
-				{
-					b0Ptr = b0->mutable_gpu_data();
-					b1Ptr = b1->mutable_gpu_data();
-				}
-
-				const auto WeightSize1 = weight.Size();
-				const auto WeightSize2 = weight[0].Size();
-				const auto KernelHeight = weight[0][0].Size();
-				const auto KernelWidth = weight[0][0][0].Size();
-
-				if (!(b0->count() == WeightSize1 * WeightSize2 * KernelHeight * KernelWidth))
-					return eWaifu2xError_FailedConstructModel;
-
-				if (!(b1->count() == bias.Size()))
-					return eWaifu2xError_FailedConstructModel;
-
-				weightList.resize(0);
-				biasList.resize(0);
-
-				size_t weightCount = 0;
-				for (auto it2 = weight.Begin(); it2 != weight.End(); ++it2)
-				{
-					for (auto it3 = (*it2).Begin(); it3 != (*it2).End(); ++it3)
-					{
-						for (auto it4 = (*it3).Begin(); it4 != (*it3).End(); ++it4)
-						{
-							for (auto it5 = (*it4).Begin(); it5 != (*it4).End(); ++it5)
-								weightList.push_back((float)it5->GetDouble());
-						}
-					}
-				}
-
-				caffe::caffe_copy(b0->count(), weightList.data(), b0Ptr);
-
-				for (auto it2 = bias.Begin(); it2 != bias.End(); ++it2)
-					biasList.push_back((float)it2->GetDouble());
-
-				caffe::caffe_copy(b1->count(), biasList.data(), b1Ptr);
-
-				count++;
-			}
-
-			net->ToProto(&param);
-
-			caffe::WriteProtoToBinaryFile(param, caffemodel_path);
-		}
-		catch (...)
-		{
-			return eWaifu2xError_FailedConstructModel;
-		}
+		const auto ret = LoadParameterFromJson(net, model_path, param_path);
+		if (ret != eWaifu2xError_OK)
+			return ret;
 	}
 
 	return eWaifu2xError_OK;
 }
 
-// モデルファイルからネットワークを構築
-// processでcudnnが指定されなかった場合はcuDNNが呼び出されないように変更する
-Waifu2x::eWaifu2xError Waifu2x::ConstractNet(boost::shared_ptr<caffe::Net<float>> &net, const std::string &model_path, const std::string &process)
+Waifu2x::eWaifu2xError Waifu2x::SetParameter(caffe::NetParameter &param) const
 {
-	caffe::NetParameter param;
-	if (!caffe::ReadProtoFromTextFile(model_path, &param))
-		return eWaifu2xError_FailedOpenModelFile;
-
 	param.mutable_state()->set_phase(caffe::TEST);
+
+	{
+		auto mid = param.mutable_input_dim();
+
+		if (mid->size() != 4)
+			return eWaifu2xError_FailedParseModelFile;
+
+		*mid->Mutable(0) = batch_size;
+		*mid->Mutable(2) = input_block_size;
+		*mid->Mutable(3) = input_block_size;
+	}
 
 	for (int i = 0; i < param.layer_size(); i++)
 	{
@@ -415,17 +323,169 @@ Waifu2x::eWaifu2xError Waifu2x::ConstractNet(boost::shared_ptr<caffe::Net<float>
 			else
 				layer_param->mutable_relu_param()->set_engine(caffe::ReLUParameter_Engine_CAFFE);
 		}
-		else if (type == "MemoryData")
-		{
-			if (layer_param->mutable_memory_data_param()->width() == original_width_height && layer_param->mutable_memory_data_param()->height() == original_width_height)
-			{
-				layer_param->mutable_memory_data_param()->set_width(input_block_size);
-				layer_param->mutable_memory_data_param()->set_height(input_block_size);
-			}
-		}
 	}
 
+	return eWaifu2xError_OK;
+}
+
+Waifu2x::eWaifu2xError Waifu2x::LoadParameterFromJson(boost::shared_ptr<caffe::Net<float>> &net, const std::string &model_path, const std::string &param_path)
+{
+	const std::string caffemodel_path = param_path + ".caffemodel";
+	const std::string modelbin_path = model_path + ".protobin";
+
+	caffe::NetParameter param;
+	if (!caffe::ReadProtoFromTextFile(model_path, &param))
+		return eWaifu2xError_FailedOpenModelFile;
+
+	caffe::WriteProtoToBinaryFile(param, modelbin_path);
+
+	const auto ret = SetParameter(param);
+	if (ret != eWaifu2xError_OK)
+		return ret;
+
 	net = boost::shared_ptr<caffe::Net<float>>(new caffe::Net<float>(param));
+
+	rapidjson::Document d;
+	std::vector<char> jsonBuf;
+
+	try
+	{
+		FILE *fp = fopen(param_path.c_str(), "rb");
+		if (fp == nullptr)
+			return eWaifu2xError_FailedOpenModelFile;
+
+		fseek(fp, 0, SEEK_END);
+		const auto size = ftell(fp);
+		fseek(fp, 0, SEEK_SET);
+
+		jsonBuf.resize(size + 1);
+		fread(jsonBuf.data(), 1, size, fp);
+
+		fclose(fp);
+
+		jsonBuf[jsonBuf.size() - 1] = '\0';
+
+		d.Parse(jsonBuf.data());
+	}
+	catch (...)
+	{
+		return eWaifu2xError_FailedParseModelFile;
+	}
+
+	if (d.Size() != 7)
+		return eWaifu2xError_FailedParseModelFile;
+
+	int inputPlane = 0;
+	int outputPlane = 0;
+	try
+	{
+		inputPlane = d[0]["nInputPlane"].GetInt();
+		outputPlane = d[d.Size() - 1]["nOutputPlane"].GetInt();
+	}
+	catch (...)
+	{
+		return eWaifu2xError_FailedParseModelFile;
+	}
+
+	if (inputPlane == 0 || outputPlane == 0)
+		return eWaifu2xError_FailedParseModelFile;
+
+	if (inputPlane != outputPlane)
+		return eWaifu2xError_FailedParseModelFile;
+
+	//if (param.layer_size() < 17)
+	//	return eWaifu2xError_FailedParseModelFile;
+
+	std::vector<boost::shared_ptr<caffe::Layer<float>>> list;
+	auto &v = net->layers();
+	for (auto &l : v)
+	{
+		auto lk = l->type();
+		auto &bv = l->blobs();
+		if (bv.size() > 0)
+			list.push_back(l);
+	}
+
+	try
+	{
+		std::vector<float> weightList;
+		std::vector<float> biasList;
+
+		int count = 0;
+		for (auto it = d.Begin(); it != d.End(); ++it)
+		{
+			const auto &weight = (*it)["weight"];
+			const auto nInputPlane = (*it)["nInputPlane"].GetInt();
+			const auto nOutputPlane = (*it)["nOutputPlane"].GetInt();
+			const auto kW = (*it)["kW"].GetInt();
+			const auto &bias = (*it)["bias"];
+
+			auto leyer = list[count];
+
+			auto &b0 = leyer->blobs()[0];
+			auto &b1 = leyer->blobs()[1];
+
+			float *b0Ptr = nullptr;
+			float *b1Ptr = nullptr;
+
+			if (caffe::Caffe::mode() == caffe::Caffe::CPU)
+			{
+				b0Ptr = b0->mutable_cpu_data();
+				b1Ptr = b1->mutable_cpu_data();
+			}
+			else
+			{
+				b0Ptr = b0->mutable_gpu_data();
+				b1Ptr = b1->mutable_gpu_data();
+			}
+
+			const auto WeightSize1 = weight.Size();
+			const auto WeightSize2 = weight[0].Size();
+			const auto KernelHeight = weight[0][0].Size();
+			const auto KernelWidth = weight[0][0][0].Size();
+
+			if (!(b0->count() == WeightSize1 * WeightSize2 * KernelHeight * KernelWidth))
+				return eWaifu2xError_FailedConstructModel;
+
+			if (!(b1->count() == bias.Size()))
+				return eWaifu2xError_FailedConstructModel;
+
+			weightList.resize(0);
+			biasList.resize(0);
+
+			size_t weightCount = 0;
+			for (auto it2 = weight.Begin(); it2 != weight.End(); ++it2)
+			{
+				for (auto it3 = (*it2).Begin(); it3 != (*it2).End(); ++it3)
+				{
+					for (auto it4 = (*it3).Begin(); it4 != (*it3).End(); ++it4)
+					{
+						for (auto it5 = (*it4).Begin(); it5 != (*it4).End(); ++it5)
+							weightList.push_back((float)it5->GetDouble());
+					}
+				}
+			}
+
+			caffe::caffe_copy(b0->count(), weightList.data(), b0Ptr);
+
+			for (auto it2 = bias.Begin(); it2 != bias.End(); ++it2)
+				biasList.push_back((float)it2->GetDouble());
+
+			caffe::caffe_copy(b1->count(), biasList.data(), b1Ptr);
+
+			count++;
+		}
+
+		net->ToProto(&param);
+
+		caffe::WriteProtoToBinaryFile(param, caffemodel_path);
+	}
+	catch (...)
+	{
+		return eWaifu2xError_FailedConstructModel;
+	}
+
+	input_plane = inputPlane;
 
 	return eWaifu2xError_OK;
 }
@@ -440,7 +500,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 	assert(Width % output_size == 0);
 	assert(Height % output_size == 0);
 
-	assert(im.channels() == 1);
+	assert(im.channels() == 1 || im.channels() == 3);
 
 	cv::Mat outim(im.rows, im.cols, im.type());
 
@@ -449,25 +509,21 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 
 	try
 	{
-		const auto input_layer =
-			boost::dynamic_pointer_cast<caffe::MemoryDataLayer<float>>(
-			net->layer_by_name("image_input_layer"));
-		assert(input_layer);
+		auto input_blobs = net->input_blobs();
+		auto input_blob = net->input_blobs()[0];
 
-		const auto conv7_layer =
-			boost::dynamic_pointer_cast<caffe::ConvolutionLayer<float>>(
-			net->layer_by_name("conv7_layer"));
-		assert(conv7_layer);
+		input_blob->Reshape(batch_size, input_plane, input_block_size, input_block_size);
 
-		input_layer->set_batch_size(batch_size);
+		assert(im.channels() == input_plane);
+		assert(input_blob->shape(1) == input_plane);
 
 		const int WidthNum = Width / output_size;
 		const int HeightNum = Height / output_size;
 
 		const int BlockNum = WidthNum * HeightNum;
 
-		const int input_block_plane_size = input_block_size * input_block_size;
-		const int output_block_plane_size = output_block_size * output_block_size;
+		const int input_block_plane_size = input_block_size * input_block_size * input_plane;
+		const int output_block_plane_size = output_block_size * output_block_size * input_plane;
 
 		const int output_padding = inner_padding + outer_padding - layer_num;
 
@@ -477,7 +533,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 			const int processNum = (BlockNum - num) >= batch_size ? batch_size : BlockNum - num;
 
 			if (processNum < batch_size)
-				input_layer->set_batch_size(processNum);
+				input_blob->Reshape(processNum, input_plane, input_block_size, input_block_size);
 
 			for (int n = 0; n < processNum; n++)
 			{
@@ -546,19 +602,53 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 
 						const auto Line = someborderimg.step1();
 
-						if (input_block_size == Line)
-							memcpy(fptr, uptr, input_block_size * input_block_size * sizeof(float));
+						if (someborderimg.channels() == 1)
+						{
+							if (input_block_size == Line)
+								memcpy(fptr, uptr, input_block_size * input_block_size * sizeof(float));
+							else
+							{
+								for (int i = 0; i < input_block_size; i++)
+									memcpy(fptr + i * input_block_size, uptr + i * Line, input_block_size * sizeof(float));
+							}
+						}
 						else
 						{
-							for (int i = 0; i < input_block_size; i++)
-								memcpy(fptr + i * input_block_size, uptr + i * Line, input_block_size * sizeof(float));
+							const auto LinePixel = someborderimg.step1() / someborderimg.channels();
+							const auto Channel = someborderimg.channels();
+							const auto Width = someborderimg.size().width;
+							const auto Height = someborderimg.size().height;
+
+							for (int i = 0; i < Height; i++)
+							{
+								for (int j = 0; j < LinePixel; j++)
+								{
+									for (int ch = 0; ch < Channel; ch++)
+										fptr[(ch * Height + i) * Width + j] = uptr[(i * LinePixel + j) * Channel + ch];
+								}
+							}
+
+							/*
+							{
+								cv::Mat im(someborderimg.size(), CV_32F, fptr, Width * sizeof(float));
+
+								cv::Mat write_iamge;
+								im.convertTo(write_iamge, CV_8U, 255.0);
+								im.release();
+
+								if (!cv::imwrite("test_in.png", write_iamge))
+									return eWaifu2xError_FailedOpenOutputFile;
+							}
+							*/
 						}
 					}
 				}
 			}
 
+			assert(input_blob->count() == input_block_plane_size * processNum);
+
 			// ネットワークに画像を入力
-			input_layer->Reset(input_block, dummy_data, input_block_plane_size * processNum);
+			input_blob->set_cpu_data(input_block);
 
 			// 計算
 			auto out = net->ForwardPrefilled(nullptr);
@@ -586,9 +676,39 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 
 				const float *fptr = output_block + (output_block_plane_size * n);
 
-				// 結果を入力画像にコピー(後に処理する部分とここで上書きする部分は被らないから、入力画像を上書きしても大丈夫)
-				for (int i = 0; i < crop_size; i++)
-					memcpy(imptr + (h + i) * Line + w, fptr + (i + output_padding) * output_block_size + output_padding, crop_size * sizeof(float));
+				// 結果を出力画像にコピー
+				if (outim.channels() == 1)
+				{
+					for (int i = 0; i < crop_size; i++)
+						memcpy(imptr + (h + i) * Line + w, fptr + (i + output_padding) * output_block_size + output_padding, crop_size * sizeof(float));
+				}
+				else
+				{
+					const auto LinePixel = outim.step1() / outim.channels();
+					const auto Channel = outim.channels();
+
+					for (int i = 0; i < crop_size; i++)
+					{
+						for (int j = 0; j < crop_size; j++)
+						{
+							for (int ch = 0; ch < Channel; ch++)
+								imptr[((h + i) * LinePixel + (w + j)) * Channel + ch] = fptr[(ch * output_block_size + i + output_padding) * output_block_size + j + output_padding];
+						}
+					}
+
+					/*
+					{
+						cv::Mat im(someborderimg.size(), CV_32F, fptr, Width * sizeof(float));
+
+						cv::Mat write_iamge;
+						im.convertTo(write_iamge, CV_8U, 255.0);
+						im.release();
+
+						if (!cv::imwrite("test_in.png", write_iamge))
+							return eWaifu2xError_FailedOpenOutputFile;
+					}
+					*/
+				}
 			}
 		}
 	}
@@ -689,11 +809,7 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 			const std::string model_path = (mode_dir_path / "srcnn.prototxt").string();
 			const std::string param_path = (mode_dir_path / ("noise" + std::to_string(noise_level) + "_model.json")).string();
 
-			ret = ConstractNet(net_noise, model_path, process);
-			if (ret != eWaifu2xError_OK)
-				return ret;
-
-			ret = LoadParameter(net_noise, param_path);
+			ret = ConstractNet(net_noise, model_path, param_path, process);
 			if (ret != eWaifu2xError_OK)
 				return ret;
 		}
@@ -703,17 +819,13 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 			const std::string model_path = (mode_dir_path / "srcnn.prototxt").string();
 			const std::string param_path = (mode_dir_path / "scale2.0x_model.json").string();
 
-			ret = ConstractNet(net_scale, model_path, process);
-			if (ret != eWaifu2xError_OK)
-				return ret;
-
-			ret = LoadParameter(net_scale, param_path);
+			ret = ConstractNet(net_scale, model_path, param_path, process);
 			if (ret != eWaifu2xError_OK)
 				return ret;
 		}
 
-		const int input_block_plane_size = input_block_size * input_block_size;
-		const int output_block_plane_size = output_block_size * output_block_size;
+		const int input_block_plane_size = input_block_size * input_block_size * input_plane;
+		const int output_block_plane_size = output_block_size * output_block_size * input_plane;
 
 		if (isCuda)
 		{
@@ -776,8 +888,22 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std
 		return ret;
 
 	cv::Mat im;
-	CreateBrightnessImage(float_image, im);
+	if (input_plane == 1)
+		CreateBrightnessImage(float_image, im);
+	else
+	{
 
+		std::vector<cv::Mat> planes;
+		cv::split(float_image, planes);
+
+		if (float_image.channels() == 4)
+			planes.resize(3);
+
+		// BGRからRGBにする
+		std::swap(planes[0], planes[2]);
+
+		cv::merge(planes, im);
+	}
 	cv::Size_<int> image_size = im.size();
 
 	const boost::filesystem::path ip(input_file);
@@ -825,10 +951,36 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std
 	if (cancel_func && cancel_func())
 		return eWaifu2xError_Cancel;
 
-	// 再構築した輝度画像とCreateZoomColorImage()で作成した色情報をマージして通常の画像に変換し、書き込む
+	cv::Mat process_image;
+	if (input_plane == 1)
+	{
+		// 再構築した輝度画像とCreateZoomColorImage()で作成した色情報をマージして通常の画像に変換し、書き込む
 
-	std::vector<cv::Mat> color_planes;
-	CreateZoomColorImage(float_image, image_size, color_planes);
+		std::vector<cv::Mat> color_planes;
+		CreateZoomColorImage(float_image, image_size, color_planes);
+
+		float_image.release();
+
+		color_planes[0] = im;
+		im.release();
+
+		cv::Mat converted_image;
+		cv::merge(color_planes, converted_image);
+		color_planes.clear();
+
+		cv::cvtColor(converted_image, process_image, ConvertInverseMode);
+		converted_image.release();
+	}
+	else
+	{
+		std::vector<cv::Mat> planes;
+		cv::split(im, planes);
+
+		// RGBからBGRに直す
+		std::swap(planes[0], planes[2]);
+
+		cv::merge(planes, process_image);
+	}
 
 	cv::Mat alpha;
 	if (float_image.channels() == 4)
@@ -839,19 +991,6 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std
 
 		cv::resize(alpha, alpha, image_size, 0.0, 0.0, cv::INTER_CUBIC);
 	}
-
-	float_image.release();
-
-	color_planes[0] = im;
-	im.release();
-
-	cv::Mat converted_image;
-	cv::merge(color_planes, converted_image);
-	color_planes.clear();
-
-	cv::Mat process_image;
-	cv::cvtColor(converted_image, process_image, ConvertInverseMode);
-	converted_image.release();
 
 	// アルファチャンネルがあったら、アルファを付加してカラーからアルファの影響を抜く
 	if (!alpha.empty())

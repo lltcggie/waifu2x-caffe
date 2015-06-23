@@ -105,6 +105,7 @@ private:
 	std::string mode;
 	int noise_level;
 	double scale_ratio;
+	std::string model_dir;
 	std::string process;
 	std::string outputExt;
 	std::string inputFileExt;
@@ -189,6 +190,13 @@ private:
 				MessageBox(dh, TEXT("拡大率は0.0より大きい正数である必要があります"), TEXT("エラー"), MB_OK | MB_ICONERROR);
 			}
 		}
+
+		if (SendMessage(GetDlgItem(dh, IDC_RADIO_MODEL_RGB), BM_GETCHECK, 0, 0))
+			model_dir = "models/anime_style_art_rgb";
+		else if (SendMessage(GetDlgItem(dh, IDC_RADIO_MODEL_Y), BM_GETCHECK, 0, 0))
+			model_dir = "models/anime_style_art";
+		else
+			model_dir = "models/ukbench";
 
 		{
 			char buf[AR_PATH_MAX] = "";
@@ -423,7 +431,7 @@ private:
 		Waifu2x::eWaifu2xError ret;
 
 		Waifu2x w;
-		ret = w.init(__argc, __argv, mode, noise_level, scale_ratio, "models", process, crop_size, batch_size);
+		ret = w.init(__argc, __argv, mode, noise_level, scale_ratio, model_dir, process, crop_size, batch_size);
 		if(ret != Waifu2x::eWaifu2xError_OK)
 			SendMessage(dh, WM_ON_WAIFU2X_ERROR, (WPARAM)&ret, 0);
 		else
@@ -538,7 +546,7 @@ private:
 	}
 
 public:
-	DialogEvent() : dh(nullptr), mode("noise_scale"), noise_level(1), scale_ratio(2.0), process("gpu"), outputExt("png"), inputFileExt("png:jpg:jpeg:tif:tiff:bmp"),
+	DialogEvent() : dh(nullptr), mode("noise_scale"), noise_level(1), scale_ratio(2.0), model_dir("models/anime_style_art_rgb"), process("gpu"), outputExt("png"), inputFileExt("png:jpg:jpeg:tif:tiff:bmp"),
 		crop_size(128), batch_size(1), isLastError(false)
 	{
 	}
@@ -705,6 +713,7 @@ public:
 		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE_SCALE), BM_SETCHECK, BST_CHECKED, 0);
 		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL1), BM_SETCHECK, BST_CHECKED, 0);
 		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_GPU), BM_SETCHECK, BST_CHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_RGB), BM_SETCHECK, BST_CHECKED, 0);
 
 		EnableWindow(GetDlgItem(dh, IDC_BUTTON_CANCEL), FALSE);
 
@@ -735,6 +744,37 @@ public:
 
 	void RadioButtom(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 	{
+		ReplaceAddString();
+	}
+
+	void ModelRadioButtomScaleAndNoise(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
+	{
+		const BOOL flag = TRUE;
+
+		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL1), flag);
+		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL2), flag);
+		EnableWindow(GetDlgItem(dh, IDC_RADIO_MODE_NOISE), flag);
+		EnableWindow(GetDlgItem(dh, IDC_RADIO_MODE_SCALE), flag);
+		EnableWindow(GetDlgItem(dh, IDC_RADIO_MODE_NOISE_SCALE), flag);
+		EnableWindow(GetDlgItem(dh, IDC_RADIO_AUTO_SCALE), flag);
+	}
+
+	void ModelRadioButtomScaleOnly(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
+	{
+		const BOOL flag = FALSE;
+
+		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL1), flag);
+		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL2), flag);
+		EnableWindow(GetDlgItem(dh, IDC_RADIO_MODE_NOISE), flag);
+		EnableWindow(GetDlgItem(dh, IDC_RADIO_MODE_SCALE), TRUE);
+		EnableWindow(GetDlgItem(dh, IDC_RADIO_MODE_NOISE_SCALE), flag);
+		EnableWindow(GetDlgItem(dh, IDC_RADIO_AUTO_SCALE), flag);
+
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_SCALE), BM_SETCHECK, BST_CHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+
 		ReplaceAddString();
 	}
 
@@ -900,6 +940,10 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_RADIONOISE_LEVEL2);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_RADIO_MODE_CPU);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_RADIO_MODE_GPU);
+
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::ModelRadioButtomScaleAndNoise, &cDialogEvent), NULL, IDC_RADIO_MODEL_RGB);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::ModelRadioButtomScaleAndNoise, &cDialogEvent), NULL, IDC_RADIO_MODEL_Y);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::ModelRadioButtomScaleOnly, &cDialogEvent), NULL, IDC_RADIO_MODEL_PHOTO);
 
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::CheckCUDNN, &cDialogEvent), NULL, IDC_BUTTON_CHECK_CUDNN);
 
