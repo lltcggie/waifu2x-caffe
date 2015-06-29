@@ -178,8 +178,12 @@ waifu2x-caffe-cui.exe -i mywaifu.png -m noise_scale --scale_ratio 1.6 --noise_le
      デフォルト値は`1`です。
 
    --model_dir <文字列>
-     モデルが格納されているディレクトリへのパスを指定します。デフォルト値は`models`です。
-     基本的には指定しなくても大丈夫です。独自のモデルを使用する時などに指定して下さい。
+     モデルが格納されているディレクトリへのパスを指定します。デフォルト値は`models/anime_style_art_rgb`です。
+     標準では以下のモデルが付属しています。
+      * `models/anime_style_art_rgb` : RGBすべてを変換する2次元画像用モデル
+      * `models/anime_style_art` : 輝度のみを変換する2次元画像用モデル
+      * `models/ukbench` : 写真用モデル(拡大するモデルのみ付属しています。ノイズ除去は出来ません)
+     基本的には指定しなくても大丈夫です。デフォルト以外のモデルや自作のモデルを使用する時などに指定して下さい。
 
    -p <cpu|gpu|cudnn>, --process <cpu|gpu|cudnn>
      処理に使うプロセッサーを指定します。デフォルト値は`gpu`です。
