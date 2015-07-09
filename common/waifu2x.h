@@ -91,7 +91,8 @@ private:
 	float *output_block;
 
 private:
-	eWaifu2xError LoadImage(cv::Mat &float_image, const std::string &input_file);
+	static eWaifu2xError LoadMat(cv::Mat &float_image, const std::string &input_file);
+	static eWaifu2xError LoadMatBySTBI(cv::Mat &float_image, const std::string &input_file);
 	eWaifu2xError CreateBrightnessImage(const cv::Mat &float_image, cv::Mat &im);
 	eWaifu2xError PaddingImage(const cv::Mat &input, cv::Mat &output);
 	eWaifu2xError Zoom2xAndPaddingImage(const cv::Mat &input, cv::Mat &output, cv::Size_<int> &zoom_size);
@@ -100,6 +101,7 @@ private:
 	eWaifu2xError LoadParameterFromJson(boost::shared_ptr<caffe::Net<float>> &net, const std::string &model_path, const std::string &param_path);
 	eWaifu2xError SetParameter(caffe::NetParameter &param) const;
 	eWaifu2xError ReconstructImage(boost::shared_ptr<caffe::Net<float>> net, cv::Mat &im);
+	eWaifu2xError WriteMat(const cv::Mat &im, const std::string &output_file);
 
 public:
 	Waifu2x();
@@ -119,4 +121,6 @@ public:
 		const waifu2xCancelFunc cancel_func = nullptr);
 
 	const std::string& used_process() const;
+
+	static cv::Mat LoadMat(const std::string &path);
 };

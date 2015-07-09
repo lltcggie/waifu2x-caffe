@@ -10,10 +10,13 @@
 #include <chrono>
 #include <cuda_runtime.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
+
 #if defined(WIN32) || defined(WIN64)
 #include <Windows.h>
-
-#undef LoadImage
 #endif
 
 #ifdef _MSC_VER
@@ -65,6 +68,28 @@ static std::once_flag waifu2x_cuda_once_flag;
 			ptr = nullptr; \
 		} \
 	} while (0)
+
+namespace
+{
+	class IgnoreErrorCV
+	{
+	private:
+		static int handleError(int status, const char* func_name,
+			const char* err_msg, const char* file_name,
+			int line, void* userdata)
+		{
+			return 0;
+		}
+
+	public:
+		IgnoreErrorCV()
+		{
+			cv::redirectError(handleError);
+		}
+	};
+
+	IgnoreErrorCV g_IgnoreErrorCV;
+}
 
 Waifu2x::Waifu2x() : is_inited(false), isCuda(false), input_block(nullptr), dummy_data(nullptr), output_block(nullptr)
 {
@@ -153,12 +178,24 @@ Waifu2x::eWaifu2xCudaError Waifu2x::can_use_CUDA()
 	return CudaFlag;
 }
 
+cv::Mat Waifu2x::LoadMat(const std::string &path)
+{
+	cv::Mat mat;
+	LoadMat(mat, path);
+
+	return mat;
+}
+
 // 画像を読み込んで値を0.0f～1.0fの範囲に変換
-Waifu2x::eWaifu2xError Waifu2x::LoadImage(cv::Mat &float_image, const std::string &input_file)
+Waifu2x::eWaifu2xError Waifu2x::LoadMat(cv::Mat &float_image, const std::string &input_file)
 {
 	cv::Mat original_image = cv::imread(input_file, cv::IMREAD_UNCHANGED);
 	if (original_image.empty())
-		return eWaifu2xError_FailedOpenInputFile;
+	{
+		const eWaifu2xError ret = LoadMatBySTBI(original_image, input_file);
+		if (ret != eWaifu2xError_OK)
+			return ret;
+	}
 
 	cv::Mat convert;
 	original_image.convertTo(convert, CV_32F, 1.0 / 255.0);
@@ -184,6 +221,62 @@ Waifu2x::eWaifu2xError Waifu2x::LoadImage(cv::Mat &float_image, const std::strin
 	}
 
 	float_image = convert;
+
+	return eWaifu2xError_OK;
+}
+
+Waifu2x::eWaifu2xError Waifu2x::LoadMatBySTBI(cv::Mat &float_image, const std::string &input_file)
+{
+	int x, y, comp;
+	stbi_uc *data = stbi_load(input_file.c_str(), &x, &y, &comp, 4);
+	if (!data)
+		return eWaifu2xError_FailedOpenInputFile;
+
+	int type = 0;
+	switch (comp)
+	{
+	case 1:
+	case 3:
+	case 4:
+		type = CV_MAKETYPE(CV_8U, comp);
+		break;
+
+	default:
+		return eWaifu2xError_FailedOpenInputFile;
+	}
+
+	float_image = cv::Mat(cv::Size(x, y), type);
+
+	const auto LinePixel = float_image.step1() / float_image.channels();
+	const auto Channel = float_image.channels();
+	const auto Width = float_image.size().width;
+	const auto Height = float_image.size().height;
+
+	assert(x == Width);
+	assert(y == Height);
+	assert(Channel == comp);
+
+	auto ptr = float_image.data;
+	for (int i = 0; i < y; i++)
+	{
+		for (int j = 0; j < x; j++)
+		{
+			for (int ch = 0; ch < Channel; ch++)
+				ptr[(i * LinePixel + j) * comp + ch] = data[(i * x + j) * comp + ch];
+		}
+	}
+
+	stbi_image_free(data);
+
+	if (comp >= 3)
+	{
+		// RGBだからBGRに変換
+		for (int i = 0; i < y; i++)
+		{
+			for (int j = 0; j < x; j++)
+				std::swap(ptr[(i * LinePixel + j) * comp + 0], ptr[(i * LinePixel + j) * comp + 2]);
+		}
+	}
 
 	return eWaifu2xError_OK;
 }
@@ -874,6 +967,68 @@ void Waifu2x::destroy()
 	is_inited = false;
 }
 
+Waifu2x::eWaifu2xError Waifu2x::WriteMat(const cv::Mat &im, const std::string &output_file)
+{
+	const boost::filesystem::path ip(output_file);
+	const std::string ext = ip.extension().string();
+
+	const bool isJpeg = boost::iequals(ext, ".jpg") || boost::iequals(ext, ".jpeg");
+
+	if (boost::iequals(ext, ".tga"))
+	{
+		unsigned char *data = im.data;
+
+		std::vector<unsigned char> rgbimg;
+		if (im.channels() >= 3 || im.step1() != im.size().width * im.channels()) // RGB用バッファにコピー(あるいはパディングをとる)
+		{
+			const auto Line = im.step1();
+			const auto Channel = im.channels();
+			const auto Width = im.size().width;
+			const auto Height = im.size().height;
+
+			rgbimg.resize(Width * Height * Channel);
+
+			const auto Stride = Width * Channel;
+			for (int i = 0; i < Height; i++)
+				memcpy(rgbimg.data() + Stride * i, im.data + Line * i, Stride);
+
+			data = rgbimg.data();
+		}
+
+		if (im.channels() >= 3) // BGRをRGBに並び替え
+		{
+			const auto Line = im.step1();
+			const auto Channel = im.channels();
+			const auto Width = im.size().width;
+			const auto Height = im.size().height;
+
+			auto ptr = rgbimg.data();
+			for (int i = 0; i < Height; i++)
+			{
+				for (int j = 0; j < Width; j++)
+					std::swap(ptr[(i * Width + j) * Channel + 0], ptr[(i * Width + j) * Channel + 2]);
+			}
+		}
+
+		if(!stbi_write_tga(output_file.c_str(), im.size().width, im.size().height, im.channels(), data))
+			return eWaifu2xError_FailedOpenOutputFile;
+
+		return eWaifu2xError_OK;
+	}
+
+	try
+	{
+		if (cv::imwrite(output_file, im))
+			return eWaifu2xError_OK;
+
+	}
+	catch (...)
+	{
+	}
+
+	return eWaifu2xError_FailedOpenOutputFile;
+}
+
 Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std::string &output_file,
 	const waifu2xCancelFunc cancel_func)
 {
@@ -883,7 +1038,7 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std
 		return eWaifu2xError_NotInitialized;
 
 	cv::Mat float_image;
-	ret = LoadImage(float_image, input_file);
+	ret = LoadMat(float_image, input_file);
 	if (ret != eWaifu2xError_OK)
 		return ret;
 
@@ -1018,8 +1173,9 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std
 	process_image.convertTo(write_iamge, CV_8U, 255.0);
 	process_image.release();
 
-	if (!cv::imwrite(output_file, write_iamge))
-		return eWaifu2xError_FailedOpenOutputFile;
+	ret = WriteMat(write_iamge, output_file);
+	if (ret != eWaifu2xError_OK)
+		return ret;
 
 	write_iamge.release();
 

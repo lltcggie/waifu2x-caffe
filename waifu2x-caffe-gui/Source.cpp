@@ -264,7 +264,7 @@ private:
 			{
 				if (!boost::filesystem::is_directory(p) && std::find(extList.begin(), extList.end(), p.extension().string()) != extList.end())
 				{
-					auto mat = cv::imread(p.string(), cv::IMREAD_UNCHANGED);
+					auto mat = Waifu2x::LoadMat(p.string());
 					if (mat.empty())
 						continue;
 
@@ -277,7 +277,7 @@ private:
 		}
 		else
 		{
-			auto mat = cv::imread(input_path.string(), cv::IMREAD_UNCHANGED);
+			auto mat = Waifu2x::LoadMat(input_path.string());
 			if (mat.empty())
 				return;
 
