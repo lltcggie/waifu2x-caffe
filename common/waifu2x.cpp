@@ -205,17 +205,16 @@ Waifu2x::eWaifu2xError Waifu2x::LoadMat(cv::Mat &float_image, const std::string 
 		cv::cvtColor(convert, convert, cv::COLOR_GRAY2BGR);
 	else if (convert.channels() == 4)
 	{
-		// アルファチャンネル付きだったら背景を1(白)として画像合成する
+		// アルファチャンネル付きだったらα乗算済みにする
 
 		std::vector<cv::Mat> planes;
 		cv::split(convert, planes);
 
-		cv::Mat w2 = planes[3];
-		cv::Mat w1 = 1.0 - planes[3];
+		cv::Mat w = planes[3];
 
-		planes[0] = planes[0].mul(w2) + w1;
-		planes[1] = planes[1].mul(w2) + w1;
-		planes[2] = planes[2].mul(w2) + w1;
+		planes[0] = planes[0].mul(w);
+		planes[1] = planes[1].mul(w);
+		planes[2] = planes[2].mul(w);
 
 		cv::merge(planes, convert);
 	}
@@ -1158,9 +1157,9 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std
 
 		cv::Mat w2 = planes[3];
 
-		planes[0] = (planes[0] - 1.0).mul(1.0 / w2) + 1.0;
-		planes[1] = (planes[1] - 1.0).mul(1.0 / w2) + 1.0;
-		planes[2] = (planes[2] - 1.0).mul(1.0 / w2) + 1.0;
+		planes[0] = (planes[0]).mul(1.0 / w2);
+		planes[1] = (planes[1]).mul(1.0 / w2);
+		planes[2] = (planes[2]).mul(1.0 / w2);
 
 		cv::merge(planes, process_image);
 	}
