@@ -546,7 +546,7 @@ private:
 	}
 
 public:
-	DialogEvent() : dh(nullptr), mode("noise_scale"), noise_level(1), scale_ratio(2.0), model_dir("models/anime_style_art_rgb"), process("gpu"), outputExt("png"), inputFileExt("png:jpg:jpeg:tif:tiff:bmp"),
+	DialogEvent() : dh(nullptr), mode("noise_scale"), noise_level(1), scale_ratio(2.0), model_dir("models/anime_style_art_rgb"), process("gpu"), outputExt("png"), inputFileExt("png:jpg:jpeg:tif:tiff:bmp:tga"),
 		crop_size(128), batch_size(1), isLastError(false)
 	{
 	}

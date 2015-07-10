@@ -61,7 +61,7 @@ int main(int argc, char** argv)
 		"(auto)", "string", cmd);
 
 	TCLAP::ValueArg<std::string> cmdInputFileExt("l", "input_extention_list",
-		"extention to input image file when input_path is folder", false, "png:jpg:jpeg:tif:tiff:bmp",
+		"extention to input image file when input_path is folder", false, "png:jpg:jpeg:tif:tiff:bmp:tga",
 		"string", cmd);
 
 	TCLAP::ValueArg<std::string> cmdOutputFileExt("e", "output_extention",
