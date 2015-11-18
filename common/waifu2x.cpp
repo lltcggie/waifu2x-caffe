@@ -1239,25 +1239,21 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std
 		{
 			cv::Mat in(brfm.clone());
 
-			cv::imwrite("0.png", in * 255.0);
-
 			const int rotateNum = i % 4;
 			RotateClockwise90N(in, rotateNum);
-			cv::imwrite("1.png", in * 255.0);
 
 			if(i >= 4)
 				cv::flip(in, in, 1); // êÇíºé≤îΩì]
-			cv::imwrite("2.png", in * 255.0);
 
 			ret = ReconstructFloatMat(isJpeg, cancel_func, in, in);
 			if (ret != eWaifu2xError_OK)
 				return ret;
-			cv::imwrite("3.png", in * 255.0);
+
 			if (i >= 4)
 				cv::flip(in, in, 1); // êÇíºé≤îΩì]
-			cv::imwrite("4.png", in * 255.0);
+
 			RotateCounterclockwise90N(in, rotateNum);
-			cv::imwrite("5.png", in * 255.0);
+
 			ri[i] = in;
 		}
 
