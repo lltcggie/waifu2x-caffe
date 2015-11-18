@@ -110,6 +110,8 @@ private:
 	std::string outputExt;
 	std::string inputFileExt;
 
+	bool use_tta;
+
 	int crop_size;
 	int batch_size;
 
@@ -248,6 +250,8 @@ private:
 				MessageBox(dh, TEXT("分割サイズは0より大きい整数である必要があります"), TEXT("エラー"), MB_OK | MB_ICONERROR);
 			}
 		}
+
+		use_tta = SendMessage(GetDlgItem(dh, IDC_CHECK_TTA), BM_GETCHECK, 0, 0) == BST_CHECKED;
 
 		return ret;
 	}
@@ -431,7 +435,7 @@ private:
 		Waifu2x::eWaifu2xError ret;
 
 		Waifu2x w;
-		ret = w.init(__argc, __argv, mode, noise_level, scale_ratio, model_dir, process, crop_size, batch_size);
+		ret = w.init(__argc, __argv, mode, noise_level, scale_ratio, model_dir, process, use_tta, crop_size, batch_size);
 		if(ret != Waifu2x::eWaifu2xError_OK)
 			SendMessage(dh, WM_ON_WAIFU2X_ERROR, (WPARAM)&ret, 0);
 		else
@@ -547,7 +551,7 @@ private:
 
 public:
 	DialogEvent() : dh(nullptr), mode("noise_scale"), noise_level(1), scale_ratio(2.0), model_dir("models/anime_style_art_rgb"), process("gpu"), outputExt("png"), inputFileExt("png:jpg:jpeg:tif:tiff:bmp:tga"),
-		crop_size(128), batch_size(1), isLastError(false)
+		use_tta(false), crop_size(128), batch_size(1), isLastError(false)
 	{
 	}
 
