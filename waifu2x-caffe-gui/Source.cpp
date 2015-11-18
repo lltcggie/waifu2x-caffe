@@ -493,7 +493,13 @@ private:
 		SyncMember(true);
 
 		const boost::filesystem::path output_path(output_str);
-		std::string stem = output_path.stem().string();
+		std::string stem;
+
+		if (!boost::filesystem::is_directory(input_str))
+			stem = output_path.stem().string();
+		else
+			stem = output_path.filename().string();
+
 		if (stem.length() > 0 && stem.length() >= autoSetAddName.length())
 		{
 			const std::string base = stem.substr(0, stem.length() - autoSetAddName.length());
@@ -503,7 +509,11 @@ private:
 				const std::string addstr(AddName());
 				autoSetAddName = addstr;
 
-				boost::filesystem::path new_out_path = output_path.branch_path() / (base + addstr + outputExt);
+				boost::filesystem::path new_out_path;
+				if (!boost::filesystem::is_directory(input_str))
+					new_out_path = output_path.branch_path() / (base + addstr + outputExt);
+				else
+					new_out_path = output_path.branch_path() / (base + addstr);
 
 				SetWindowTextA(GetDlgItem(dh, IDC_EDIT_OUTPUT), new_out_path.string().c_str());
 			}
