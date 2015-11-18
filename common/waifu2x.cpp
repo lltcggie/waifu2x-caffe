@@ -815,7 +815,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 }
 
 Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &Mode, const int NoiseLevel, const double ScaleRatio, const std::string &ModelDir, const std::string &Process,
-	const int CropSize, const int BatchSize)
+	const bool UseTTA, const int CropSize, const int BatchSize)
 {
 	Waifu2x::eWaifu2xError ret;
 
@@ -832,6 +832,7 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 		scale_ratio = ScaleRatio;
 		model_dir = ModelDir;
 		process = Process;
+		use_tta = UseTTA;
 
 		crop_size = CropSize;
 		batch_size = BatchSize;
@@ -1028,29 +1029,19 @@ Waifu2x::eWaifu2xError Waifu2x::WriteMat(const cv::Mat &im, const std::string &o
 	return eWaifu2xError_FailedOpenOutputFile;
 }
 
-Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std::string &output_file,
-	const waifu2xCancelFunc cancel_func)
+Waifu2x::eWaifu2xError Waifu2x::BeforeReconstructFloatMatProcess(const cv::Mat &in, cv::Mat &out)
 {
 	Waifu2x::eWaifu2xError ret;
 
-	if (!is_inited)
-		return eWaifu2xError_NotInitialized;
-
-	cv::Mat float_image;
-	ret = LoadMat(float_image, input_file);
-	if (ret != eWaifu2xError_OK)
-		return ret;
-
 	cv::Mat im;
 	if (input_plane == 1)
-		CreateBrightnessImage(float_image, im);
+		CreateBrightnessImage(in, im);
 	else
 	{
-
 		std::vector<cv::Mat> planes;
-		cv::split(float_image, planes);
+		cv::split(in, planes);
 
-		if (float_image.channels() == 4)
+		if (in.channels() == 4)
 			planes.resize(3);
 
 		// BGRÇ©ÇÁRGBÇ…Ç∑ÇÈ
@@ -1058,12 +1049,18 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std
 
 		cv::merge(planes, im);
 	}
+
+	out = im;
+
+	return eWaifu2xError_OK;
+}
+
+Waifu2x::eWaifu2xError Waifu2x::ReconstructFloatMat(const bool isJpeg, const waifu2xCancelFunc cancel_func, const cv::Mat &in, cv::Mat &out)
+{
+	Waifu2x::eWaifu2xError ret;
+
+	cv::Mat im(in);
 	cv::Size_<int> image_size = im.size();
-
-	const boost::filesystem::path ip(input_file);
-	const boost::filesystem::path ipext(ip.extension());
-
-	const bool isJpeg = boost::iequals(ipext.string(), ".jpg") || boost::iequals(ipext.string(), ".jpeg");
 
 	const bool isReconstructNoise = mode == "noise" || mode == "noise_scale" || (mode == "auto_scale" && isJpeg);
 	const bool isReconstructScale = mode == "scale" || mode == "noise_scale";
@@ -1084,7 +1081,6 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std
 		return eWaifu2xError_Cancel;
 
 	const int scale2 = ceil(log2(scale_ratio));
-	const double shrinkRatio = scale_ratio / std::pow(2.0, (double)scale2);
 
 	if (isReconstructScale)
 	{
@@ -1105,18 +1101,24 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std
 	if (cancel_func && cancel_func())
 		return eWaifu2xError_Cancel;
 
+	out = im;
+
+	return eWaifu2xError_OK;
+}
+
+Waifu2x::eWaifu2xError Waifu2x::AfterReconstructFloatMatProcess(const cv::Mat &floatim, const cv::Mat &in, cv::Mat &out)
+{
+	cv::Size_<int> image_size = in.size();
+
 	cv::Mat process_image;
 	if (input_plane == 1)
 	{
 		// çƒç\ízÇµÇΩãPìxâÊëúÇ∆CreateZoomColorImage()Ç≈çÏê¨ÇµÇΩêFèÓïÒÇÉ}Å[ÉWÇµÇƒí èÌÇÃâÊëúÇ…ïœä∑ÇµÅAèëÇ´çûÇﬁ
 
 		std::vector<cv::Mat> color_planes;
-		CreateZoomColorImage(float_image, image_size, color_planes);
+		CreateZoomColorImage(floatim, image_size, color_planes);
 
-		float_image.release();
-
-		color_planes[0] = im;
-		im.release();
+		color_planes[0] = in;
 
 		cv::Mat converted_image;
 		cv::merge(color_planes, converted_image);
@@ -1128,7 +1130,7 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std
 	else
 	{
 		std::vector<cv::Mat> planes;
-		cv::split(im, planes);
+		cv::split(in, planes);
 
 		// RGBÇ©ÇÁBGRÇ…íºÇ∑
 		std::swap(planes[0], planes[2]);
@@ -1137,10 +1139,10 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std
 	}
 
 	cv::Mat alpha;
-	if (float_image.channels() == 4)
+	if (floatim.channels() == 4)
 	{
 		std::vector<cv::Mat> planes;
-		cv::split(float_image, planes);
+		cv::split(floatim, planes);
 		alpha = planes[3];
 
 		cv::resize(alpha, alpha, image_size, 0.0, 0.0, cv::INTER_CUBIC);
@@ -1164,9 +1166,116 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std
 		cv::merge(planes, process_image);
 	}
 
+	const int scale2 = ceil(log2(scale_ratio));
+	const double shrinkRatio = scale_ratio / std::pow(2.0, (double)scale2);
+
 	const cv::Size_<int> ns(image_size.width * shrinkRatio, image_size.height * shrinkRatio);
 	if (image_size.width != ns.width || image_size.height != ns.height)
 		cv::resize(process_image, process_image, ns, 0.0, 0.0, cv::INTER_LINEAR);
+
+	out = process_image;
+
+	return eWaifu2xError_OK;
+}
+
+Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std::string &output_file,
+	const waifu2xCancelFunc cancel_func)
+{
+	Waifu2x::eWaifu2xError ret;
+
+	if (!is_inited)
+		return eWaifu2xError_NotInitialized;
+
+	const boost::filesystem::path ip(input_file);
+	const boost::filesystem::path ipext(ip.extension());
+
+	const bool isJpeg = boost::iequals(ipext.string(), ".jpg") || boost::iequals(ipext.string(), ".jpeg");
+
+	cv::Mat float_image;
+	ret = LoadMat(float_image, input_file);
+	if (ret != eWaifu2xError_OK)
+		return ret;
+
+	cv::Mat brfm;
+	ret = BeforeReconstructFloatMatProcess(float_image, brfm);
+	if (ret != eWaifu2xError_OK)
+		return ret;
+
+	cv::Mat reconstruct_image;
+	if (!use_tta) // ïÅí Ç…èàóù
+	{
+		ret = ReconstructFloatMat(isJpeg, cancel_func, brfm, reconstruct_image);
+		if (ret != eWaifu2xError_OK)
+			return ret;
+	}
+	else // Test-Time Augmentation Mode
+	{
+		const auto RotateClockwise90 = [](cv::Mat &mat)
+		{
+			cv::transpose(mat, mat);
+			cv::flip(mat, mat, 1);
+		};
+
+		const auto RotateClockwise90N = [RotateClockwise90](cv::Mat &mat, const int rotateNum)
+		{
+			for (int i = 0; i < rotateNum; i++)
+				RotateClockwise90(mat);
+		};
+
+		const auto RotateCounterclockwise90 = [](cv::Mat &mat)
+		{
+			cv::transpose(mat, mat);
+			cv::flip(mat, mat, 0);
+		};
+
+		const auto RotateCounterclockwise90N = [RotateCounterclockwise90](cv::Mat &mat, const int rotateNum)
+		{
+			for (int i = 0; i < rotateNum; i++)
+				RotateCounterclockwise90(mat);
+		};
+
+		cv::Mat ri[8];
+		for (int i = 0; i < 8; i++)
+		{
+			cv::Mat in(brfm.clone());
+
+			cv::imwrite("0.png", in * 255.0);
+
+			const int rotateNum = i % 4;
+			RotateClockwise90N(in, rotateNum);
+			cv::imwrite("1.png", in * 255.0);
+
+			if(i >= 4)
+				cv::flip(in, in, 1); // êÇíºé≤îΩì]
+			cv::imwrite("2.png", in * 255.0);
+
+			ret = ReconstructFloatMat(isJpeg, cancel_func, in, in);
+			if (ret != eWaifu2xError_OK)
+				return ret;
+			cv::imwrite("3.png", in * 255.0);
+			if (i >= 4)
+				cv::flip(in, in, 1); // êÇíºé≤îΩì]
+			cv::imwrite("4.png", in * 255.0);
+			RotateCounterclockwise90N(in, rotateNum);
+			cv::imwrite("5.png", in * 255.0);
+			ri[i] = in;
+		}
+
+		reconstruct_image = ri[0];
+		for (int i = 1; i < 8; i++)
+			reconstruct_image += ri[i];
+
+		reconstruct_image /= 8.0;
+	}
+
+	brfm.release();
+
+	cv::Mat process_image;
+	ret = AfterReconstructFloatMatProcess(float_image, reconstruct_image, process_image);
+	if (ret != eWaifu2xError_OK)
+		return ret;
+
+	float_image.release();
 
 	cv::Mat write_iamge;
 	process_image.convertTo(write_iamge, CV_8U, 255.0);

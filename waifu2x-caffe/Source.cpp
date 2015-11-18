@@ -107,6 +107,13 @@ int main(int argc, char** argv)
 		"input batch size", false,
 		1, "int", cmd);
 
+	std::vector<int> cmdTTAConstraintV;
+	cmdTTAConstraintV.push_back(0);
+	cmdTTAConstraintV.push_back(1);
+	TCLAP::ValuesConstraint<int> cmdTTAConstraint(cmdTTAConstraintV);
+	TCLAP::ValueArg<int> cmdTTALevel("t", "tta", "8x slower and slightly high quality",
+		false, 0, &cmdTTAConstraint, cmd);
+
 	// definition of command line argument : end
 
 	TCLAP::Arg::enableIgnoreMismatched();
@@ -237,7 +244,7 @@ int main(int argc, char** argv)
 
 	Waifu2x::eWaifu2xError ret;
 	Waifu2x w;
-	ret = w.init(argc, argv, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), cmdModelPath.getValue(), cmdProcess.getValue(),
+	ret = w.init(argc, argv, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), cmdModelPath.getValue(), cmdProcess.getValue(), cmdTTALevel.getValue() == 1,
 		cmdCropSizeFile.getValue(), cmdBatchSizeFile.getValue());
 	switch (ret)
 	{

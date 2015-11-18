@@ -90,6 +90,8 @@ private:
 	float *dummy_data;
 	float *output_block;
 
+	bool use_tta;
+
 private:
 	static eWaifu2xError LoadMat(cv::Mat &float_image, const std::string &input_file);
 	static eWaifu2xError LoadMatBySTBI(cv::Mat &float_image, const std::string &input_file);
@@ -103,6 +105,10 @@ private:
 	eWaifu2xError ReconstructImage(boost::shared_ptr<caffe::Net<float>> net, cv::Mat &im);
 	eWaifu2xError WriteMat(const cv::Mat &im, const std::string &output_file);
 
+	eWaifu2xError BeforeReconstructFloatMatProcess(const cv::Mat &in, cv::Mat &out);
+	eWaifu2xError ReconstructFloatMat(const bool isJpeg, const waifu2xCancelFunc cancel_func, const cv::Mat &in, cv::Mat &out);
+	eWaifu2xError AfterReconstructFloatMatProcess(const cv::Mat &floatim, const cv::Mat &in, cv::Mat &out);
+
 public:
 	Waifu2x();
 	~Waifu2x();
@@ -113,7 +119,7 @@ public:
 	// mode: noise or scale or noise_scale or auto_scale
 	// process: cpu or gpu or cudnn
 	eWaifu2xError init(int argc, char** argv, const std::string &mode, const int noise_level, const double scale_ratio, const std::string &model_dir, const std::string &process,
-		const int crop_size = 128, const int batch_size = 1);
+		const bool use_tta = false, const int crop_size = 128, const int batch_size = 1);
 
 	void destroy();
 
