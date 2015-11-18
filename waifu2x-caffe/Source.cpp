@@ -136,6 +136,8 @@ int main(int argc, char** argv)
 	if (outputExt.length() > 0 && outputExt[0] != '.')
 		outputExt = "." + outputExt;
 
+	const bool use_tta = cmdTTALevel.getValue() == 1;
+
 	std::vector<std::pair<std::string, std::string>> file_paths;
 	if (boost::filesystem::is_directory(input_path)) // input_pathがフォルダならそのディレクトリ以下の画像ファイルを一括変換
 	{
@@ -150,6 +152,8 @@ int main(int argc, char** argv)
 			const std::string &mode = cmdMode.getValue();
 			if (mode.find("noise") != mode.npos || mode.find("auto_scale") != mode.npos)
 				addstr += "(Level" + std::to_string(cmdNRLevel.getValue()) + ")";
+			if (use_tta)
+				addstr += "(tta)";
 			if (mode.find("scale") != mode.npos)
 				addstr += "(x" + std::to_string(cmdScaleRatio.getValue()) + ")";
 
@@ -244,6 +248,8 @@ int main(int argc, char** argv)
 			std::string &mode = cmdMode.getValue();
 			if (mode.find("noise") != mode.npos || mode.find("auto_scale") != mode.npos)
 				outputFileName = outputFileName + "(Level" + std::to_string(cmdNRLevel.getValue()) + ")";
+			if (use_tta)
+				outputFileName += "(tta)";
 			if (mode.find("scale") != mode.npos)
 				outputFileName = outputFileName + "(x" + std::to_string(cmdScaleRatio.getValue()) + ")";
 			outputFileName += outputExt;
@@ -254,7 +260,7 @@ int main(int argc, char** argv)
 
 	Waifu2x::eWaifu2xError ret;
 	Waifu2x w;
-	ret = w.init(argc, argv, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), cmdModelPath.getValue(), cmdProcess.getValue(), cmdTTALevel.getValue() == 1,
+	ret = w.init(argc, argv, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), cmdModelPath.getValue(), cmdProcess.getValue(), use_tta,
 		cmdCropSizeFile.getValue(), cmdBatchSizeFile.getValue());
 	switch (ret)
 	{
