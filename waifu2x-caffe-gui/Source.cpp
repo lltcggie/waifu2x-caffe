@@ -2,12 +2,14 @@
 #include <windows.h>
 #include <Commctrl.h>
 #include <tchar.h>
+#include <stdio.h>
 #include <string>
 #include <thread>
 #include <atomic>
 #include <chrono>
 #include <iostream>
 #include <fstream>
+#include <algorithm>
 #include <boost/filesystem.hpp>
 #include <boost/tokenizer.hpp>
 #include <boost/foreach.hpp>
@@ -233,7 +235,11 @@ private:
 			tokenizer tokens(inputFileExt, sep);
 
 			for (tokenizer::iterator tok_iter = tokens.begin(); tok_iter != tokens.end(); ++tok_iter)
-				extList.push_back("." + *tok_iter);
+			{
+				std::string ext(*tok_iter);
+				std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+				extList.push_back("." + ext);
+			}
 		}
 
 		if (!NotSyncCropSize)
@@ -268,16 +274,22 @@ private:
 			BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::recursive_directory_iterator(input_path),
 				boost::filesystem::recursive_directory_iterator()))
 			{
-				if (!boost::filesystem::is_directory(p) && std::find(extList.begin(), extList.end(), p.extension().string()) != extList.end())
+
+				if (!boost::filesystem::is_directory(p))
 				{
-					auto mat = Waifu2x::LoadMat(p.string());
-					if (mat.empty())
-						continue;
+					std::string ext(p.extension().string());
+					std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+					if (std::find(extList.begin(), extList.end(), ext) != extList.end())
+					{
+						auto mat = Waifu2x::LoadMat(p.string());
+						if (mat.empty())
+							continue;
 
-					auto size = mat.size();
-					mat.release();
+						auto size = mat.size();
+						mat.release();
 
-					gcd = boost::math::gcd(size.width, size.height);
+						gcd = boost::math::gcd(size.width, size.height);
+					}
 				}
 			}
 		}
@@ -376,14 +388,19 @@ private:
 				BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::recursive_directory_iterator(path),
 					boost::filesystem::recursive_directory_iterator()))
 				{
-					if (!boost::filesystem::is_directory(p) && std::find(extList.begin(), extList.end(), p.extension().string()) != extList.end())
+					if (!boost::filesystem::is_directory(p))
 					{
-						const auto out_relative = relativePath(p, input_path);
-						const auto out_absolute = output_path / out_relative;
+						std::string ext(p.extension().string());
+						std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+						if (std::find(extList.begin(), extList.end(), ext) != extList.end())
+						{
+							const auto out_relative = relativePath(p, input_path);
+							const auto out_absolute = output_path / out_relative;
 
-						const auto out = (out_absolute.branch_path() / out_absolute.stem()).string() + outputExt;
+							const auto out = (out_absolute.branch_path() / out_absolute.stem()).string() + outputExt;
 
-						file_paths.emplace_back(p.string(), out);
+							file_paths.emplace_back(p.string(), out);
+						}
 					}
 				}
 

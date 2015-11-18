@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <algorithm>
 #include <tclap/CmdLine.h>
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
@@ -179,7 +180,11 @@ int main(int argc, char** argv)
 			tokenizer tokens(cmdInputFileExt.getValue(), sep);
 
 			for (tokenizer::iterator tok_iter = tokens.begin(); tok_iter != tokens.end(); ++tok_iter)
-				extList.push_back("." + *tok_iter);
+			{
+				std::string ext(*tok_iter);
+				std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+				extList.push_back("." + ext);
+			}
 		}
 
 		// 変換する画像の入力、出力パスを取得
@@ -202,14 +207,19 @@ int main(int argc, char** argv)
 						}
 					}
 				}
-				else if (std::find(extList.begin(), extList.end(), p.extension().string()) != extList.end())
+				else
 				{
-					const auto out_relative = relativePath(p, input_path);
-					const auto out_absolute = output_path / out_relative;
+					std::string ext(p.extension().string());
+					std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+					if (std::find(extList.begin(), extList.end(), ext) != extList.end())
+					{
+						const auto out_relative = relativePath(p, input_path);
+						const auto out_absolute = output_path / out_relative;
 
-					const auto out = (out_absolute.branch_path() / out_absolute.stem()).string() + outputExt;
+						const auto out = (out_absolute.branch_path() / out_absolute.stem()).string() + outputExt;
 
-					file_paths.emplace_back(p.string(), out);
+						file_paths.emplace_back(p.string(), out);
+					}
 				}
 			}
 
