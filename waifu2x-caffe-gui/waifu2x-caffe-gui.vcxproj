@@ -42,12 +42,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>D:\caffe-build\install\include;D:\caffe-build\install\include\boost-1_59;$(CUDA_PATH_V7_5)\include;C:\opencv249\build\include;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\caffe-build\install\lib;$(CUDA_PATH_V7_5)\lib\$(PlatformName);C:\opencv249\build\$(PlatformShortName)\vc12\staticlib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>D:\caffe-build\install\lib;$(CUDA_PATH_V7_5)\lib\$(PlatformName);C:\opencv249\build\$(PlatformShortName)\vc12\staticlib;C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2016.1.146\windows\mkl\lib\intel64_win;C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2016.1.146\windows\compiler\lib\intel64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>D:\caffe-build\install\include;D:\caffe-build\install\include\boost-1_59;$(CUDA_PATH_V7_5)\include;C:\opencv249\build\include;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\caffe-build\install\lib;$(CUDA_PATH_V7_5)\lib\$(PlatformName);C:\opencv249\build\$(PlatformShortName)\vc12\staticlib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>D:\caffe-build\install\lib;$(CUDA_PATH_V7_5)\lib\$(PlatformName);C:\opencv249\build\$(PlatformShortName)\vc12\staticlib;C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2016.1.146\windows\mkl\lib\intel64_win;C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2016.1.146\windows\compiler\lib\intel64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>

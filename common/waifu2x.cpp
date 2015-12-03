@@ -36,6 +36,10 @@
 #pragma comment(lib, "curand.lib")
 #pragma comment(lib, "cublas.lib")
 #pragma comment(lib, "cudnn.lib")
+#pragma comment(lib, "mkl_intel_lp64.lib")
+#pragma comment(lib, "mkl_intel_thread.lib")
+#pragma comment(lib, "mkl_core.lib")
+#pragma comment(lib, "libiomp5md.lib")
 
 #pragma comment(lib, "IlmImfd.lib")
 #pragma comment(lib, "libjasperd.lib")
@@ -59,11 +63,14 @@
 #pragma comment(lib, "libhdf5_hl.lib")
 #pragma comment(lib, "libhdf5.lib")
 #pragma comment(lib, "zlibstatic.lib")
-#pragma comment(lib, "libopenblas.lib")
 #pragma comment(lib, "cudart.lib")
 #pragma comment(lib, "curand.lib")
 #pragma comment(lib, "cublas.lib")
 #pragma comment(lib, "cudnn.lib")
+#pragma comment(lib, "mkl_intel_lp64.lib")
+#pragma comment(lib, "mkl_intel_thread.lib")
+#pragma comment(lib, "mkl_core.lib")
+#pragma comment(lib, "libiomp5md.lib")
 
 #pragma comment(lib, "IlmImf.lib")
 #pragma comment(lib, "libjasper.lib")
@@ -91,15 +98,6 @@ const int MinCudaDriverVersion = 6050;
 static std::once_flag waifu2x_once_flag;
 static std::once_flag waifu2x_cudnn_once_flag;
 static std::once_flag waifu2x_cuda_once_flag;
-
-#ifdef _MSC_VER
-// OpenBLASÇÃèâä˙âªÅAèIóπä÷êî
-extern "C"
-{
-	void __cdecl gotoblas_init(void);
-	void __cdecl gotoblas_quit(void);
-}
-#endif
 
 #ifndef CUDA_CHECK_WAIFU2X
 #define CUDA_CHECK_WAIFU2X(condition) \
@@ -236,16 +234,10 @@ Waifu2x::eWaifu2xCudaError Waifu2x::can_use_CUDA()
 
 void Waifu2x::init_liblary()
 {
-#ifdef _MSC_VER
-	gotoblas_init();
-#endif
 }
 
 void Waifu2x::quit_liblary()
 {
-#ifdef _MSC_VER
-	gotoblas_quit();
-#endif
 }
 
 cv::Mat Waifu2x::LoadMat(const std::string &path)
