@@ -15,6 +15,7 @@
 #include <boost/foreach.hpp>
 #include <boost/math/common_factor_rt.hpp>
 #include <opencv2/opencv.hpp>
+#include <cblas.h>
 #include "resource.h"
 #include "../common/waifu2x.h"
 
@@ -830,10 +831,10 @@ public:
 			MessageBox(dh, TEXT("cuDNNが使えます。"), TEXT("結果"), MB_OK | MB_ICONINFORMATION);
 			break;
 		case Waifu2x::eWaifu2xcuDNNError_NotFind:
-			MessageBox(dh, TEXT("cuDNNは使えません。\r\n「cudnn64_65.dll」が見つかりません。"), TEXT("結果"), MB_OK | MB_ICONERROR);
+			MessageBox(dh, TEXT("cuDNNは使えません。\r\n「") TEXT(CUDNN_DLL_NAME) TEXT("」が見つかりません。"), TEXT("結果"), MB_OK | MB_ICONERROR);
 			break;
 		case Waifu2x::eWaifu2xcuDNNError_OldVersion:
-			MessageBox(dh, TEXT("cuDNNは使えません。\r\n「cudnn64_65.dll」のバージョンが古いです。v2を使って下さい。"), TEXT("結果"), MB_OK | MB_ICONERROR);
+			MessageBox(dh, TEXT("cuDNNは使えません。\r\n「") TEXT(CUDNN_DLL_NAME) TEXT("」のバージョンが古いです。v2を使って下さい。"), TEXT("結果"), MB_OK | MB_ICONERROR);
 			break;
 		case Waifu2x::eWaifu2xcuDNNError_CannotCreate:
 			MessageBox(dh, TEXT("cuDNNは使えません。\r\ncuDNNを初期化出来ません。"), TEXT("結果"), MB_OK | MB_ICONERROR);
@@ -934,6 +935,8 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	LPSTR     lpCmdLine,
 	int       nCmdShow)
 {
+	Waifu2x::init_liblary();
+
 	// CDialogクラスでダイアログを作成する
 	CDialog cDialog;
 	CDialog cDialog2;
@@ -991,6 +994,8 @@ int WINAPI WinMain(HINSTANCE hInstance,
 
 	// ダイアログを表示
 	cDialog.DoModal(hInstance, IDD_DIALOG);
+
+	Waifu2x::quit_liblary();
 
 	return 0;
 }

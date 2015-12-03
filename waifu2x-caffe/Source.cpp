@@ -50,6 +50,8 @@ boost::filesystem::path relativePath(const boost::filesystem::path &path, const 
 
 int main(int argc, char** argv)
 {
+	Waifu2x::init_liblary();
+
 	// definition of command line arguments
 	TCLAP::CmdLine cmd("waifu2x reimplementation using Caffe", ' ', "1.0.0");
 
@@ -311,6 +313,8 @@ int main(int argc, char** argv)
 	}
 
 	printf("ïœä∑Ç…ê¨å˜ÇµÇ‹ÇµÇΩ\n");
+
+	Waifu2x::quit_liblary();
 
 	return 0;
 }

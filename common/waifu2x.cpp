@@ -19,15 +19,62 @@
 #include <Windows.h>
 #endif
 
-#ifdef _MSC_VER
 #ifdef _DEBUG
-#pragma comment(lib, "libcaffed.lib")
+#pragma comment(lib, "caffe-d.lib")
+#pragma comment(lib, "proto-d.lib")
+#pragma comment(lib, "libboost_system-vc120-mt-sgd-1_59.lib")
+#pragma comment(lib, "libboost_thread-vc120-mt-sgd-1_59.lib")
+#pragma comment(lib, "libboost_filesystem-vc120-mt-sgd-1_59.lib")
+#pragma comment(lib, "glogd.lib")
+#pragma comment(lib, "gflagsd.lib")
 #pragma comment(lib, "libprotobufd.lib")
+#pragma comment(lib, "libhdf5_hl_D.lib")
+#pragma comment(lib, "libhdf5_D.lib")
+#pragma comment(lib, "zlibstaticd.lib")
+#pragma comment(lib, "libopenblasd.lib")
+#pragma comment(lib, "cudart.lib")
+#pragma comment(lib, "curand.lib")
+#pragma comment(lib, "cublas.lib")
+#pragma comment(lib, "cudnn.lib")
+
+#pragma comment(lib, "IlmImfd.lib")
+#pragma comment(lib, "libjasperd.lib")
+#pragma comment(lib, "libjpegd.lib")
+#pragma comment(lib, "libpngd.lib")
+#pragma comment(lib, "libtiffd.lib")
+#pragma comment(lib, "opencv_calib3d249d.lib")
+#pragma comment(lib, "opencv_contrib249d.lib")
+#pragma comment(lib, "opencv_core249d.lib")
+#pragma comment(lib, "opencv_highgui249d.lib")
+#pragma comment(lib, "opencv_imgproc249d.lib")
 #else
-#pragma comment(lib, "libcaffe.lib")
+#pragma comment(lib, "caffe.lib")
+#pragma comment(lib, "proto.lib")
+#pragma comment(lib, "libboost_system-vc120-mt-s-1_59.lib")
+#pragma comment(lib, "libboost_thread-vc120-mt-s-1_59.lib")
+#pragma comment(lib, "libboost_filesystem-vc120-mt-s-1_59.lib")
+#pragma comment(lib, "glog.lib")
+#pragma comment(lib, "gflags.lib")
 #pragma comment(lib, "libprotobuf.lib")
-#endif
-#pragma comment(lib, "libprotoc.lib")
+#pragma comment(lib, "libhdf5_hl.lib")
+#pragma comment(lib, "libhdf5.lib")
+#pragma comment(lib, "zlibstatic.lib")
+#pragma comment(lib, "libopenblas.lib")
+#pragma comment(lib, "cudart.lib")
+#pragma comment(lib, "curand.lib")
+#pragma comment(lib, "cublas.lib")
+#pragma comment(lib, "cudnn.lib")
+
+#pragma comment(lib, "IlmImf.lib")
+#pragma comment(lib, "libjasper.lib")
+#pragma comment(lib, "libjpeg.lib")
+#pragma comment(lib, "libpng.lib")
+#pragma comment(lib, "libtiff.lib")
+#pragma comment(lib, "opencv_calib3d249.lib")
+#pragma comment(lib, "opencv_contrib249.lib")
+#pragma comment(lib, "opencv_core249.lib")
+#pragma comment(lib, "opencv_highgui249.lib")
+#pragma comment(lib, "opencv_imgproc249.lib")
 #endif
 
 // 入力画像のオフセット
@@ -44,6 +91,15 @@ const int MinCudaDriverVersion = 6050;
 static std::once_flag waifu2x_once_flag;
 static std::once_flag waifu2x_cudnn_once_flag;
 static std::once_flag waifu2x_cuda_once_flag;
+
+#ifdef _MSC_VER
+// OpenBLASの初期化、終了関数
+extern "C"
+{
+	void __cdecl gotoblas_init(void);
+	void __cdecl gotoblas_quit(void);
+}
+#endif
 
 #ifndef CUDA_CHECK_WAIFU2X
 #define CUDA_CHECK_WAIFU2X(condition) \
@@ -107,7 +163,7 @@ Waifu2x::eWaifu2xcuDNNError Waifu2x::can_use_cuDNN()
 	std::call_once(waifu2x_cudnn_once_flag, [&]()
 	{
 #if defined(WIN32) || defined(WIN64)
-		HMODULE hModule = LoadLibrary(TEXT("cudnn64_65.dll"));
+		HMODULE hModule = LoadLibrary(TEXT(CUDNN_DLL_NAME));
 		if (hModule != NULL)
 		{
 			typedef cudnnStatus_t(__stdcall * cudnnCreateType)(cudnnHandle_t *);
@@ -176,6 +232,20 @@ Waifu2x::eWaifu2xCudaError Waifu2x::can_use_CUDA()
 	});
 
 	return CudaFlag;
+}
+
+void Waifu2x::init_liblary()
+{
+#ifdef _MSC_VER
+	gotoblas_init();
+#endif
+}
+
+void Waifu2x::quit_liblary()
+{
+#ifdef _MSC_VER
+	gotoblas_quit();
+#endif
 }
 
 cv::Mat Waifu2x::LoadMat(const std::string &path)

@@ -8,6 +8,8 @@
 #include <boost/shared_ptr.hpp>
 #include <opencv2/opencv.hpp>
 
+#define CUDNN_DLL_NAME "cudnn64_70"
+
 
 namespace caffe
 {
@@ -115,6 +117,9 @@ public:
 
 	static eWaifu2xcuDNNError can_use_cuDNN();
 	static eWaifu2xCudaError can_use_CUDA();
+
+	static void init_liblary();
+	static void quit_liblary();
 
 	// mode: noise or scale or noise_scale or auto_scale
 	// process: cpu or gpu or cudnn
