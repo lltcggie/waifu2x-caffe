@@ -42,12 +42,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>D:\caffe-build\install\include;D:\caffe-build\install\include\boost-1_59;$(CUDA_PATH_V7_5)\include;C:\opencv249\build\include;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\caffe-build\install\lib;$(CUDA_PATH_V7_5)\lib\$(PlatformName);C:\opencv249\build\$(PlatformShortName)\vc12\staticlib;C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2016.1.146\windows\mkl\lib\intel64_win;C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2016.1.146\windows\compiler\lib\intel64;$(LibraryPath)</LibraryPath>
+    <LibraryPath>D:\caffe-build\install\lib;$(CUDA_PATH_V7_5)\lib\$(PlatformName);C:\opencv249\build\x64\vc12\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>D:\caffe-build\install\include;D:\caffe-build\install\include\boost-1_59;$(CUDA_PATH_V7_5)\include;C:\opencv249\build\include;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\caffe-build\install\lib;$(CUDA_PATH_V7_5)\lib\$(PlatformName);C:\opencv249\build\$(PlatformShortName)\vc12\staticlib;C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2016.1.146\windows\mkl\lib\intel64_win;C:\Program Files (x86)\IntelSWTools\compilers_and_libraries_2016.1.146\windows\compiler\lib\intel64;$(LibraryPath)</LibraryPath>
+    <LibraryPath>D:\caffe-build\install\lib;$(CUDA_PATH_V7_5)\lib\$(PlatformName);C:\opencv249\build\x64\vc12\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -56,7 +56,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -74,7 +74,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
