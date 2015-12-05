@@ -1293,7 +1293,7 @@ Waifu2x::eWaifu2xError Waifu2x::Reconstruct(const bool isReconstructNoise, const
 	return eWaifu2xError_OK;
 }
 
-Waifu2x::eWaifu2xError Waifu2x::AfterReconstructFloatMatProcess(const waifu2xCancelFunc cancel_func, const cv::Mat &floatim, const cv::Mat &in, cv::Mat &out)
+Waifu2x::eWaifu2xError Waifu2x::AfterReconstructFloatMatProcess(const bool isReconstructScale, const waifu2xCancelFunc cancel_func, const cv::Mat &floatim, const cv::Mat &in, cv::Mat &out)
 {
 	cv::Size_<int> image_size = in.size();
 
@@ -1329,7 +1329,7 @@ Waifu2x::eWaifu2xError Waifu2x::AfterReconstructFloatMatProcess(const waifu2xCan
 	const double shrinkRatio = scale_ratio / std::pow(2.0, (double)scale2);
 
 	cv::Mat alpha;
-	if (floatim.channels() == 4 && scale2 >= 1)
+	if (floatim.channels() == 4 && isReconstructScale)
 	{
 		std::vector<cv::Mat> planes;
 		cv::split(floatim, planes);
@@ -1357,9 +1357,12 @@ Waifu2x::eWaifu2xError Waifu2x::AfterReconstructFloatMatProcess(const waifu2xCan
 		cv::merge(planes, process_image);
 	}
 
-	const cv::Size_<int> ns(image_size.width * shrinkRatio, image_size.height * shrinkRatio);
-	if (image_size.width != ns.width || image_size.height != ns.height)
-		cv::resize(process_image, process_image, ns, 0.0, 0.0, cv::INTER_LINEAR);
+	if (isReconstructScale)
+	{
+		const cv::Size_<int> ns(image_size.width * shrinkRatio, image_size.height * shrinkRatio);
+		if (image_size.width != ns.width || image_size.height != ns.height)
+			cv::resize(process_image, process_image, ns, 0.0, 0.0, cv::INTER_LINEAR);
+	}
 
 	out = process_image;
 
@@ -1392,7 +1395,7 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std
 		return ret;
 
 	cv::Mat process_image;
-	ret = AfterReconstructFloatMatProcess(cancel_func, float_image, reconstruct_image, process_image);
+	ret = AfterReconstructFloatMatProcess(isReconstructScale, cancel_func, float_image, reconstruct_image, process_image);
 	if (ret != eWaifu2xError_OK)
 		return ret;
 
