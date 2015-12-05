@@ -203,7 +203,7 @@ private:
 		else if (SendMessage(GetDlgItem(dh, IDC_RADIO_MODEL_Y), BM_GETCHECK, 0, 0))
 			model_dir = "models/anime_style_art";
 		else
-			model_dir = "models/ukbench";
+			model_dir = "models/photo";
 
 		{
 			char buf[AR_PATH_MAX] = "";
@@ -981,7 +981,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::ModelRadioButtomScaleAndNoise, &cDialogEvent), NULL, IDC_RADIO_MODEL_RGB);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::ModelRadioButtomScaleAndNoise, &cDialogEvent), NULL, IDC_RADIO_MODEL_Y);
-	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::ModelRadioButtomScaleOnly, &cDialogEvent), NULL, IDC_RADIO_MODEL_PHOTO);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::ModelRadioButtomScaleAndNoise, &cDialogEvent), NULL, IDC_RADIO_MODEL_PHOTO);
 
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::CheckCUDNN, &cDialogEvent), NULL, IDC_BUTTON_CHECK_CUDNN);
 
