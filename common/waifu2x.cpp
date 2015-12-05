@@ -1342,20 +1342,12 @@ Waifu2x::eWaifu2xError Waifu2x::AfterReconstructFloatMatProcess(const bool isRec
 		Reconstruct(false, true, cancel_func, planes[3], alpha);
 	}
 
-	// アルファチャンネルがあったらアルファを付加して、完全透明のピクセルの色を消す(処理の都合上、完全透明のピクセルにも色を付けたから)
+	// アルファチャンネルがあったらアルファを付加する
 	if (!alpha.empty())
 	{
 		std::vector<cv::Mat> planes;
 		cv::split(process_image, planes);
 		process_image.release();
-
-		cv::Mat mask;
-		cv::threshold(alpha, mask, 0.0, 1.0, cv::THRESH_BINARY); // アルファチャンネルを二値化してマスクとして扱う
-
-		// アルファチャンネルが0のところの色を消す
-		planes[0] = planes[0].mul(mask);
-		planes[1] = planes[1].mul(mask);
-		planes[2] = planes[2].mul(mask);
 
 		planes.push_back(alpha);
 
@@ -1409,6 +1401,24 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std
 	cv::Mat write_iamge;
 	process_image.convertTo(write_iamge, CV_8U, 255.0);
 	process_image.release();
+
+	// 完全透明のピクセルの色を消す(処理の都合上、完全透明のピクセルにも色を付けたから)
+	// モデルによっては画像全域の完全透明の場所にごく小さい値のアルファが広がることがある。それを消すためにuint8_tに変換してからこの処理を行うことにした
+	if (write_iamge.channels() > 3)
+	{
+		std::vector<cv::Mat> planes;
+		cv::split(write_iamge, planes);
+
+		cv::Mat mask;
+		cv::threshold(planes[3], mask, 0.0, 1.0, cv::THRESH_BINARY); // アルファチャンネルを二値化してマスクとして扱う
+
+		// アルファチャンネルが0のところの色を消す
+		planes[0] = planes[0].mul(mask);
+		planes[1] = planes[1].mul(mask);
+		planes[2] = planes[2].mul(mask);
+
+		cv::merge(planes, write_iamge);
+	}
 
 	ret = WriteMat(write_iamge, output_file);
 	if (ret != eWaifu2xError_OK)
