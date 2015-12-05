@@ -1243,7 +1243,15 @@ Waifu2x::eWaifu2xError Waifu2x::AfterReconstructFloatMatProcess(const cv::Mat &f
 		cv::split(floatim, planes);
 		alpha = planes[3];
 
-		cv::resize(alpha, alpha, image_size, 0.0, 0.0, cv::INTER_CUBIC);
+		// 拡大したアルファチャンネルの生成
+		cv::Mat alpha_linear, alpha_cubic;
+		cv::resize(alpha, alpha_linear, image_size, 0.0, 0.0, cv::INTER_LINEAR);
+		cv::resize(alpha, alpha_cubic, image_size, 0.0, 0.0, cv::INTER_CUBIC);
+
+		cv::Mat mask;
+		cv::threshold(alpha_linear, mask, 0.0, 1.0, cv::THRESH_BINARY); // アルファを線形補間したものを二値化してマスクとして扱う
+
+		alpha = alpha_cubic.mul(mask); // バイキュービック補間で拡大すると、アルファチャンネルの境界付近に（ごく小さな値ながら）ゴミが現れる。それを線形補間マスクで消す
 	}
 
 	// アルファチャンネルがあったらアルファを付加して、完全透明のピクセルの色を消す(処理の都合上、完全透明のピクセルにも色を付けたから)
@@ -1260,6 +1268,12 @@ Waifu2x::eWaifu2xError Waifu2x::AfterReconstructFloatMatProcess(const cv::Mat &f
 		planes[0] = planes[0].mul(mask);
 		planes[1] = planes[1].mul(mask);
 		planes[2] = planes[2].mul(mask);
+
+		{
+			cv::Mat write_iamge;
+			mask.convertTo(write_iamge, CV_8U, 255.0);
+			WriteMat(write_iamge, "test_mask.png");
+		}
 
 		planes.push_back(alpha);
 
