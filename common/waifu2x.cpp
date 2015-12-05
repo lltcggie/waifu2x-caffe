@@ -381,14 +381,19 @@ Waifu2x::eWaifu2xError Waifu2x::LoadMatBySTBI(cv::Mat &float_image, const std::s
 // ‰æ‘œ‚©‚ç‹P“x‚Ì‰æ‘œ‚ðŽæ‚èo‚·
 Waifu2x::eWaifu2xError Waifu2x::CreateBrightnessImage(const cv::Mat &float_image, cv::Mat &im)
 {
-	cv::Mat converted_color;
-	cv::cvtColor(float_image, converted_color, ConvertMode);
+	if (float_image.channels() > 1)
+	{
+		cv::Mat converted_color;
+		cv::cvtColor(float_image, converted_color, ConvertMode);
 
-	std::vector<cv::Mat> planes;
-	cv::split(converted_color, planes);
+		std::vector<cv::Mat> planes;
+		cv::split(converted_color, planes);
 
-	im = planes[0];
-	planes.clear();
+		im = planes[0];
+		planes.clear();
+	}
+	else
+		im = float_image;
 
 	return eWaifu2xError_OK;
 }
