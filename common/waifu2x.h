@@ -108,10 +108,10 @@ private:
 	eWaifu2xError ReconstructImage(boost::shared_ptr<caffe::Net<float>> net, cv::Mat &im);
 	eWaifu2xError WriteMat(const cv::Mat &im, const std::string &output_file);
 
-	eWaifu2xError BeforeReconstructFloatMatProcess(const cv::Mat &in, cv::Mat &out);
-	eWaifu2xError ReconstructFloatMat(const bool isJpeg, const waifu2xCancelFunc cancel_func, const cv::Mat &in, cv::Mat &out);
-	eWaifu2xError Reconstruct(const bool isJpeg, const waifu2xCancelFunc cancel_func, const cv::Mat &in, cv::Mat &out);
-	eWaifu2xError AfterReconstructFloatMatProcess(const cv::Mat &floatim, const cv::Mat &in, cv::Mat &out);
+	eWaifu2xError BeforeReconstructFloatMatProcess(const cv::Mat &in, cv::Mat &out, bool &convertBGRflag);
+	eWaifu2xError ReconstructFloatMat(const bool isReconstructNoise, const bool isReconstructScale, const waifu2xCancelFunc cancel_func, const cv::Mat &in, cv::Mat &out);
+	eWaifu2xError Reconstruct(const bool isReconstructNoise, const bool isReconstructScale, const waifu2xCancelFunc cancel_func, const cv::Mat &in, cv::Mat &out);
+	eWaifu2xError AfterReconstructFloatMatProcess(const waifu2xCancelFunc cancel_func, const cv::Mat &floatim, const cv::Mat &in, cv::Mat &out);
 
 public:
 	Waifu2x();

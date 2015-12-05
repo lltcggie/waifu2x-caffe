@@ -1127,19 +1127,28 @@ Waifu2x::eWaifu2xError Waifu2x::WriteMat(const cv::Mat &im, const std::string &o
 	return eWaifu2xError_FailedOpenOutputFile;
 }
 
-Waifu2x::eWaifu2xError Waifu2x::BeforeReconstructFloatMatProcess(const cv::Mat &in, cv::Mat &out)
+Waifu2x::eWaifu2xError Waifu2x::BeforeReconstructFloatMatProcess(const cv::Mat &in, cv::Mat &out, bool &convertBGRflag)
 {
 	Waifu2x::eWaifu2xError ret;
+
+	convertBGRflag = false;
 
 	cv::Mat im;
 	if (input_plane == 1)
 		CreateBrightnessImage(in, im);
 	else
 	{
-		std::vector<cv::Mat> planes;
-		cv::split(in, planes);
+		im = in;
+		if (in.channels() == 1)
+		{
+			cv::cvtColor(in, im, CV_GRAY2BGR);
+			convertBGRflag = true;
+		}
 
-		if (in.channels() == 4)
+		std::vector<cv::Mat> planes;
+		cv::split(im, planes);
+
+		if (im.channels() == 4)
 			planes.resize(3);
 
 		// BGRからRGBにする
@@ -1153,15 +1162,12 @@ Waifu2x::eWaifu2xError Waifu2x::BeforeReconstructFloatMatProcess(const cv::Mat &
 	return eWaifu2xError_OK;
 }
 
-Waifu2x::eWaifu2xError Waifu2x::ReconstructFloatMat(const bool isJpeg, const waifu2xCancelFunc cancel_func, const cv::Mat &in, cv::Mat &out)
+Waifu2x::eWaifu2xError Waifu2x::ReconstructFloatMat(const bool isReconstructNoise, const bool isReconstructScale, const waifu2xCancelFunc cancel_func, const cv::Mat &in, cv::Mat &out)
 {
 	Waifu2x::eWaifu2xError ret;
 
 	cv::Mat im(in);
 	cv::Size_<int> image_size = im.size();
-
-	const bool isReconstructNoise = mode == "noise" || mode == "noise_scale" || (mode == "auto_scale" && isJpeg);
-	const bool isReconstructScale = mode == "scale" || mode == "noise_scale";
 
 	if (isReconstructNoise)
 	{
@@ -1204,19 +1210,20 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructFloatMat(const bool isJpeg, const wai
 	return eWaifu2xError_OK;
 }
 
-Waifu2x::eWaifu2xError Waifu2x::Reconstruct(const bool isJpeg, const waifu2xCancelFunc cancel_func, const cv::Mat &in, cv::Mat &out)
+Waifu2x::eWaifu2xError Waifu2x::Reconstruct(const bool isReconstructNoise, const bool isReconstructScale, const waifu2xCancelFunc cancel_func, const cv::Mat &in, cv::Mat &out)
 {
 	Waifu2x::eWaifu2xError ret;
 
+	bool convertBGRflag = false;
 	cv::Mat brfm;
-	ret = BeforeReconstructFloatMatProcess(in, brfm);
+	ret = BeforeReconstructFloatMatProcess(in, brfm, convertBGRflag);
 	if (ret != eWaifu2xError_OK)
 		return ret;
 
 	cv::Mat reconstruct_image;
 	if (!use_tta) // 普通に処理
 	{
-		ret = ReconstructFloatMat(isJpeg, cancel_func, brfm, reconstruct_image);
+		ret = ReconstructFloatMat(isReconstructNoise, isReconstructScale, cancel_func, brfm, reconstruct_image);
 		if (ret != eWaifu2xError_OK)
 			return ret;
 	}
@@ -1257,7 +1264,7 @@ Waifu2x::eWaifu2xError Waifu2x::Reconstruct(const bool isJpeg, const waifu2xCanc
 			if (i >= 4)
 				cv::flip(in, in, 1); // 垂直軸反転
 
-			ret = ReconstructFloatMat(isJpeg, cancel_func, in, in);
+			ret = ReconstructFloatMat(isReconstructNoise, isReconstructScale, cancel_func, in, in);
 			if (ret != eWaifu2xError_OK)
 				return ret;
 
@@ -1276,12 +1283,17 @@ Waifu2x::eWaifu2xError Waifu2x::Reconstruct(const bool isJpeg, const waifu2xCanc
 		reconstruct_image /= 8.0;
 	}
 
+	if (convertBGRflag)
+	{
+		cv::cvtColor(reconstruct_image, reconstruct_image, CV_RGB2GRAY); // この地点ではまだRGBなことに注意
+	}
+
 	out = reconstruct_image;
 
 	return eWaifu2xError_OK;
 }
 
-Waifu2x::eWaifu2xError Waifu2x::AfterReconstructFloatMatProcess(const cv::Mat &floatim, const cv::Mat &in, cv::Mat &out)
+Waifu2x::eWaifu2xError Waifu2x::AfterReconstructFloatMatProcess(const waifu2xCancelFunc cancel_func, const cv::Mat &floatim, const cv::Mat &in, cv::Mat &out)
 {
 	cv::Size_<int> image_size = in.size();
 
@@ -1313,22 +1325,16 @@ Waifu2x::eWaifu2xError Waifu2x::AfterReconstructFloatMatProcess(const cv::Mat &f
 		cv::merge(planes, process_image);
 	}
 
+	const int scale2 = ceil(log2(scale_ratio));
+	const double shrinkRatio = scale_ratio / std::pow(2.0, (double)scale2);
+
 	cv::Mat alpha;
-	if (floatim.channels() == 4)
+	if (floatim.channels() == 4 && scale2 >= 1)
 	{
 		std::vector<cv::Mat> planes;
 		cv::split(floatim, planes);
-		alpha = planes[3];
 
-		// 拡大したアルファチャンネルの生成
-		cv::Mat alpha_linear, alpha_cubic;
-		cv::resize(alpha, alpha_linear, image_size, 0.0, 0.0, cv::INTER_LINEAR);
-		cv::resize(alpha, alpha_cubic, image_size, 0.0, 0.0, cv::INTER_CUBIC);
-
-		cv::Mat mask;
-		cv::threshold(alpha_linear, mask, 0.0, 1.0, cv::THRESH_BINARY); // アルファを線形補間したものを二値化してマスクとして扱う
-
-		alpha = alpha_cubic.mul(mask); // バイキュービック補間で拡大すると、アルファチャンネルの境界付近に（ごく小さな値ながら）ゴミが現れる。それを線形補間マスクで消す
+		Reconstruct(false, true, cancel_func, planes[3], alpha);
 	}
 
 	// アルファチャンネルがあったらアルファを付加して、完全透明のピクセルの色を消す(処理の都合上、完全透明のピクセルにも色を付けたから)
@@ -1346,19 +1352,10 @@ Waifu2x::eWaifu2xError Waifu2x::AfterReconstructFloatMatProcess(const cv::Mat &f
 		planes[1] = planes[1].mul(mask);
 		planes[2] = planes[2].mul(mask);
 
-		{
-			cv::Mat write_iamge;
-			mask.convertTo(write_iamge, CV_8U, 255.0);
-			WriteMat(write_iamge, "test_mask.png");
-		}
-
 		planes.push_back(alpha);
 
 		cv::merge(planes, process_image);
 	}
-
-	const int scale2 = ceil(log2(scale_ratio));
-	const double shrinkRatio = scale_ratio / std::pow(2.0, (double)scale2);
 
 	const cv::Size_<int> ns(image_size.width * shrinkRatio, image_size.height * shrinkRatio);
 	if (image_size.width != ns.width || image_size.height != ns.height)
@@ -1381,6 +1378,8 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std
 	const boost::filesystem::path ipext(ip.extension());
 
 	const bool isJpeg = boost::iequals(ipext.string(), ".jpg") || boost::iequals(ipext.string(), ".jpeg");
+	const bool isReconstructNoise = mode == "noise" || mode == "noise_scale" || (mode == "auto_scale" && isJpeg);
+	const bool isReconstructScale = mode == "scale" || mode == "noise_scale";
 
 	cv::Mat float_image;
 	ret = LoadMat(float_image, input_file);
@@ -1388,12 +1387,12 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std
 		return ret;
 
 	cv::Mat reconstruct_image;
-	ret = Reconstruct(isJpeg, cancel_func, float_image, reconstruct_image);
+	ret = Reconstruct(isReconstructNoise, isReconstructScale, cancel_func, float_image, reconstruct_image);
 	if (ret != eWaifu2xError_OK)
 		return ret;
 
 	cv::Mat process_image;
-	ret = AfterReconstructFloatMatProcess(float_image, reconstruct_image, process_image);
+	ret = AfterReconstructFloatMatProcess(cancel_func, float_image, reconstruct_image, process_image);
 	if (ret != eWaifu2xError_OK)
 		return ret;
 
