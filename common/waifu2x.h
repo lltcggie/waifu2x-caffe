@@ -97,6 +97,7 @@ private:
 private:
 	static eWaifu2xError LoadMat(cv::Mat &float_image, const std::string &input_file);
 	static eWaifu2xError LoadMatBySTBI(cv::Mat &float_image, const std::string &input_file);
+	static eWaifu2xError AlphaMakeBorder(std::vector<cv::Mat> &planes, const cv::Mat &alpha, const int offset);
 	eWaifu2xError CreateBrightnessImage(const cv::Mat &float_image, cv::Mat &im);
 	eWaifu2xError PaddingImage(const cv::Mat &input, cv::Mat &output);
 	eWaifu2xError Zoom2xAndPaddingImage(const cv::Mat &input, cv::Mat &output, cv::Size_<int> &zoom_size);

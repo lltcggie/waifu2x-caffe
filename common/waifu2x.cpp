@@ -231,6 +231,60 @@ cv::Mat Waifu2x::LoadMat(const std::string &path)
 	return mat;
 }
 
+Waifu2x::eWaifu2xError Waifu2x::AlphaMakeBorder(std::vector<cv::Mat> &planes, const cv::Mat &alpha, const int offset)
+{
+	// このカーネルと画像の畳込みを行うと、(x, y)を中心とした3×3領域の合計値が求まる
+	const static cv::Mat sum2d_kernel = (cv::Mat_<double>(3, 3) <<
+		1., 1., 1.,
+		1., 1., 1.,
+		1., 1., 1.);
+
+	cv::Mat mask;
+	cv::threshold(alpha, mask, 0.0, 1.0, cv::THRESH_BINARY); // アルファチャンネルを二値化してマスクとして扱う
+
+	cv::Mat mask_nega;
+	cv::threshold(mask, mask_nega, 0.0, 1.0, cv::THRESH_BINARY_INV); // 反転したマスク（値が1の箇所は完全透明でない有効な画素となる）
+
+	for (auto &p : planes) // 完全に透明なピクセルにあるゴミを取る
+	{
+		p = p.mul(mask);
+	}
+
+	for (int i = 0; i < offset; i++)
+	{
+		cv::Mat mask_weight;
+		cv::filter2D(mask, mask_weight, -1, sum2d_kernel, cv::Point(-1, -1), 0, cv::BORDER_DEFAULT); // マスクの3×3領域の合計値を求める
+
+		cv::Mat mask_nega_u8;
+		mask_nega.convertTo(mask_nega_u8, CV_8U, 255.0); // mask_negaのCV_U8版（OpenCVのAPI上必要になる）
+
+		for (auto &p : planes) // 1チャンネルずつ処理
+		{
+			// チャンネルの3×3領域内の有効画素の平均値を求める
+			cv::Mat border;
+			cv::filter2D(p, border, -1, sum2d_kernel, cv::Point(-1, -1), 0, cv::BORDER_DEFAULT);
+			border /= mask_weight;
+
+			// チャンネルの有効な画素の部分に、計算した平均値をコピー
+			border.copyTo(p, mask_nega_u8);
+		}
+
+		// マスクを1回膨張させたものを新しいマスクとする(マスクの3×3領域の合計値を求めたものの非0領域は、マスクを1回膨張させたものの領域に等しい)
+		cv::threshold(mask_weight, mask, 0.0, 1.0, cv::THRESH_BINARY);
+		// 新しいマスクの反転したマスクを計算
+		cv::threshold(mask, mask_nega, 0.0, 1.0, cv::THRESH_BINARY_INV);
+	}
+
+	// 画素を0から1にクリッピング
+	for (auto &p : planes)
+	{
+		cv::threshold(p, p, 1.0, 1.0, cv::THRESH_TRUNC);
+		cv::threshold(p, p, 0.0, 0.0, cv::THRESH_TOZERO);
+	}
+
+	return eWaifu2xError_OK;
+}
+
 // 画像を読み込んで値を0.0f～1.0fの範囲に変換
 Waifu2x::eWaifu2xError Waifu2x::LoadMat(cv::Mat &float_image, const std::string &input_file)
 {
@@ -250,17 +304,16 @@ Waifu2x::eWaifu2xError Waifu2x::LoadMat(cv::Mat &float_image, const std::string 
 		cv::cvtColor(convert, convert, cv::COLOR_GRAY2BGR);
 	else if (convert.channels() == 4)
 	{
-		// アルファチャンネル付きだったらα乗算済みにする
+		// アルファチャンネル付きだったら透明なピクセルのと不透明なピクセルの境界部分の色を広げる
 
 		std::vector<cv::Mat> planes;
 		cv::split(convert, planes);
 
-		cv::Mat w = planes[3];
+		cv::Mat alpha = planes[3];
+		planes.resize(3);
+		AlphaMakeBorder(planes, alpha, layer_num);
 
-		planes[0] = planes[0].mul(w);
-		planes[1] = planes[1].mul(w);
-		planes[2] = planes[2].mul(w);
-
+		planes.push_back(alpha);
 		cv::merge(planes, convert);
 	}
 
@@ -1193,20 +1246,22 @@ Waifu2x::eWaifu2xError Waifu2x::AfterReconstructFloatMatProcess(const cv::Mat &f
 		cv::resize(alpha, alpha, image_size, 0.0, 0.0, cv::INTER_CUBIC);
 	}
 
-	// アルファチャンネルがあったら、アルファを付加してカラーからアルファの影響を抜く
+	// アルファチャンネルがあったらアルファを付加して、完全透明のピクセルの色を消す(処理の都合上、完全透明のピクセルにも色を付けたから)
 	if (!alpha.empty())
 	{
 		std::vector<cv::Mat> planes;
 		cv::split(process_image, planes);
 		process_image.release();
 
+		cv::Mat mask;
+		cv::threshold(alpha, mask, 0.0, 1.0, cv::THRESH_BINARY); // アルファチャンネルを二値化してマスクとして扱う
+
+		// アルファチャンネルが0のところの色を消す
+		planes[0] = planes[0].mul(mask);
+		planes[1] = planes[1].mul(mask);
+		planes[2] = planes[2].mul(mask);
+
 		planes.push_back(alpha);
-
-		cv::Mat w2 = planes[3];
-
-		planes[0] = (planes[0]).mul(1.0 / w2);
-		planes[1] = (planes[1]).mul(1.0 / w2);
-		planes[2] = (planes[2]).mul(1.0 / w2);
 
 		cv::merge(planes, process_image);
 	}
