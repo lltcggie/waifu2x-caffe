@@ -43,13 +43,15 @@
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>D:\caffe-build\install\include;D:\caffe-build\install\include\boost-1_59;$(CUDA_PATH_V7_5)\include;C:\opencv249\build\include;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(IncludePath)</IncludePath>
     <LibraryPath>D:\caffe-build\install\lib;$(CUDA_PATH_V7_5)\lib\$(PlatformName);C:\opencv249\build\x64\vc12\lib;$(LibraryPath)</LibraryPath>
-    <TargetName>waifu2x-caffe</TargetName>
+    <TargetName>waifu2x-caffed</TargetName>
+    <OutDir>$(SolutionDir)bin</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>D:\caffe-build\install\include;D:\caffe-build\install\include\boost-1_59;$(CUDA_PATH_V7_5)\include;C:\opencv249\build\include;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(IncludePath)</IncludePath>
     <LibraryPath>D:\caffe-build\install\lib;$(CUDA_PATH_V7_5)\lib\$(PlatformName);C:\opencv249\build\x64\vc12\lib;$(LibraryPath)</LibraryPath>
     <TargetName>waifu2x-caffe</TargetName>
+    <OutDir>$(SolutionDir)bin</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
