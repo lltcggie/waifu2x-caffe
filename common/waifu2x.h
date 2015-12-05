@@ -110,6 +110,7 @@ private:
 
 	eWaifu2xError BeforeReconstructFloatMatProcess(const cv::Mat &in, cv::Mat &out);
 	eWaifu2xError ReconstructFloatMat(const bool isJpeg, const waifu2xCancelFunc cancel_func, const cv::Mat &in, cv::Mat &out);
+	eWaifu2xError Reconstruct(const bool isJpeg, const waifu2xCancelFunc cancel_func, const cv::Mat &in, cv::Mat &out);
 	eWaifu2xError AfterReconstructFloatMatProcess(const cv::Mat &floatim, const cv::Mat &in, cv::Mat &out);
 
 public:
