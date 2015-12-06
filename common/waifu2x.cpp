@@ -78,6 +78,9 @@ const int ConvertInverseMode = CV_YUV2RGB;
 // 最低限必要なCUDAドライバーのバージョン
 const int MinCudaDriverVersion = 6050;
 
+// floatな画像をuint8_tな画像に変換する際の四捨五入に使う値
+const double clip_eps8 = (1.0 / 255.0) * 0.5 - (1.0e-7 * (1.0 / 255.0) * 0.5);
+
 static std::once_flag waifu2x_once_flag;
 static std::once_flag waifu2x_cudnn_once_flag;
 static std::once_flag waifu2x_cuda_once_flag;
@@ -256,7 +259,7 @@ Waifu2x::eWaifu2xError Waifu2x::AlphaMakeBorder(std::vector<cv::Mat> &planes, co
 		cv::filter2D(mask, mask_weight, -1, sum2d_kernel, cv::Point(-1, -1), 0, cv::BORDER_DEFAULT); // マスクの3×3領域の合計値を求める
 
 		cv::Mat mask_nega_u8;
-		mask_nega.convertTo(mask_nega_u8, CV_8U, 255.0); // mask_negaのCV_U8版（OpenCVのAPI上必要になる）
+		mask_nega.convertTo(mask_nega_u8, CV_8U, 255.0, clip_eps8); // mask_negaのCV_U8版（OpenCVのAPI上必要になる）
 
 		for (auto &p : planes) // 1チャンネルずつ処理
 		{
@@ -1399,7 +1402,7 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std
 	float_image.release();
 
 	cv::Mat write_iamge;
-	process_image.convertTo(write_iamge, CV_8U, 255.0);
+	process_image.convertTo(write_iamge, CV_8U, 255.0, clip_eps8);
 	process_image.release();
 
 	// 完全透明のピクセルの色を消す(処理の都合上、完全透明のピクセルにも色を付けたから)
