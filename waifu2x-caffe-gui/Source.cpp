@@ -567,7 +567,7 @@ private:
 		PostMessage(dh, WM_END_THREAD, 0, 0);
 	}
 
-	void ReplaceAddString()
+	void ReplaceAddString() // ƒtƒ@ƒCƒ‹–¼‚ÌŽ©“®Ý’è•”•ª‚ð‘‚«Š·‚¦‚é
 	{
 		SyncMember(true);
 
@@ -581,18 +581,21 @@ private:
 
 		if (stem.length() > 0 && stem.length() >= autoSetAddName.length())
 		{
-			const tstring base = stem.substr(0, stem.length() - autoSetAddName.length());
-			stem.erase(0, base.length());
-			if (stem == autoSetAddName)
+			const auto pos = stem.find(autoSetAddName);
+			if (pos != tstring::npos)
 			{
 				const tstring addstr(AddName());
+
+				auto new_name = stem;
+				new_name.replace(pos, autoSetAddName.length(), addstr);
+
 				autoSetAddName = addstr;
 
 				boost::filesystem::path new_out_path;
 				if (!boost::filesystem::is_directory(input_str))
-					new_out_path = output_path.branch_path() / (base + addstr + outputExt);
+					new_out_path = output_path.branch_path() / (new_name + outputExt);
 				else
-					new_out_path = output_path.branch_path() / (base + addstr);
+					new_out_path = output_path.branch_path() / (new_name);
 
 				SetWindowText(GetDlgItem(dh, IDC_EDIT_OUTPUT), getTString(new_out_path).c_str());
 			}
