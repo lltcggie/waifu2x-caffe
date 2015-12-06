@@ -1184,6 +1184,12 @@ void Waifu2x::destroy()
 	is_inited = false;
 }
 
+static void Waifu2x_stbi_write_func(void *context, void *data, int size)
+{
+	boost::iostreams::stream<boost::iostreams::file_descriptor> *osp = (boost::iostreams::stream<boost::iostreams::file_descriptor> *)context;
+	osp->write((const char *)data, size);
+}
+
 Waifu2x::eWaifu2xError Waifu2x::WriteMat(const cv::Mat &im, const boost::filesystem::path &output_file)
 {
 	const boost::filesystem::path ip(output_file);
@@ -1231,7 +1237,7 @@ Waifu2x::eWaifu2xError Waifu2x::WriteMat(const cv::Mat &im, const boost::filesys
 		if(!os)
 			return eWaifu2xError_FailedOpenOutputFile;
 
-		if (!stbi_write_tga(os, im.size().width, im.size().height, im.channels(), data))
+		if (!stbi_write_tga_to_func(Waifu2x_stbi_write_func, &os, im.size().width, im.size().height, im.channels(), data))
 			return eWaifu2xError_FailedOpenOutputFile;
 
 		return eWaifu2xError_OK;
