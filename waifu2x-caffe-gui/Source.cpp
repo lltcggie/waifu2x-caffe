@@ -35,6 +35,20 @@ const std::pair<int, int> DefaultCommonDivisorRange = {90, 140};
 const char * const CropSizeListName = "crop_size_list.txt";
 
 
+#ifdef UNICODE
+typedef std::wstring tstring;
+inline tstring getTString(const boost::filesystem::path& p)
+{
+	return p.wstring();
+}
+#else
+typedef std::string tstring;
+inline tstring getTString(const boost::filesystem::path& p)
+{
+	return p.string();
+}
+#endif
+
 // http://stackoverflow.com/questions/10167382/boostfilesystem-get-relative-path
 boost::filesystem::path relativePath(const boost::filesystem::path &path, const boost::filesystem::path &relative_to)
 {
@@ -103,30 +117,30 @@ private:
 
 	std::vector<int> CropSizeList;
 
-	std::string input_str;
-	std::string output_str;
+	tstring input_str;
+	tstring output_str;
 	std::string mode;
 	int noise_level;
 	double scale_ratio;
-	std::string model_dir;
+	tstring model_dir;
 	std::string process;
-	std::string outputExt;
-	std::string inputFileExt;
+	tstring outputExt;
+	tstring inputFileExt;
 
 	bool use_tta;
 
 	int crop_size;
 	int batch_size;
 
-	std::vector<std::string> extList;
+	std::vector<tstring> extList;
 
 	std::thread processThread;
 	std::atomic_bool cancelFlag;
 
-	std::string autoSetAddName;
+	tstring autoSetAddName;
 	bool isLastError;
 
-	std::string logMessage;
+	tstring logMessage;
 
 	std::string usedProcess;
 	std::chrono::system_clock::duration cuDNNCheckTime;
@@ -134,16 +148,36 @@ private:
 	std::chrono::system_clock::duration ProcessTime;
 
 private:
-	std::string AddName() const
+	static tstring to_tstring(int val)
 	{
-		std::string addstr("(" + mode + ")");
+#ifdef UNICODE
+		return std::to_wstring(val);
+#else
+		return std::to_string(val);
+#endif
+	}
+
+	tstring AddName() const
+	{
+		tstring addstr(TEXT("("));
+
+		if (mode == "noise")
+			addstr += TEXT("noise");
+		else if (mode == "scale")
+			addstr += TEXT("scale");
+		else if (mode == "noise_scale")
+			addstr += TEXT("noise_scale");
+		else if (mode == "auto_scale")
+			addstr += TEXT("auto_scale");
+
+		addstr += TEXT(")");
 
 		if (mode.find("noise") != mode.npos || mode.find("auto_scale") != mode.npos)
-			addstr += "(Level" + std::to_string(noise_level) + ")";
+			addstr += TEXT("(Level") + to_tstring(noise_level) + TEXT(")");
 		if (use_tta)
-			addstr += "(tta)";
+			addstr += TEXT("(tta)");
 		if (mode.find("scale") != mode.npos)
-			addstr += "(x" + std::to_string(scale_ratio) + ")";
+			addstr += TEXT("(x") + to_tstring(scale_ratio) + TEXT(")");
 
 		return addstr;
 	}
@@ -153,17 +187,17 @@ private:
 		bool ret = true;
 
 		{
-			char buf[AR_PATH_MAX] = "";
-			GetWindowTextA(GetDlgItem(dh, IDC_EDIT_INPUT), buf, _countof(buf));
-			buf[_countof(buf) - 1] = '\0';
+			TCHAR buf[AR_PATH_MAX] = TEXT("");
+			GetWindowText(GetDlgItem(dh, IDC_EDIT_INPUT), buf, _countof(buf));
+			buf[_countof(buf) - 1] = TEXT('\0');
 
 			input_str = buf;
 		}
 
 		{
-			char buf[AR_PATH_MAX] = "";
-			GetWindowTextA(GetDlgItem(dh, IDC_EDIT_OUTPUT), buf, _countof(buf));
-			buf[_countof(buf) - 1] = '\0';
+			TCHAR buf[AR_PATH_MAX] = TEXT("");
+			GetWindowText(GetDlgItem(dh, IDC_EDIT_OUTPUT), buf, _countof(buf));
+			buf[_countof(buf) - 1] = TEXT('\0');
 
 			output_str = buf;
 		}
@@ -183,13 +217,13 @@ private:
 			noise_level = 2;
 
 		{
-			char buf[AR_PATH_MAX] = "";
-			GetWindowTextA(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), buf, _countof(buf));
-			buf[_countof(buf) - 1] = '\0';
+			TCHAR buf[AR_PATH_MAX] = TEXT("");
+			GetWindowText(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), buf, _countof(buf));
+			buf[_countof(buf) - 1] = TEXT('\0');
 
-			char *ptr = nullptr;
-			scale_ratio = strtod(buf, &ptr);
-			if (!ptr || *ptr != '\0' || scale_ratio <= 0.0)
+			TCHAR *ptr = nullptr;
+			scale_ratio = _tcstod(buf, &ptr);
+			if (!ptr || *ptr != TEXT('\0') || scale_ratio <= 0.0)
 			{
 				scale_ratio = 2.0;
 				ret = false;
@@ -199,20 +233,20 @@ private:
 		}
 
 		if (SendMessage(GetDlgItem(dh, IDC_RADIO_MODEL_RGB), BM_GETCHECK, 0, 0))
-			model_dir = "models/anime_style_art_rgb";
+			model_dir = TEXT("models/anime_style_art_rgb");
 		else if (SendMessage(GetDlgItem(dh, IDC_RADIO_MODEL_Y), BM_GETCHECK, 0, 0))
-			model_dir = "models/anime_style_art";
+			model_dir = TEXT("models/anime_style_art");
 		else
-			model_dir = "models/photo";
+			model_dir = TEXT("models/photo");
 
 		{
-			char buf[AR_PATH_MAX] = "";
-			GetWindowTextA(GetDlgItem(dh, IDC_EDIT_OUT_EXT), buf, _countof(buf));
-			buf[_countof(buf) - 1] = '\0';
+			TCHAR buf[AR_PATH_MAX] = TEXT("");
+			GetWindowText(GetDlgItem(dh, IDC_EDIT_OUT_EXT), buf, _countof(buf));
+			buf[_countof(buf) - 1] = TEXT('\0');
 
 			outputExt = buf;
-			if (outputExt.length() > 0 && outputExt[0] != '.')
-				outputExt = "." + outputExt;
+			if (outputExt.length() > 0 && outputExt[0] != TEXT('.'))
+				outputExt = TEXT(".") + outputExt;
 		}
 
 		if (SendMessage(GetDlgItem(dh, IDC_RADIO_MODE_CPU), BM_GETCHECK, 0, 0))
@@ -221,36 +255,36 @@ private:
 			process = "gpu";
 
 		{
-			char buf[AR_PATH_MAX] = "";
-			GetWindowTextA(GetDlgItem(dh, IDC_EDIT_INPUT_EXT_LIST), buf, _countof(buf));
-			buf[_countof(buf) - 1] = '\0';
+			TCHAR buf[AR_PATH_MAX] = TEXT("");
+			GetWindowText(GetDlgItem(dh, IDC_EDIT_INPUT_EXT_LIST), buf, _countof(buf));
+			buf[_countof(buf) - 1] = TEXT('\0');
 
 			inputFileExt = buf;
 
 			// input_extention_listを文字列の配列にする
 
-			typedef boost::char_separator<char> char_separator;
-			typedef boost::tokenizer<char_separator> tokenizer;
+			typedef boost::char_separator<TCHAR> char_separator;
+			typedef boost::tokenizer<char_separator, tstring::const_iterator, tstring> tokenizer;
 
-			char_separator sep(":", "", boost::drop_empty_tokens);
+			char_separator sep(TEXT(":"), TEXT(""), boost::drop_empty_tokens);
 			tokenizer tokens(inputFileExt, sep);
 
-			for (tokenizer::iterator tok_iter = tokens.begin(); tok_iter != tokens.end(); ++tok_iter)
+			for (auto tok_iter = tokens.begin(); tok_iter != tokens.end(); ++tok_iter)
 			{
-				std::string ext(*tok_iter);
+				tstring ext(*tok_iter);
 				std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-				extList.push_back("." + ext);
+				extList.push_back(TEXT(".") + ext);
 			}
 		}
 
 		if (!NotSyncCropSize)
 		{
-			char buf[AR_PATH_MAX] = "";
-			GetWindowTextA(GetDlgItem(dh, IDC_COMBO_CROP_SIZE), buf, _countof(buf));
-			buf[_countof(buf) - 1] = '\0';
+			TCHAR buf[AR_PATH_MAX] = TEXT("");
+			GetWindowText(GetDlgItem(dh, IDC_COMBO_CROP_SIZE), buf, _countof(buf));
+			buf[_countof(buf) - 1] = TEXT('\0');
 
-			char *ptr = nullptr;
-			crop_size = strtol (buf, &ptr, 10);
+			TCHAR *ptr = nullptr;
+			crop_size = _tcstol(buf, &ptr, 10);
 			if (!ptr || *ptr != '\0' || crop_size <= 0)
 			{
 				crop_size = 128;
@@ -278,8 +312,12 @@ private:
 
 				if (!boost::filesystem::is_directory(p))
 				{
-					std::string ext(p.extension().string());
+					tstring ext(getTString(p.extension()));
+#ifdef UNICODE
+					std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
+#else
 					std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+#endif
 					if (std::find(extList.begin(), extList.end(), ext) != extList.end())
 					{
 						auto mat = Waifu2x::LoadMat(p.string());
@@ -325,8 +363,8 @@ private:
 		{
 			const int n = list[i];
 
-			std::string str(std::to_string(n));
-			SendMessageA(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
+			tstring str(to_tstring(n));
+			SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
 
 			const int diff = abs(DefaultCommonDivisor - n);
 			if (DefaultCommonDivisorRange.first <= n && n <= DefaultCommonDivisorRange.second && diff < mindiff)
@@ -336,15 +374,15 @@ private:
 			}
 		}
 
-		SendMessageA(hcrop, CB_ADDSTRING, 0, (LPARAM)"-----------------------");
+		SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)TEXT("-----------------------"));
 
 		// CropSizeListの値を追加していく
 		mindiff = INT_MAX;
 		int defaultListIndex = -1;
 		for (const auto n : CropSizeList)
 		{
-			std::string str(std::to_string(n));
-			const int index = SendMessageA(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
+			tstring str(to_tstring(n));
+			const int index = SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
 
 			const int diff = abs(DefaultCommonDivisor - n);
 			if (DefaultCommonDivisorRange.first <= n && n <= DefaultCommonDivisorRange.second && diff < mindiff)
@@ -365,7 +403,7 @@ private:
 	{
 		const boost::filesystem::path input_path(boost::filesystem::absolute(input_str));
 
-		std::vector<std::pair<std::string, std::string>> file_paths;
+		std::vector<std::pair<tstring, tstring>> file_paths;
 		if (boost::filesystem::is_directory(input_path)) // input_pathがフォルダならそのディレクトリ以下の画像ファイルを一括変換
 		{
 			boost::filesystem::path output_path(output_str);
@@ -391,16 +429,21 @@ private:
 				{
 					if (!boost::filesystem::is_directory(p))
 					{
-						std::string ext(p.extension().string());
+						tstring ext(getTString(p.extension()));
+#ifdef UNICODE
+						std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
+#else
 						std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+#endif
+
 						if (std::find(extList.begin(), extList.end(), ext) != extList.end())
 						{
 							const auto out_relative = relativePath(p, input_path);
 							const auto out_absolute = output_path / out_relative;
 
-							const auto out = (out_absolute.branch_path() / out_absolute.stem()).string() + outputExt;
+							const auto out = getTString(out_absolute.branch_path() / out_absolute.stem()) + outputExt;
 
-							file_paths.emplace_back(p.string(), out);
+							file_paths.emplace_back(getTString(p), out);
 						}
 					}
 				}
@@ -494,20 +537,20 @@ private:
 		SyncMember(true);
 
 		const boost::filesystem::path output_path(output_str);
-		std::string stem;
+		tstring stem;
 
 		if (!boost::filesystem::is_directory(input_str))
-			stem = output_path.stem().string();
+			stem = getTString(output_path.stem());
 		else
-			stem = output_path.filename().string();
+			stem = getTString(output_path.filename());
 
 		if (stem.length() > 0 && stem.length() >= autoSetAddName.length())
 		{
-			const std::string base = stem.substr(0, stem.length() - autoSetAddName.length());
+			const tstring base = stem.substr(0, stem.length() - autoSetAddName.length());
 			stem.erase(0, base.length());
 			if (stem == autoSetAddName)
 			{
-				const std::string addstr(AddName());
+				const tstring addstr(AddName());
 				autoSetAddName = addstr;
 
 				boost::filesystem::path new_out_path;
@@ -516,36 +559,36 @@ private:
 				else
 					new_out_path = output_path.branch_path() / (base + addstr);
 
-				SetWindowTextA(GetDlgItem(dh, IDC_EDIT_OUTPUT), new_out_path.string().c_str());
+				SetWindowText(GetDlgItem(dh, IDC_EDIT_OUTPUT), getTString(new_out_path).c_str());
 			}
 		}
 	}
 
-	void AddLogMessage(const char *msg)
+	void AddLogMessage(const TCHAR *msg)
 	{
 		if (logMessage.length() == 0)
 			logMessage += msg;
 		else
-			logMessage += std::string("\r\n") + msg;
+			logMessage += tstring(TEXT("\r\n")) + msg;
 
-		SetWindowTextA(GetDlgItem(dh, IDC_EDIT_LOG), logMessage.c_str());
+		SetWindowText(GetDlgItem(dh, IDC_EDIT_LOG), logMessage.c_str());
 	}
 
 	void Waifu2xTime()
 	{
-		char msg[1024 * 2];
-		char *ptr = msg;
+		TCHAR msg[1024 * 2];
+		TCHAR *ptr = msg;
 
 		{
-			std::string p(usedProcess);
-			if (p == "cpu")
-				p = "CPU";
-			else if (p == "gpu")
-				p = "CUDA";
-			else if (p == "cudnn")
-				p = "cuDNN";
+			tstring p;
+			if (usedProcess == "cpu")
+				p = TEXT("CPU");
+			else if (usedProcess == "gpu")
+				p = TEXT("CUDA");
+			else // if (p == "cudnn")
+				p = TEXT("cuDNN");
 
-			ptr += sprintf(ptr, "使用プロセッサーモード: %s\r\n", p.c_str());
+			ptr += _stprintf(ptr, TEXT("使用プロセッサーモード: %s\r\n"), p.c_str());
 		}
 
 		{
@@ -554,7 +597,7 @@ private:
 			const int sec = t % 60; t /= 60;
 			const int min = t % 60; t /= 60;
 			const int hour = (int)t;
-			ptr += sprintf(ptr, "処理時間: %02d:%02d:%02d.%d\r\n", hour, min, sec, msec);
+			ptr += _stprintf(ptr, TEXT("処理時間: %02d:%02d:%02d.%d\r\n"), hour, min, sec, msec);
 		}
 
 		{
@@ -563,7 +606,7 @@ private:
 			const int sec = t % 60; t /= 60;
 			const int min = t % 60; t /= 60;
 			const int hour = (int)t;
-			ptr += sprintf(ptr, "初期化時間: %02d:%02d:%02d.%d\r\n", hour, min, sec, msec);
+			ptr += _stprintf(ptr, TEXT("初期化時間: %02d:%02d:%02d.%d\r\n"), hour, min, sec, msec);
 		}
 
 		if (process == "gpu" || process == "cudnn")
@@ -573,14 +616,15 @@ private:
 			const int sec = t % 60; t /= 60;
 			const int min = t % 60; t /= 60;
 			const int hour = (int)t;
-			ptr += sprintf(ptr, "cuDNNチェック時間: %02d:%02d:%02d.%d", hour, min, sec, msec);
+			ptr += _stprintf(ptr, TEXT("cuDNNチェック時間: %02d:%02d:%02d.%d"), hour, min, sec, msec);
 		}
 
 		AddLogMessage(msg);
 	}
 
 public:
-	DialogEvent() : dh(nullptr), mode("noise_scale"), noise_level(1), scale_ratio(2.0), model_dir("models/anime_style_art_rgb"), process("gpu"), outputExt("png"), inputFileExt("png:jpg:jpeg:tif:tiff:bmp:tga"),
+	DialogEvent() : dh(nullptr), mode("noise_scale"), noise_level(1), scale_ratio(2.0), model_dir(TEXT("models/anime_style_art_rgb")),
+		process("gpu"), outputExt(TEXT("png")), inputFileExt(TEXT("png:jpg:jpeg:tif:tiff:bmp:tga")),
 		use_tta(false), crop_size(128), batch_size(1), isLastError(false)
 	{
 	}
@@ -635,7 +679,7 @@ public:
 		EnableWindow(GetDlgItem(dh, IDC_BUTTON_EXEC), FALSE);
 		EnableWindow(GetDlgItem(dh, IDC_BUTTON_CHECK_CUDNN), FALSE);
 
-		SetWindowTextA(GetDlgItem(hWnd, IDC_EDIT_LOG), "");
+		SetWindowText(GetDlgItem(hWnd, IDC_EDIT_LOG), TEXT(""));
 		logMessage.clear();
 	}
 
@@ -649,13 +693,13 @@ public:
 		if (!isLastError)
 		{
 			if (!cancelFlag)
-				AddLogMessage("変換に成功しました");
+				AddLogMessage(TEXT("変換に成功しました"));
 
 			Waifu2xTime();
 			MessageBeep(MB_ICONASTERISK);
 		}
 		else
-			MessageBoxA(dh, "エラーが発生しました", "エラー", MB_OK | MB_ICONERROR);
+			MessageBox(dh, TEXT("エラーが発生しました"), TEXT("エラー"), MB_OK | MB_ICONERROR);
 	}
 
 	void OnDialogEnd(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
@@ -671,9 +715,9 @@ public:
 		const boost::filesystem::path *p = (const boost::filesystem::path *)wParam;
 
 		// 出力フォルダ「%s」の作成に失敗しました\n", out_absolute.string().c_str());
-		std::wstring msg(L"出力フォルダ\r\n「");
-		msg += p->wstring();
-		msg += L"」\r\nの作成に失敗しました";
+		tstring msg(TEXT("出力フォルダ\r\n「"));
+		msg += getTString(*p);
+		msg += TEXT("」\r\nの作成に失敗しました");
 
 		MessageBox(dh, msg.c_str(), TEXT("エラー"), MB_OK | MB_ICONERROR);
 
@@ -686,49 +730,49 @@ public:
 
 		if (ret != Waifu2x::eWaifu2xError_OK)
 		{
-			char msg[1024] = "";
+			TCHAR msg[1024] = TEXT("");
 
 			if (lParam == 0)
 			{
 				switch (ret)
 				{
 				case Waifu2x::eWaifu2xError_Cancel:
-					sprintf(msg, "キャンセルされました");
+					_stprintf(msg, TEXT("キャンセルされました"));
 					break;
 				case Waifu2x::eWaifu2xError_InvalidParameter:
-					sprintf(msg, "パラメータが不正です");
+					_stprintf(msg, TEXT("パラメータが不正です"));
 					break;
 				case Waifu2x::eWaifu2xError_FailedOpenModelFile:
-					sprintf(msg, "モデルファイルが開けませんでした");
+					_stprintf(msg, TEXT("モデルファイルが開けませんでした"));
 					break;
 				case Waifu2x::eWaifu2xError_FailedParseModelFile:
-					sprintf(msg, "モデルファイルが壊れています");
+					_stprintf(msg, TEXT("モデルファイルが壊れています"));
 					break;
 				case Waifu2x::eWaifu2xError_FailedConstructModel:
-					sprintf(msg, "ネットワークの構築に失敗しました");
+					_stprintf(msg, TEXT("ネットワークの構築に失敗しました"));
 					break;
 				}
 			}
 			else
 			{
-				const auto &fp = *(const std::pair<std::string, std::string> *)lParam;
+				const auto &fp = *(const std::pair<tstring, tstring> *)lParam;
 
 				switch (ret)
 				{
 				case Waifu2x::eWaifu2xError_Cancel:
-					sprintf(msg, "キャンセルされました");
+					_stprintf(msg, TEXT("キャンセルされました"));
 					break;
 				case Waifu2x::eWaifu2xError_InvalidParameter:
-					sprintf(msg, "パラメータが不正です");
+					_stprintf(msg, TEXT("パラメータが不正です"));
 					break;
 				case Waifu2x::eWaifu2xError_FailedOpenInputFile:
-					sprintf(msg, "入力画像「%s」が開けませんでした", fp.first.c_str());
+					_stprintf(msg, TEXT("入力画像「%s」が開けませんでした"), fp.first.c_str());
 					break;
 				case Waifu2x::eWaifu2xError_FailedOpenOutputFile:
-					sprintf(msg, "出力画像を「%s」に書き込めませんでした", fp.second.c_str());
+					_stprintf(msg, TEXT("出力画像を「%s」に書き込めませんでした"), fp.second.c_str());
 					break;
 				case Waifu2x::eWaifu2xError_FailedProcessCaffe:
-					sprintf(msg, "補間処理に失敗しました");
+					_stprintf(msg, TEXT("補間処理に失敗しました"));
 					break;
 				}
 			}
@@ -751,10 +795,10 @@ public:
 
 		EnableWindow(GetDlgItem(dh, IDC_BUTTON_CANCEL), FALSE);
 
-		char text[] = "2.00";
-		SetWindowTextA(GetDlgItem(hWnd, IDC_EDIT_SCALE_RATIO), text);
-		SetWindowTextA(GetDlgItem(hWnd, IDC_EDIT_OUT_EXT), outputExt.c_str());
-		SetWindowTextA(GetDlgItem(hWnd, IDC_EDIT_INPUT_EXT_LIST), inputFileExt.c_str());
+		TCHAR text[] = TEXT("2.00");
+		SetWindowText(GetDlgItem(hWnd, IDC_EDIT_SCALE_RATIO), text);
+		SetWindowText(GetDlgItem(hWnd, IDC_EDIT_OUT_EXT), outputExt.c_str());
+		SetWindowText(GetDlgItem(hWnd, IDC_EDIT_INPUT_EXT_LIST), inputFileExt.c_str());
 
 		std::ifstream ifs(CropSizeListName);
 		if (ifs)
@@ -847,13 +891,13 @@ public:
 	// ここで渡されるhWndはIDC_EDITのHWND(コントロールのイベントだから)
 	LRESULT DropInput(HWND hWnd, WPARAM wParam, LPARAM lParam, WNDPROC OrgSubWnd, LPVOID lpData)
 	{
-		char szTmp[AR_PATH_MAX];
+		TCHAR szTmp[AR_PATH_MAX];
 
 		// ドロップされたファイル数を取得
-		UINT FileNum = DragQueryFileA((HDROP)wParam, 0xFFFFFFFF, szTmp, _countof(szTmp));
+		UINT FileNum = DragQueryFile((HDROP)wParam, 0xFFFFFFFF, szTmp, _countof(szTmp));
 		if (FileNum >= 1)
 		{
-			DragQueryFileA((HDROP)wParam, 0, szTmp, _countof(szTmp));
+			DragQueryFile((HDROP)wParam, 0, szTmp, _countof(szTmp));
 
 			boost::filesystem::path path(szTmp);
 
@@ -870,33 +914,32 @@ public:
 			{
 				HWND ho = GetDlgItem(dh, IDC_EDIT_OUTPUT);
 
-				const std::string addstr(AddName());
+				const tstring addstr(AddName());
 				autoSetAddName = AddName();
 
-				auto str = (path.branch_path() / (path.stem().string() + addstr)).string();
+				const auto str = getTString(path.branch_path() / (path.stem().wstring() + addstr));
+				SetWindowText(ho, str.c_str());
 
-				SetWindowTextA(ho, str.c_str());
-
-				SetWindowTextA(hWnd, szTmp);
+				SetWindowText(hWnd, szTmp);
 			}
 			else
 			{
 				HWND ho = GetDlgItem(dh, IDC_EDIT_OUTPUT);
 
-				std::string outputFileName = szTmp;
+				tstring outputFileName = szTmp;
 
 				const auto tailDot = outputFileName.find_last_of('.');
 				if (tailDot != outputFileName.npos)
 					outputFileName.erase(tailDot, outputFileName.length());
 
-				const std::string addstr(AddName());
+				const tstring addstr(AddName());
 				autoSetAddName = addstr;
 
 				outputFileName += addstr + outputExt;
 
-				SetWindowTextA(ho, outputFileName.c_str());
+				SetWindowText(ho, outputFileName.c_str());
 
-				SetWindowTextA(hWnd, szTmp);
+				SetWindowText(hWnd, szTmp);
 			}
 
 			SetCropSizeList(path);
