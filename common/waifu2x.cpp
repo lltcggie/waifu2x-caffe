@@ -280,7 +280,7 @@ Waifu2x::eWaifu2xcuDNNError Waifu2x::can_use_cuDNN()
 			cudnnGetVersionType cudnnGetVersionFunc = (cudnnGetVersionType)GetProcAddress(hModule, "cudnnGetVersion");
 			if (cudnnCreateFunc != nullptr && cudnnDestroyFunc != nullptr && cudnnGetVersionFunc != nullptr)
 			{
-				if (cudnnGetVersionFunc() >= 2000)
+				if (cudnnGetVersionFunc() >= 3000)
 				{
 					cudnnHandle_t h;
 					if (cudnnCreateFunc(&h) == CUDNN_STATUS_SUCCESS)
