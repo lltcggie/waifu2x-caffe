@@ -1,3 +1,6 @@
 [submodule "rapidjson"]
 	path = rapidjson
 	url = https://github.com/miloyip/rapidjson.git
+[submodule "stb"]
+	path = stb
+	url = https://github.com/nothings/stb.git
