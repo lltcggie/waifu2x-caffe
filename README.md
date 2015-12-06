@@ -1,7 +1,10 @@
-# waifu2x-caffe
+waifu2x-caffe (for Windows)
+----------
+
+ 制作者 : lltcggie
 
 本ソフトは、画像変換ソフトウェア「[waifu2x](https://github.com/nagadomi/waifu2x)」の変換機能のみを、
-[Caffe](http://caffe.berkeleyvision.org/)を用いて書き直したソフトです。
+[Caffe](http://caffe.berkeleyvision.org/)を用いて書き直し、Windows向けにビルドしたソフトです。
 CPUで変換することも出来ますが、CUDA(あるいはcuDNN)を使うとCPUより高速に変換することが出来ます。
 
 
@@ -35,8 +38,8 @@ cuDNNを使わなくてもCUDAで変換出来ますが、cuDNNを使うと以下
  * VRAMの使用量を減らすことが出来る(CUDAのおよそ9分の1)
 
 このような利点があるcuDNNですが、ライセンスの関係上動作に必要なファイルを配布することが出来ません。
-なので、cuDNNを使いたい人は[こちらのページ](https://developer.nvidia.com/cuDNN)でWindows向けバイナリ(v2以降)をダウンロードし、
-「cudnn64_65.dll」をwaifu2x-caffeのフォルダに入れて下さい。
+なので、cuDNNを使いたい人は[こちらのページ](https://developer.nvidia.com/cuDNN)でWindows向けバイナリ(v3以降)をダウンロードし、
+「cudnn64_70.dll」をwaifu2x-caffeのフォルダに入れて下さい。
 (cuDNNをダウンロードするにはNVIDIA Developerへの登録とCUDA Registered Developersへの登録が必要です。
  CUDA Registered Developersはおそらく(簡単な)審査があるっぽいので登録してもすぐにcuDNNをダウンロード出来るわけではありません。)
 
@@ -84,7 +87,6 @@ cuDNN
       * ノイズ除去と拡大 : ノイズ除去と拡大を行います 
       * ノイズ除去(自動判別)と拡大 : 拡大を行います。入力がJPEG画像の場合のみノイズ除去も行います
 
-
 ###「JPEGノイズ除去レベル」
     ノイズ除去レベルを指定します。
 
@@ -102,8 +104,8 @@ cuDNN
 ###「モデル」
     使用するモデルを指定します。
       * RGB : RGBすべてを変換する2次元画像用モデル
+      * 写真 : 写真用モデル(アニメの場合もこれのほうが自然に見えるらしいです)
       * Y(輝度のみ) : 輝度のみを変換する2次元画像用モデル
-      * 写真 : 写真用モデル(拡大するモデルのみ付属しています。ノイズ除去は出来ません)
 
 ###「分割サイズ」
     内部で分割して処理を行う際の幅（ピクセル単位）を指定します。
@@ -161,9 +163,9 @@ waifu2x-caffe-cui.exe -i mywaifu.png -m noise_scale --scale_ratio 1.6 --noise_le
 
 ###-l <文字列>,  --input_extention_list <文字列>
      input_fileがフォルダの場合の、フォルダ内の変換する画像の拡張子を指定します。
-     デフォルト値は`png:jpg:bmp`です。
+     デフォルト値は`png:jpg:jpeg:tif:tiff:bmp:tga`です。
      また、区切り文字は`:`です。
-     例. png:jpg:bmp
+     例. png:jpg:jpeg:tif:tiff:bmp:tga
 
 ###-e <文字列>,  --output_extention <文字列>
      input_fileがフォルダの場合の、出力画像の拡張子を指定します。
@@ -242,6 +244,13 @@ CUDAで変換中でもGPUを使い切れていない（GPUの使用率が100%近
  * 数値を2倍にした場合、使用するメモリ量は4倍になる(実際は3～4倍といったところ)のでソフトが落ちないように注意。特にCUDAはcuDNNに比べてメモリの消費量がとても多いので気をつけること
 
 
+ アルファチャンネル付き画像について
+--------
+
+本ソフトではアルファチャンネル付き画像の拡大も対応しています。
+しかし、アルファチャンネルを単体で拡大する処理になっているため、アルファチャンネル付き画像の拡大は無い場合と比べておよそ2倍の時間がかかるので注意してください。
+
+
 おことわり
 ------------
 
@@ -250,7 +259,7 @@ CUDAで変換中でもGPUを使い切れていない（GPUの使用率が100%近
 制作者はいかなる義務も負わないものとします。
 
 
- 謝辞
+謝辞
 ------
 オリジナルの[waifu2x](https://github.com/nagadomi/waifu2x)、及びモデルの制作を行い、MITライセンスの下で公開して下さった [ultraist](https://twitter.com/ultraistter)さん、
 オリジナルのwaifu2xを元に[waifu2x-converter](https://github.com/WL-Amigo/waifu2x-converter-cpp)を作成して下さった [アミーゴ](https://twitter.com/WL_Amigo)さん(READMEやLICENSE.txtの書き方、OpenCVの使い方等かなり参考にさせていただきました)
