@@ -32,7 +32,8 @@ const int MinCommonDivisor = 50;
 const int DefaultCommonDivisor = 128;
 const std::pair<int, int> DefaultCommonDivisorRange = {90, 140};
 
-const char * const CropSizeListName = "crop_size_list.txt";
+const TCHAR * const CropSizeListName = TEXT("crop_size_list.txt");
+const TCHAR * const SettingFileName = TEXT("setting.ini");
 
 
 #ifdef UNICODE
@@ -115,6 +116,7 @@ class DialogEvent
 private:
 	HWND dh;
 
+	boost::filesystem::path exeDir;
 	std::vector<int> CropSizeList;
 
 	tstring input_str;
@@ -152,12 +154,14 @@ private:
 		eModelTypeRGB,
 		eModelTypePhoto,
 		eModelTypeY,
+		eModelTypeEnd,
 	};
 
 	eModelType modelType;
 
 private:
-	static tstring to_tstring(int val)
+	template<typename T>
+	static tstring to_tstring(T val)
 	{
 #ifdef UNICODE
 		return std::to_wstring(val);
@@ -660,6 +664,55 @@ private:
 		AddLogMessage(msg);
 	}
 
+	void SaveIni(const bool isSyncMember = true)
+	{
+		if (isSyncMember)
+			SyncMember(true);
+
+		const boost::filesystem::path SettingFilePath(exeDir / SettingFileName);
+
+		tstring tScale;
+		tstring tmode;
+		tstring tprcess;
+		tstring toutputExt;
+
+		tScale = to_tstring(scale_ratio);
+
+		if (mode == ("noise"))
+			tmode = TEXT("noise");
+		else if (mode == ("scale"))
+			tmode = TEXT("scale");
+		else if (mode == ("auto_scale"))
+			tmode = TEXT("auto_scale");
+		else // noise_scale
+			tmode = TEXT("noise_scale");
+
+		if (process == "gpu")
+			tprcess = TEXT("gpu");
+		else
+			tprcess = TEXT("cpu");
+
+		toutputExt = outputExt;
+		if (toutputExt.length() > 0 && toutputExt[0] == TEXT('.'))
+			toutputExt.erase(0, 1);
+
+		WritePrivateProfileString(TEXT("Setting"), TEXT("LastScale"), tScale.c_str(), getTString(SettingFilePath).c_str());
+
+		WritePrivateProfileString(TEXT("Setting"), TEXT("LastOutputExt"), toutputExt.c_str(), getTString(SettingFilePath).c_str());
+
+		WritePrivateProfileString(TEXT("Setting"), TEXT("LastInputFileExt"), inputFileExt.c_str(), getTString(SettingFilePath).c_str());
+
+		WritePrivateProfileString(TEXT("Setting"), TEXT("LastMode"), tmode.c_str(), getTString(SettingFilePath).c_str());
+
+		WritePrivateProfileString(TEXT("Setting"), TEXT("LastNoiseLevel"), to_tstring(noise_level).c_str(), getTString(SettingFilePath).c_str());
+
+		WritePrivateProfileString(TEXT("Setting"), TEXT("LastProcess"), tprcess.c_str(), getTString(SettingFilePath).c_str());
+
+		WritePrivateProfileString(TEXT("Setting"), TEXT("LastModel"), to_tstring(modelType).c_str(), getTString(SettingFilePath).c_str());
+
+		WritePrivateProfileString(TEXT("Setting"), TEXT("LastUseTTA"), to_tstring(use_tta ? 1 : 0).c_str(), getTString(SettingFilePath).c_str());
+	}
+
 public:
 	DialogEvent() : dh(nullptr), mode("noise_scale"), noise_level(1), scale_ratio(2.0), model_dir(TEXT("models/anime_style_art_rgb")),
 		process("gpu"), outputExt(TEXT("png")), inputFileExt(TEXT("png:jpg:jpeg:tif:tiff:bmp:tga")),
@@ -707,6 +760,8 @@ public:
 			}
 		}
 
+		SaveIni(true); // 強制終了の可能性も考えて実行時に設定保存
+
 		SendMessage(GetDlgItem(dh, IDC_PROGRESS), PBM_SETPOS, 0, 0);
 		cancelFlag = false;
 		isLastError = false;
@@ -742,6 +797,8 @@ public:
 
 	void OnDialogEnd(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 	{
+		SaveIni();
+
 		if (!processThread.joinable())
 			PostQuitMessage(0);
 		else
@@ -826,19 +883,17 @@ public:
 	{
 		dh = hWnd;
 
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE_SCALE), BM_SETCHECK, BST_CHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL1), BM_SETCHECK, BST_CHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_GPU), BM_SETCHECK, BST_CHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_RGB), BM_SETCHECK, BST_CHECKED, 0);
+		{
+			TCHAR texepath[1024 * 3] = TEXT("");
+			GetModuleFileName(NULL, texepath, _countof(texepath));
+			texepath[_countof(texepath) - 1] = TEXT('\0');
 
-		EnableWindow(GetDlgItem(dh, IDC_BUTTON_CANCEL), FALSE);
+			const boost::filesystem::path exePath(texepath);
+			exeDir = exePath.branch_path();
+		}
 
-		TCHAR text[] = TEXT("2.00");
-		SetWindowText(GetDlgItem(hWnd, IDC_EDIT_SCALE_RATIO), text);
-		SetWindowText(GetDlgItem(hWnd, IDC_EDIT_OUT_EXT), outputExt.c_str());
-		SetWindowText(GetDlgItem(hWnd, IDC_EDIT_INPUT_EXT_LIST), inputFileExt.c_str());
-
-		std::ifstream ifs(CropSizeListName);
+		const boost::filesystem::path CropSizeListPath(exeDir / CropSizeListName);
+		std::ifstream ifs(CropSizeListPath.wstring());
 		if (ifs)
 		{
 			std::string str;
@@ -850,6 +905,141 @@ public:
 					CropSizeList.push_back(n);
 			}
 		}
+
+		const boost::filesystem::path SettingFilePath(exeDir / SettingFileName);
+
+		tstring tScale;
+		tstring tmode;
+		tstring tprcess;
+		{
+			TCHAR tmp[1000];
+
+			GetPrivateProfileString(TEXT("Setting"), TEXT("LastScale"), TEXT("2.00"), tmp, _countof(tmp), getTString(SettingFilePath).c_str());
+			tmp[_countof(tmp) - 1] = TEXT('\0');
+			tScale = tmp;
+
+			GetPrivateProfileString(TEXT("Setting"), TEXT("LastOutputExt"), TEXT("png"), tmp, _countof(tmp), getTString(SettingFilePath).c_str());
+			tmp[_countof(tmp) - 1] = TEXT('\0');
+			outputExt = tmp;
+
+			GetPrivateProfileString(TEXT("Setting"), TEXT("LastInputFileExt"), TEXT("png:jpg:jpeg:tif:tiff:bmp:tga"), tmp, _countof(tmp), getTString(SettingFilePath).c_str());
+			tmp[_countof(tmp) - 1] = TEXT('\0');
+			inputFileExt = tmp;
+
+			GetPrivateProfileString(TEXT("Setting"), TEXT("LastMode"), TEXT("noise_scale"), tmp, _countof(tmp), getTString(SettingFilePath).c_str());
+			tmp[_countof(tmp) - 1] = TEXT('\0');
+			tmode = tmp;
+
+			noise_level = GetPrivateProfileInt(TEXT("Setting"), TEXT("LastNoiseLevel"), 1, getTString(SettingFilePath).c_str());
+
+			GetPrivateProfileString(TEXT("Setting"), TEXT("LastProcess"), TEXT("gpu"), tmp, _countof(tmp), getTString(SettingFilePath).c_str());
+			tmp[_countof(tmp) - 1] = TEXT('\0');
+			tprcess = tmp;
+
+			modelType = (eModelType)GetPrivateProfileInt(TEXT("Setting"), TEXT("LastModel"), 0, getTString(SettingFilePath).c_str());
+
+			use_tta = GetPrivateProfileInt(TEXT("Setting"), TEXT("LastUseTTA"), 0, getTString(SettingFilePath).c_str()) != 0;
+		}
+
+		TCHAR *ptr = nullptr;
+		const double tempScale = _tcstod(tScale.c_str(), &ptr);
+		if (!ptr || *ptr != TEXT('\0') || tempScale <= 0.0)
+			tScale = TEXT("2.00");
+
+		if (outputExt.length() > 0 && outputExt[0] == TEXT('.'))
+			outputExt.erase(0, 1);
+
+		if (!(1 <= noise_level && noise_level <= 2))
+			noise_level = 1;
+
+		if (tprcess == TEXT("gpu"))
+			process = "gpu";
+		else
+			process = "cpu";
+
+		if (!((eModelType)0 <= modelType && modelType < eModelTypeEnd))
+			modelType = eModelTypeRGB;
+
+		if (tmode == TEXT("noise"))
+		{
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE), BM_SETCHECK, BST_CHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+		}
+		else if (tmode == TEXT("scale"))
+		{
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_SCALE), BM_SETCHECK, BST_CHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+		}
+		else if (tmode == TEXT("auto_scale"))
+		{
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_SCALE), BM_SETCHECK, BST_CHECKED, 0);
+		}
+		else // noise_scale
+		{
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE_SCALE), BM_SETCHECK, BST_CHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+		}
+
+		if (noise_level == 1)
+		{
+			SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL1), BM_SETCHECK, BST_CHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL2), BM_SETCHECK, BST_UNCHECKED, 0);
+		}
+		else
+		{
+			SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL1), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL2), BM_SETCHECK, BST_CHECKED, 0);
+		}
+		
+		if (process == "gpu")
+		{
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_GPU), BM_SETCHECK, BST_CHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_CPU), BM_SETCHECK, BST_UNCHECKED, 0);
+		}
+		else
+		{
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_GPU), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_CPU), BM_SETCHECK, BST_CHECKED, 0);
+		}
+
+		if (modelType == eModelTypeRGB)
+		{
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_RGB), BM_SETCHECK, BST_CHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_PHOTO), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_Y), BM_SETCHECK, BST_UNCHECKED, 0);
+		}
+		else if (modelType == eModelTypePhoto)
+		{
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_RGB), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_PHOTO), BM_SETCHECK, BST_CHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_Y), BM_SETCHECK, BST_UNCHECKED, 0);
+		}
+		else
+		{
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_RGB), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_PHOTO), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_Y), BM_SETCHECK, BST_CHECKED, 0);
+		}
+
+		if (use_tta)
+			SendMessage(GetDlgItem(hWnd, IDC_CHECK_TTA), BM_SETCHECK, BST_CHECKED, 0);
+		else
+			SendMessage(GetDlgItem(hWnd, IDC_CHECK_TTA), BM_SETCHECK, BST_UNCHECKED, 0);
+
+		SetWindowText(GetDlgItem(hWnd, IDC_EDIT_SCALE_RATIO), tScale.c_str());
+		SetWindowText(GetDlgItem(hWnd, IDC_EDIT_OUT_EXT), outputExt.c_str());
+		SetWindowText(GetDlgItem(hWnd, IDC_EDIT_INPUT_EXT_LIST), inputFileExt.c_str());
+
+		EnableWindow(GetDlgItem(dh, IDC_BUTTON_CANCEL), FALSE);
 	}
 
 	void Cancel(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
