@@ -79,6 +79,7 @@ const int ConvertInverseMode = CV_YUV2RGB;
 const int MinCudaDriverVersion = 6050;
 
 // float‚È‰æ‘œ‚ğuint8_t‚È‰æ‘œ‚É•ÏŠ·‚·‚éÛ‚ÌlÌŒÜ“ü‚Ég‚¤’l
+// https://github.com/nagadomi/waifu2x/commit/797b45ae23665a1c5e3c481c018e48e6f0d0e383
 const double clip_eps8 = (1.0 / 255.0) * 0.5 - (1.0e-7 * (1.0 / 255.0) * 0.5);
 
 static std::once_flag waifu2x_once_flag;
@@ -825,19 +826,6 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 										fptr[(ch * Height + i) * Width + j] = uptr[(i * LinePixel + j) * Channel + ch];
 								}
 							}
-
-							/*
-							{
-								cv::Mat im(someborderimg.size(), CV_32F, fptr, Width * sizeof(float));
-
-								cv::Mat write_iamge;
-								im.convertTo(write_iamge, CV_8U, 255.0);
-								im.release();
-
-								if (!cv::imwrite("test_in.png", write_iamge))
-									return eWaifu2xError_FailedOpenOutputFile;
-							}
-							*/
 						}
 					}
 				}
@@ -893,19 +881,6 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 								imptr[((h + i) * LinePixel + (w + j)) * Channel + ch] = fptr[(ch * output_block_size + i + output_padding) * output_block_size + j + output_padding];
 						}
 					}
-
-					/*
-					{
-						cv::Mat im(someborderimg.size(), CV_32F, fptr, Width * sizeof(float));
-
-						cv::Mat write_iamge;
-						im.convertTo(write_iamge, CV_8U, 255.0);
-						im.release();
-
-						if (!cv::imwrite("test_in.png", write_iamge))
-							return eWaifu2xError_FailedOpenOutputFile;
-					}
-					*/
 				}
 			}
 		}
