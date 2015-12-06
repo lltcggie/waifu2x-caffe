@@ -147,6 +147,15 @@ private:
 	std::chrono::system_clock::duration InitTime;
 	std::chrono::system_clock::duration ProcessTime;
 
+	enum eModelType
+	{
+		eModelTypeRGB,
+		eModelTypePhoto,
+		eModelTypeY,
+	};
+
+	eModelType modelType;
+
 private:
 	static tstring to_tstring(int val)
 	{
@@ -159,8 +168,26 @@ private:
 
 	tstring AddName() const
 	{
-		tstring addstr(TEXT("("));
+		tstring addstr;
 
+		addstr += TEXT("(");
+		switch (modelType)
+		{
+		case eModelTypeRGB:
+			addstr += TEXT("RGB");
+			break;
+
+		case eModelTypePhoto:
+			addstr += TEXT("Photo");
+			break;
+
+		case eModelTypeY:
+			addstr += TEXT("Y");
+			break;
+		}
+		addstr += TEXT(")");
+
+		addstr += TEXT("(");
 		if (mode == "noise")
 			addstr += TEXT("noise");
 		else if (mode == "scale")
@@ -169,7 +196,6 @@ private:
 			addstr += TEXT("noise_scale");
 		else if (mode == "auto_scale")
 			addstr += TEXT("auto_scale");
-
 		addstr += TEXT(")");
 
 		if (mode.find("noise") != mode.npos || mode.find("auto_scale") != mode.npos)
@@ -233,11 +259,20 @@ private:
 		}
 
 		if (SendMessage(GetDlgItem(dh, IDC_RADIO_MODEL_RGB), BM_GETCHECK, 0, 0))
+		{
 			model_dir = TEXT("models/anime_style_art_rgb");
+			modelType = eModelTypeRGB;
+		}
 		else if (SendMessage(GetDlgItem(dh, IDC_RADIO_MODEL_Y), BM_GETCHECK, 0, 0))
+		{
 			model_dir = TEXT("models/anime_style_art");
+			modelType = eModelTypeY;
+		}
 		else
+		{
 			model_dir = TEXT("models/photo");
+			modelType = eModelTypePhoto;
+		}
 
 		{
 			TCHAR buf[AR_PATH_MAX] = TEXT("");
@@ -825,37 +860,6 @@ public:
 		ReplaceAddString();
 	}
 
-	void ModelRadioButtomScaleAndNoise(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
-	{
-		const BOOL flag = TRUE;
-
-		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL1), flag);
-		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL2), flag);
-		EnableWindow(GetDlgItem(dh, IDC_RADIO_MODE_NOISE), flag);
-		EnableWindow(GetDlgItem(dh, IDC_RADIO_MODE_SCALE), flag);
-		EnableWindow(GetDlgItem(dh, IDC_RADIO_MODE_NOISE_SCALE), flag);
-		EnableWindow(GetDlgItem(dh, IDC_RADIO_AUTO_SCALE), flag);
-	}
-
-	void ModelRadioButtomScaleOnly(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
-	{
-		const BOOL flag = FALSE;
-
-		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL1), flag);
-		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL2), flag);
-		EnableWindow(GetDlgItem(dh, IDC_RADIO_MODE_NOISE), flag);
-		EnableWindow(GetDlgItem(dh, IDC_RADIO_MODE_SCALE), TRUE);
-		EnableWindow(GetDlgItem(dh, IDC_RADIO_MODE_NOISE_SCALE), flag);
-		EnableWindow(GetDlgItem(dh, IDC_RADIO_AUTO_SCALE), flag);
-
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_SCALE), BM_SETCHECK, BST_CHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
-
-		ReplaceAddString();
-	}
-
 	void CheckCUDNN(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 	{
 		const auto flag = Waifu2x::can_use_CUDA();
@@ -1019,12 +1023,11 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_RADIONOISE_LEVEL2);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_RADIO_MODE_CPU);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_RADIO_MODE_GPU);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_RADIO_MODEL_RGB);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_RADIO_MODEL_PHOTO);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_RADIO_MODEL_Y);
 
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_CHECK_TTA);
-
-	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::ModelRadioButtomScaleAndNoise, &cDialogEvent), NULL, IDC_RADIO_MODEL_RGB);
-	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::ModelRadioButtomScaleAndNoise, &cDialogEvent), NULL, IDC_RADIO_MODEL_Y);
-	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::ModelRadioButtomScaleAndNoise, &cDialogEvent), NULL, IDC_RADIO_MODEL_PHOTO);
 
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::CheckCUDNN, &cDialogEvent), NULL, IDC_BUTTON_CHECK_CUDNN);
 
