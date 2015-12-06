@@ -6,6 +6,7 @@
 #include <utility>
 #include <functional>
 #include <boost/shared_ptr.hpp>
+#include <boost/filesystem.hpp>
 #include <opencv2/opencv.hpp>
 
 #define CUDNN_DLL_NAME "cudnn64_70"
@@ -31,6 +32,7 @@ public:
 		eWaifu2xError_FailedOpenOutputFile,
 		eWaifu2xError_FailedOpenModelFile,
 		eWaifu2xError_FailedParseModelFile,
+		eWaifu2xError_FailedWriteModelFile,
 		eWaifu2xError_FailedConstructModel,
 		eWaifu2xError_FailedProcessCaffe,
 		eWaifu2xError_FailedCudaCheck,
@@ -73,7 +75,7 @@ private:
 	std::string mode;
 	int noise_level;
 	double scale_ratio;
-	std::string model_dir;
+	boost::filesystem::path model_dir;
 	std::string process;
 
 	int inner_padding;
@@ -95,18 +97,19 @@ private:
 	bool use_tta;
 
 private:
-	static eWaifu2xError LoadMat(cv::Mat &float_image, const std::string &input_file);
-	static eWaifu2xError LoadMatBySTBI(cv::Mat &float_image, const std::string &input_file);
+	static eWaifu2xError LoadMat(cv::Mat &float_image, const boost::filesystem::path &input_file);
+	static eWaifu2xError LoadMatBySTBI(cv::Mat &float_image, const std::vector<char> &img_data);
 	static eWaifu2xError AlphaMakeBorder(std::vector<cv::Mat> &planes, const cv::Mat &alpha, const int offset);
 	eWaifu2xError CreateBrightnessImage(const cv::Mat &float_image, cv::Mat &im);
 	eWaifu2xError PaddingImage(const cv::Mat &input, cv::Mat &output);
 	eWaifu2xError Zoom2xAndPaddingImage(const cv::Mat &input, cv::Mat &output, cv::Size_<int> &zoom_size);
 	eWaifu2xError CreateZoomColorImage(const cv::Mat &float_image, const cv::Size_<int> &zoom_size, std::vector<cv::Mat> &cubic_planes);
-	eWaifu2xError ConstractNet(boost::shared_ptr<caffe::Net<float>> &net, const std::string &model_path, const std::string &param_path, const std::string &process);
-	eWaifu2xError LoadParameterFromJson(boost::shared_ptr<caffe::Net<float>> &net, const std::string &model_path, const std::string &param_path, const std::string &process);
+	eWaifu2xError ConstractNet(boost::shared_ptr<caffe::Net<float>> &net, const boost::filesystem::path &model_path, const boost::filesystem::path &param_path, const std::string &process);
+	eWaifu2xError LoadParameterFromJson(boost::shared_ptr<caffe::Net<float>> &net, const boost::filesystem::path &model_path, const boost::filesystem::path &param_path
+		, const boost::filesystem::path &modelbin_path, const boost::filesystem::path &caffemodel_path, const std::string &process);
 	eWaifu2xError SetParameter(caffe::NetParameter &param, const std::string &process) const;
 	eWaifu2xError ReconstructImage(boost::shared_ptr<caffe::Net<float>> net, cv::Mat &im);
-	eWaifu2xError WriteMat(const cv::Mat &im, const std::string &output_file);
+	eWaifu2xError WriteMat(const cv::Mat &im, const boost::filesystem::path &output_file);
 
 	eWaifu2xError BeforeReconstructFloatMatProcess(const cv::Mat &in, cv::Mat &out, bool &convertBGRflag);
 	eWaifu2xError ReconstructFloatMat(const bool isReconstructNoise, const bool isReconstructScale, const waifu2xCancelFunc cancel_func, const cv::Mat &in, cv::Mat &out);
@@ -125,15 +128,15 @@ public:
 
 	// mode: noise or scale or noise_scale or auto_scale
 	// process: cpu or gpu or cudnn
-	eWaifu2xError init(int argc, char** argv, const std::string &mode, const int noise_level, const double scale_ratio, const std::string &model_dir, const std::string &process,
+	eWaifu2xError init(int argc, char** argv, const std::string &mode, const int noise_level, const double scale_ratio, const boost::filesystem::path &model_dir, const std::string &process,
 		const bool use_tta = false, const int crop_size = 128, const int batch_size = 1);
 
 	void destroy();
 
-	eWaifu2xError waifu2x(const std::string &input_file, const std::string &output_file,
+	eWaifu2xError waifu2x(const boost::filesystem::path &input_file, const boost::filesystem::path &output_file,
 		const waifu2xCancelFunc cancel_func = nullptr);
 
 	const std::string& used_process() const;
 
-	static cv::Mat LoadMat(const std::string &path);
+	static cv::Mat LoadMat(const boost::filesystem::path &path);
 };

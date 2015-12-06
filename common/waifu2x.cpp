@@ -10,6 +10,16 @@
 #include <chrono>
 #include <cuda_runtime.h>
 
+#include <boost/iostreams/stream.hpp>
+#include <boost/iostreams/device/file_descriptor.hpp>
+#include <google/protobuf/io/coded_stream.h>
+#include <google/protobuf/io/zero_copy_stream_impl.h>
+#include <google/protobuf/text_format.h>
+#include <fcntl.h>
+#ifdef _MSC_VER
+#include <io.h>
+#endif
+
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -19,6 +29,7 @@
 #include <Windows.h>
 #endif
 
+#ifdef _MSC_VER
 #ifdef _DEBUG
 #pragma comment(lib, "caffe-d.lib")
 #pragma comment(lib, "proto-d.lib")
@@ -42,6 +53,7 @@
 #pragma comment(lib, "opencv_core249d.lib")
 #pragma comment(lib, "opencv_highgui249d.lib")
 #pragma comment(lib, "opencv_imgproc249d.lib")
+#pragma comment(lib, "libboost_iostreams-vc120-mt-gd-1_59.lib")
 #else
 #pragma comment(lib, "caffe.lib")
 #pragma comment(lib, "proto.lib")
@@ -65,6 +77,8 @@
 #pragma comment(lib, "opencv_core249.lib")
 #pragma comment(lib, "opencv_highgui249.lib")
 #pragma comment(lib, "opencv_imgproc249.lib")
+#pragma comment(lib, "libboost_iostreams-vc120-mt-1_59.lib")
+#endif
 #endif
 
 // 入力画像のオフセット
@@ -81,6 +95,8 @@ const int MinCudaDriverVersion = 6050;
 // floatな画像をuint8_tな画像に変換する際の四捨五入に使う値
 // https://github.com/nagadomi/waifu2x/commit/797b45ae23665a1c5e3c481c018e48e6f0d0e383
 const double clip_eps8 = (1.0 / 255.0) * 0.5 - (1.0e-7 * (1.0 / 255.0) * 0.5);
+
+const int kProtoReadBytesLimit = INT_MAX;  // Max size of 2 GB minus 1 byte.
 
 static std::once_flag waifu2x_once_flag;
 static std::once_flag waifu2x_cudnn_once_flag;
@@ -131,6 +147,110 @@ namespace
 
 	IgnoreErrorCV g_IgnoreErrorCV;
 }
+
+template<typename BufType>
+static bool writeFile(boost::iostreams::stream<boost::iostreams::file_descriptor> &os, const std::vector<BufType> &buf)
+{
+	if (!os)
+		return false;
+
+	const auto WriteSize = sizeof(BufType) * buf.size();
+	os.write((const char *)buf.data(), WriteSize);
+	if (os.fail())
+		return false;
+
+	return true;
+}
+
+template<typename BufType>
+static bool writeFile(const boost::filesystem::path &path, std::vector<BufType> &buf)
+{
+	boost::iostreams::stream<boost::iostreams::file_descriptor> os(path, std::ios_base::out | std::ios_base::binary | std::ios_base::trunc);
+
+	return writeFile(os, buf);
+}
+
+template<typename BufType>
+static bool readFile(boost::iostreams::stream<boost::iostreams::file_descriptor_source> &is, std::vector<BufType> &buf)
+{
+	if (!is)
+		return false;
+
+	const auto size = is.seekg(0, std::ios::end).tellg();
+	is.seekg(0, std::ios::beg);
+
+	buf.resize((size / sizeof(BufType)) + (size % sizeof(BufType)));
+	is.read(buf.data(), size);
+	if (is.gcount() != size)
+		return false;
+
+	return true;
+}
+
+template<typename BufType>
+static bool readFile(const boost::filesystem::path &path, std::vector<BufType> &buf)
+{
+	boost::iostreams::stream<boost::iostreams::file_descriptor_source> is(path, std::ios_base::in | std::ios_base::binary);
+
+	return readFile(is, buf);
+}
+
+static Waifu2x::eWaifu2xError readProtoText(const boost::filesystem::path &path, ::google::protobuf::Message* proto)
+{
+	boost::iostreams::stream<boost::iostreams::file_descriptor_source> is(path, std::ios_base::in);
+
+	if (!is)
+		return Waifu2x::eWaifu2xError_FailedOpenModelFile;
+
+	std::vector<char> tmp;
+	if (!readFile(is, tmp))
+		return Waifu2x::eWaifu2xError_FailedParseModelFile;
+
+	google::protobuf::io::ArrayInputStream input(tmp.data(), tmp.size());
+	const bool success = google::protobuf::TextFormat::Parse(&input, proto);
+
+	if (!success)
+		return Waifu2x::eWaifu2xError_FailedParseModelFile;
+
+	return Waifu2x::eWaifu2xError_OK;
+}
+
+static Waifu2x::eWaifu2xError readProtoBinary(const boost::filesystem::path &path, ::google::protobuf::Message* proto)
+{
+	boost::iostreams::stream<boost::iostreams::file_descriptor_source> is(path, std::ios_base::in | std::ios_base::binary);
+
+	if (!is)
+		return Waifu2x::eWaifu2xError_FailedParseModelFile;
+
+	std::vector<char> tmp;
+	if (!readFile(is, tmp))
+		return Waifu2x::eWaifu2xError_FailedParseModelFile;
+
+	google::protobuf::io::ArrayInputStream input(tmp.data(), tmp.size());
+
+	google::protobuf::io::CodedInputStream coded_input(&input);
+	coded_input.SetTotalBytesLimit(kProtoReadBytesLimit, 536870912);
+
+	const bool success = proto->ParseFromCodedStream(&coded_input);
+	if (!success)
+		return Waifu2x::eWaifu2xError_FailedParseModelFile;
+
+	return Waifu2x::eWaifu2xError_OK;
+}
+
+static Waifu2x::eWaifu2xError writeProtoBinary(const ::google::protobuf::Message& proto, const boost::filesystem::path &path)
+{
+	boost::iostreams::stream<boost::iostreams::file_descriptor> os(path, std::ios_base::out | std::ios_base::binary | std::ios_base::trunc);
+
+	if (!os)
+		return Waifu2x::eWaifu2xError_FailedWriteModelFile;
+
+	if (!proto.SerializePartialToOstream(&os))
+		return Waifu2x::eWaifu2xError_FailedWriteModelFile;
+
+	return Waifu2x::eWaifu2xError_OK;
+}
+
 
 Waifu2x::Waifu2x() : is_inited(false), isCuda(false), input_block(nullptr), dummy_data(nullptr), output_block(nullptr)
 {
@@ -227,7 +347,7 @@ void Waifu2x::quit_liblary()
 {
 }
 
-cv::Mat Waifu2x::LoadMat(const std::string &path)
+cv::Mat Waifu2x::LoadMat(const boost::filesystem::path &path)
 {
 	cv::Mat mat;
 	LoadMat(mat, path);
@@ -290,14 +410,24 @@ Waifu2x::eWaifu2xError Waifu2x::AlphaMakeBorder(std::vector<cv::Mat> &planes, co
 }
 
 // 画像を読み込んで値を0.0f～1.0fの範囲に変換
-Waifu2x::eWaifu2xError Waifu2x::LoadMat(cv::Mat &float_image, const std::string &input_file)
+Waifu2x::eWaifu2xError Waifu2x::LoadMat(cv::Mat &float_image, const boost::filesystem::path &input_file)
 {
-	cv::Mat original_image = cv::imread(input_file, cv::IMREAD_UNCHANGED);
-	if (original_image.empty())
+	cv::Mat original_image;
+
 	{
-		const eWaifu2xError ret = LoadMatBySTBI(original_image, input_file);
-		if (ret != eWaifu2xError_OK)
-			return ret;
+		std::vector<char> img_data;
+		if (!readFile(input_file, img_data))
+			return Waifu2x::eWaifu2xError_FailedOpenInputFile;
+
+		cv::Mat im(img_data.size(), 1, CV_8U, img_data.data());
+		original_image = cv::imdecode(im, cv::IMREAD_UNCHANGED);
+
+		if (original_image.empty())
+		{
+			const eWaifu2xError ret = LoadMatBySTBI(original_image, img_data);
+			if (ret != eWaifu2xError_OK)
+				return ret;
+		}
 	}
 
 	cv::Mat convert;
@@ -326,10 +456,10 @@ Waifu2x::eWaifu2xError Waifu2x::LoadMat(cv::Mat &float_image, const std::string 
 	return eWaifu2xError_OK;
 }
 
-Waifu2x::eWaifu2xError Waifu2x::LoadMatBySTBI(cv::Mat &float_image, const std::string &input_file)
+Waifu2x::eWaifu2xError Waifu2x::LoadMatBySTBI(cv::Mat &float_image, const std::vector<char> &img_data)
 {
 	int x, y, comp;
-	stbi_uc *data = stbi_load(input_file.c_str(), &x, &y, &comp, 4);
+	stbi_uc *data = stbi_load_from_memory((const stbi_uc *)img_data.data(), img_data.size(), &x, &y, &comp, 4);
 	if (!data)
 		return eWaifu2xError_FailedOpenInputFile;
 
@@ -454,34 +584,38 @@ Waifu2x::eWaifu2xError Waifu2x::CreateZoomColorImage(const cv::Mat &float_image,
 
 // モデルファイルからネットワークを構築
 // processでcudnnが指定されなかった場合はcuDNNが呼び出されないように変更する
-Waifu2x::eWaifu2xError Waifu2x::ConstractNet(boost::shared_ptr<caffe::Net<float>> &net, const std::string &model_path, const std::string &param_path, const std::string &process)
+Waifu2x::eWaifu2xError Waifu2x::ConstractNet(boost::shared_ptr<caffe::Net<float>> &net, const boost::filesystem::path &model_path, const boost::filesystem::path &param_path, const std::string &process)
 {
-	const std::string caffemodel_path = param_path + ".caffemodel";
-	const std::string modelbin_path = model_path + ".protobin";
-
-	FILE *fp = fopen(caffemodel_path.c_str(), "rb");
-	const bool isModelExist = fp != nullptr;
-	if (fp) fclose(fp);
-
-	fp = fopen(modelbin_path.c_str(), "rb");
-	const bool isModelBinExist = fp != nullptr;
-	if (fp) fclose(fp);
+	boost::filesystem::path caffemodel_path = param_path;
+	caffemodel_path += ".caffemodel";
+	boost::filesystem::path modelbin_path = model_path;
+	modelbin_path += ".protobin";
 
 	caffe::NetParameter param;
-	if (isModelExist && isModelBinExist && caffe::ReadProtoFromBinaryFile(modelbin_path, &param))
+	if (readProtoBinary(modelbin_path, &param) == eWaifu2xError_OK)
 	{
-		const auto ret = SetParameter(param, process);
+		Waifu2x::eWaifu2xError ret;
+
+		ret = SetParameter(param, process);
 		if (ret != eWaifu2xError_OK)
 			return ret;
 
+		caffe::NetParameter param_caffemodel;
+		ret = readProtoBinary(caffemodel_path, &param_caffemodel);
+		if (ret != eWaifu2xError_OK)
+			return ret;
+
+		if (!caffe::UpgradeNetAsNeeded(caffemodel_path.string(), &param_caffemodel))
+			return Waifu2x::eWaifu2xError_FailedParseModelFile;
+
 		net = boost::shared_ptr<caffe::Net<float>>(new caffe::Net<float>(param));
-		net->CopyTrainedLayersFrom(caffemodel_path);
+		net->CopyTrainedLayersFrom(param_caffemodel);
 
 		input_plane = param.input_dim(1);
 	}
 	else
 	{
-		const auto ret = LoadParameterFromJson(net, model_path, param_path, process);
+		const auto ret = LoadParameterFromJson(net, model_path, param_path, modelbin_path, caffemodel_path, process);
 		if (ret != eWaifu2xError_OK)
 			return ret;
 	}
@@ -527,18 +661,21 @@ Waifu2x::eWaifu2xError Waifu2x::SetParameter(caffe::NetParameter &param, const s
 	return eWaifu2xError_OK;
 }
 
-Waifu2x::eWaifu2xError Waifu2x::LoadParameterFromJson(boost::shared_ptr<caffe::Net<float>> &net, const std::string &model_path, const std::string &param_path, const std::string &process)
+Waifu2x::eWaifu2xError Waifu2x::LoadParameterFromJson(boost::shared_ptr<caffe::Net<float>> &net, const boost::filesystem::path &model_path, const boost::filesystem::path &param_path
+	, const boost::filesystem::path &modelbin_path, const boost::filesystem::path &caffemodel_path, const std::string &process)
 {
-	const std::string caffemodel_path = param_path + ".caffemodel";
-	const std::string modelbin_path = model_path + ".protobin";
+	Waifu2x::eWaifu2xError ret;
 
 	caffe::NetParameter param;
-	if (!caffe::ReadProtoFromTextFile(model_path, &param))
-		return eWaifu2xError_FailedOpenModelFile;
+	ret = readProtoText(model_path, &param);
+	if (ret != eWaifu2xError_OK)
+		return ret;
 
-	caffe::WriteProtoToBinaryFile(param, modelbin_path);
+	ret = writeProtoBinary(param, modelbin_path);
+	if (ret != eWaifu2xError_OK)
+		return ret;
 
-	const auto ret = SetParameter(param, process);
+	ret = SetParameter(param, process);
 	if (ret != eWaifu2xError_OK)
 		return ret;
 
@@ -549,18 +686,15 @@ Waifu2x::eWaifu2xError Waifu2x::LoadParameterFromJson(boost::shared_ptr<caffe::N
 
 	try
 	{
-		FILE *fp = fopen(param_path.c_str(), "rb");
-		if (fp == nullptr)
+		boost::iostreams::stream<boost::iostreams::file_descriptor_source> is(param_path, std::ios_base::in | std::ios_base::binary);
+		if(!is)
 			return eWaifu2xError_FailedOpenModelFile;
 
-		fseek(fp, 0, SEEK_END);
-		const auto size = ftell(fp);
-		fseek(fp, 0, SEEK_SET);
+		const size_t size = is.seekg(0, std::ios::end).tellg();
+		is.seekg(0, std::ios::beg);
 
 		jsonBuf.resize(size + 1);
-		fread(jsonBuf.data(), 1, size, fp);
-
-		fclose(fp);
+		is.read(jsonBuf.data(), jsonBuf.size());
 
 		jsonBuf[jsonBuf.size() - 1] = '\0';
 
@@ -677,7 +811,9 @@ Waifu2x::eWaifu2xError Waifu2x::LoadParameterFromJson(boost::shared_ptr<caffe::N
 
 		net->ToProto(&param);
 
-		caffe::WriteProtoToBinaryFile(param, caffemodel_path);
+		ret = writeProtoBinary(param, caffemodel_path);
+		if (ret != eWaifu2xError_OK)
+			return ret;
 	}
 	catch (...)
 	{
@@ -895,7 +1031,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 	return eWaifu2xError_OK;
 }
 
-Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &Mode, const int NoiseLevel, const double ScaleRatio, const std::string &ModelDir, const std::string &Process,
+Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &Mode, const int NoiseLevel, const double ScaleRatio, const boost::filesystem::path &ModelDir, const std::string &Process,
 	const bool UseTTA, const int CropSize, const int BatchSize)
 {
 	Waifu2x::eWaifu2xError ret;
@@ -980,8 +1116,8 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 
 		if (mode == "noise" || mode == "noise_scale" || mode == "auto_scale")
 		{
-			const std::string model_path = (mode_dir_path / "srcnn.prototxt").string();
-			const std::string param_path = (mode_dir_path / ("noise" + std::to_string(noise_level) + "_model.json")).string();
+			const boost::filesystem::path model_path = (mode_dir_path / "srcnn.prototxt").string();
+			const boost::filesystem::path param_path = (mode_dir_path / ("noise" + std::to_string(noise_level) + "_model.json")).string();
 
 			ret = ConstractNet(net_noise, model_path, param_path, process);
 			if (ret != eWaifu2xError_OK)
@@ -990,8 +1126,8 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 
 		if (mode == "scale" || mode == "noise_scale" || mode == "auto_scale")
 		{
-			const std::string model_path = (mode_dir_path / "srcnn.prototxt").string();
-			const std::string param_path = (mode_dir_path / "scale2.0x_model.json").string();
+			const boost::filesystem::path model_path = (mode_dir_path / "srcnn.prototxt").string();
+			const boost::filesystem::path param_path = (mode_dir_path / "scale2.0x_model.json").string();
 
 			ret = ConstractNet(net_scale, model_path, param_path, process);
 			if (ret != eWaifu2xError_OK)
@@ -1048,7 +1184,7 @@ void Waifu2x::destroy()
 	is_inited = false;
 }
 
-Waifu2x::eWaifu2xError Waifu2x::WriteMat(const cv::Mat &im, const std::string &output_file)
+Waifu2x::eWaifu2xError Waifu2x::WriteMat(const cv::Mat &im, const boost::filesystem::path &output_file)
 {
 	const boost::filesystem::path ip(output_file);
 	const std::string ext = ip.extension().string();
@@ -1091,7 +1227,11 @@ Waifu2x::eWaifu2xError Waifu2x::WriteMat(const cv::Mat &im, const std::string &o
 			}
 		}
 
-		if(!stbi_write_tga(output_file.c_str(), im.size().width, im.size().height, im.channels(), data))
+		boost::iostreams::stream<boost::iostreams::file_descriptor> os(output_file, std::ios_base::out | std::ios_base::binary | std::ios_base::trunc);
+		if(!os)
+			return eWaifu2xError_FailedOpenOutputFile;
+
+		if (!stbi_write_tga(os, im.size().width, im.size().height, im.channels(), data))
 			return eWaifu2xError_FailedOpenOutputFile;
 
 		return eWaifu2xError_OK;
@@ -1099,7 +1239,10 @@ Waifu2x::eWaifu2xError Waifu2x::WriteMat(const cv::Mat &im, const std::string &o
 
 	try
 	{
-		if (cv::imwrite(output_file, im))
+		std::vector<uchar> buf;
+		cv::imencode(ext, im, buf);
+
+		if (writeFile(output_file, buf))
 			return eWaifu2xError_OK;
 
 	}
@@ -1344,7 +1487,7 @@ Waifu2x::eWaifu2xError Waifu2x::AfterReconstructFloatMatProcess(const bool isRec
 	return eWaifu2xError_OK;
 }
 
-Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::string &input_file, const std::string &output_file,
+Waifu2x::eWaifu2xError Waifu2x::waifu2x(const boost::filesystem::path &input_file, const boost::filesystem::path &output_file,
 	const waifu2xCancelFunc cancel_func)
 {
 	Waifu2x::eWaifu2xError ret;
