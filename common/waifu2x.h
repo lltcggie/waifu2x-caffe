@@ -103,8 +103,8 @@ private:
 	eWaifu2xError Zoom2xAndPaddingImage(const cv::Mat &input, cv::Mat &output, cv::Size_<int> &zoom_size);
 	eWaifu2xError CreateZoomColorImage(const cv::Mat &float_image, const cv::Size_<int> &zoom_size, std::vector<cv::Mat> &cubic_planes);
 	eWaifu2xError ConstractNet(boost::shared_ptr<caffe::Net<float>> &net, const std::string &model_path, const std::string &param_path, const std::string &process);
-	eWaifu2xError LoadParameterFromJson(boost::shared_ptr<caffe::Net<float>> &net, const std::string &model_path, const std::string &param_path);
-	eWaifu2xError SetParameter(caffe::NetParameter &param) const;
+	eWaifu2xError LoadParameterFromJson(boost::shared_ptr<caffe::Net<float>> &net, const std::string &model_path, const std::string &param_path, const std::string &process);
+	eWaifu2xError SetParameter(caffe::NetParameter &param, const std::string &process) const;
 	eWaifu2xError ReconstructImage(boost::shared_ptr<caffe::Net<float>> net, cv::Mat &im);
 	eWaifu2xError WriteMat(const cv::Mat &im, const std::string &output_file);
 

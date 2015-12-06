@@ -470,7 +470,7 @@ Waifu2x::eWaifu2xError Waifu2x::ConstractNet(boost::shared_ptr<caffe::Net<float>
 	caffe::NetParameter param;
 	if (isModelExist && isModelBinExist && caffe::ReadProtoFromBinaryFile(modelbin_path, &param))
 	{
-		const auto ret = SetParameter(param);
+		const auto ret = SetParameter(param, process);
 		if (ret != eWaifu2xError_OK)
 			return ret;
 
@@ -481,7 +481,7 @@ Waifu2x::eWaifu2xError Waifu2x::ConstractNet(boost::shared_ptr<caffe::Net<float>
 	}
 	else
 	{
-		const auto ret = LoadParameterFromJson(net, model_path, param_path);
+		const auto ret = LoadParameterFromJson(net, model_path, param_path, process);
 		if (ret != eWaifu2xError_OK)
 			return ret;
 	}
@@ -489,7 +489,7 @@ Waifu2x::eWaifu2xError Waifu2x::ConstractNet(boost::shared_ptr<caffe::Net<float>
 	return eWaifu2xError_OK;
 }
 
-Waifu2x::eWaifu2xError Waifu2x::SetParameter(caffe::NetParameter &param) const
+Waifu2x::eWaifu2xError Waifu2x::SetParameter(caffe::NetParameter &param, const std::string &process) const
 {
 	param.mutable_state()->set_phase(caffe::TEST);
 
@@ -527,7 +527,7 @@ Waifu2x::eWaifu2xError Waifu2x::SetParameter(caffe::NetParameter &param) const
 	return eWaifu2xError_OK;
 }
 
-Waifu2x::eWaifu2xError Waifu2x::LoadParameterFromJson(boost::shared_ptr<caffe::Net<float>> &net, const std::string &model_path, const std::string &param_path)
+Waifu2x::eWaifu2xError Waifu2x::LoadParameterFromJson(boost::shared_ptr<caffe::Net<float>> &net, const std::string &model_path, const std::string &param_path, const std::string &process)
 {
 	const std::string caffemodel_path = param_path + ".caffemodel";
 	const std::string modelbin_path = model_path + ".protobin";
@@ -538,7 +538,7 @@ Waifu2x::eWaifu2xError Waifu2x::LoadParameterFromJson(boost::shared_ptr<caffe::N
 
 	caffe::WriteProtoToBinaryFile(param, modelbin_path);
 
-	const auto ret = SetParameter(param);
+	const auto ret = SetParameter(param, process);
 	if (ret != eWaifu2xError_OK)
 		return ret;
 
