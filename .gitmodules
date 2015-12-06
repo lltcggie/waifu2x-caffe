@@ -1,11 +1,6 @@
 [submodule "rapidjson"]
 	path = rapidjson
 	url = https://github.com/miloyip/rapidjson.git
-[submodule "caffe"]
-	path = caffe
-	url = https://github.com/lltcggie/caffe.git
-	branch = support_windows
-	ignore = dirty
 [submodule "stb"]
 	path = stb
 	url = https://github.com/nothings/stb
