@@ -537,14 +537,6 @@ private:
 
 		const auto cuDNNCheckEndTime = std::chrono::system_clock::now();
 
-		// Caffeのエラーでないログを保存しないようにする
-		google::SetLogDestination(google::INFO, "");
-		google::SetLogDestination(google::WARNING, "");
-
-		// Caffeのエラーログを「error_log_～」に出力
-		google::SetLogDestination(google::ERROR, "error_log_");
-		google::SetLogDestination(google::FATAL, "error_log_");
-
 		Waifu2x::eWaifu2xError ret;
 
 		Waifu2x w;
@@ -1187,6 +1179,14 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	int       nCmdShow)
 {
 	Waifu2x::init_liblary();
+
+	// Caffeのエラーでないログを保存しないようにする
+	google::SetLogDestination(google::INFO, "");
+	google::SetLogDestination(google::WARNING, "");
+
+	// Caffeのエラーログを「error_log_～」に出力
+	google::SetLogDestination(google::ERROR, "error_log_");
+	google::SetLogDestination(google::FATAL, "error_log_");
 
 	// CDialogクラスでダイアログを作成する
 	CDialog cDialog;
