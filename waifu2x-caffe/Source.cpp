@@ -5,6 +5,8 @@
 #include <boost/foreach.hpp>
 #include <functional>
 #include <boost/tokenizer.hpp>
+#include <boost/tokenizer.hpp>
+#include <glog/logging.h>
 #include "../common/waifu2x.h"
 
 
@@ -51,6 +53,14 @@ boost::filesystem::path relativePath(const boost::filesystem::path &path, const 
 int main(int argc, char** argv)
 {
 	Waifu2x::init_liblary();
+
+	// Caffeのエラーでないログを保存しないようにする
+	google::SetLogDestination(google::INFO, "");
+	google::SetLogDestination(google::WARNING, "");
+
+	// Caffeのエラーログを「error_log_～」に出力
+	google::SetLogDestination(google::ERROR, "error_log_");
+	google::SetLogDestination(google::FATAL, "error_log_");
 
 	// definition of command line arguments
 	TCLAP::CmdLine cmd("waifu2x reimplementation using Caffe", ' ', "1.0.0");
