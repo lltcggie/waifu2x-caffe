@@ -537,6 +537,10 @@ private:
 
 		const auto cuDNNCheckEndTime = std::chrono::system_clock::now();
 
+		// Caffeのエラーでないログを保存しないようにする
+		google::SetLogDestination(google::INFO, "");
+		google::SetLogDestination(google::WARNING, "");
+
 		// Caffeのエラーログを「error_log_～」に出力
 		google::SetLogDestination(google::ERROR, "error_log_");
 		google::SetLogDestination(google::FATAL, "error_log_");
