@@ -1,4 +1,5 @@
 #define _CRT_SECURE_NO_WARNINGS
+#include <glog/logging.h>
 #include <windows.h>
 #include <Commctrl.h>
 #include <tchar.h>
@@ -21,6 +22,8 @@
 
 #include "CDialog.h"
 #include "CControl.h"
+
+#undef ERROR
 
 #define WM_FAILD_CREATE_DIR (WM_APP + 5)
 #define WM_ON_WAIFU2X_ERROR (WM_APP + 6)
@@ -533,6 +536,10 @@ private:
 			Waifu2x::can_use_cuDNN();
 
 		const auto cuDNNCheckEndTime = std::chrono::system_clock::now();
+
+		// Caffeのエラーログを「error_log_～」に出力
+		google::SetLogDestination(google::ERROR, "error_log_");
+		google::SetLogDestination(google::FATAL, "error_log_");
 
 		Waifu2x::eWaifu2xError ret;
 
