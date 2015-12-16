@@ -909,6 +909,31 @@ public:
 			}
 		}
 
+		{
+			HWND hcrop = GetDlgItem(dh, IDC_COMBO_CROP_SIZE);
+
+			SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)TEXT("-----------------------"));
+
+			// CropSizeList‚Ì’l‚ð’Ç‰Á‚µ‚Ä‚¢‚­
+			int mindiff = INT_MAX;
+			int defaultListIndex = -1;
+			for (const auto n : CropSizeList)
+			{
+				tstring str(to_tstring(n));
+				const int index = SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
+
+				const int diff = abs(DefaultCommonDivisor - n);
+				if (DefaultCommonDivisorRange.first <= n && n <= DefaultCommonDivisorRange.second && diff < mindiff)
+				{
+					mindiff = diff;
+					defaultListIndex = index;
+				}
+			}
+
+			if (GetWindowTextLength(hcrop) == 0)
+				SendMessage(hcrop, CB_SETCURSEL, defaultListIndex, 0);
+		}
+
 		const boost::filesystem::path SettingFilePath(exeDir / SettingFileName);
 
 		tstring tScale;
