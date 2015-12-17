@@ -17,6 +17,7 @@
 #include <boost/math/common_factor_rt.hpp>
 #include <opencv2/opencv.hpp>
 #include <cblas.h>
+#include <dlgs.h>
 #include "resource.h"
 #include "../common/waifu2x.h"
 
@@ -716,6 +717,136 @@ private:
 		WritePrivateProfileString(TEXT("Setting"), TEXT("LastUseTTA"), to_tstring(use_tta ? 1 : 0).c_str(), getTString(SettingFilePath).c_str());
 	}
 
+	// 出力パスを選択する
+	static UINT_PTR CALLBACK OFNHookProcIn(
+		_In_  HWND hdlg,
+		_In_  UINT uiMsg,
+		_In_  WPARAM wParam,
+		_In_  LPARAM lParam
+		)
+	{
+		switch (uiMsg)
+		{
+		case WM_INITDIALOG:
+		{
+			// ダイアログを中央に表示
+
+			HWND hParent = GetParent(hdlg);
+
+			HWND   hwndScreen;
+			RECT   rectScreen;
+			hwndScreen = GetDesktopWindow();
+			GetWindowRect(hwndScreen, &rectScreen);
+
+			RECT rDialog;
+			GetWindowRect(hParent, &rDialog);
+			const int Width = rDialog.left = rDialog.right;
+			const int Height = rDialog.bottom - rDialog.top;
+
+			int DialogPosX;
+			int DialogPosY;
+			DialogPosX = ((rectScreen.right - rectScreen.left) / 2 - Width / 2);
+			DialogPosY = ((rectScreen.bottom - rectScreen.top) / 2 - Height / 2);
+			SetWindowPos(hParent, NULL, DialogPosX, DialogPosY, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+		}
+		break;
+
+		case WM_NOTIFY:
+		{
+			// ファイルとフォルダを選択できるようにする
+
+			NMHDR *pnmh;
+			OFNOTIFY *pnot;
+
+			pnot = (OFNOTIFY *)lParam;
+			pnmh = &pnot->hdr;
+			switch (pnmh->code)
+			{
+			case CDN_SELCHANGE:
+			{
+				TCHAR szPath[AR_PATH_MAX] = TEXT("");
+				HWND hParent = GetParent(hdlg);
+				if (CommDlg_OpenSave_GetFilePath(hParent, szPath, _countof(szPath)) > 0)
+				{
+					szPath[_countof(szPath) - 1] = TEXT('\0');
+
+					boost::filesystem::path p(szPath);
+					const auto filename = getTString(p.filename());
+
+					CommDlg_OpenSave_SetControlText(hParent, edt1, filename.c_str());
+				}
+			}
+			break;
+			}
+		}
+		break;
+		}
+
+		return 0L;
+	}
+
+	// 出力フォルダを選択する
+	static UINT_PTR CALLBACK OFNHookProcOut(
+		_In_  HWND hdlg,
+		_In_  UINT uiMsg,
+		_In_  WPARAM wParam,
+		_In_  LPARAM lParam
+		)
+	{
+		switch (uiMsg)
+		{
+		case WM_INITDIALOG:
+		{
+			// ダイアログを中央に表示
+
+			HWND hParent = GetParent(hdlg);
+
+			HWND   hwndScreen;
+			RECT   rectScreen;
+			hwndScreen = GetDesktopWindow();
+			GetWindowRect(hwndScreen, &rectScreen);
+
+			RECT rDialog;
+			GetWindowRect(hParent, &rDialog);
+			const int Width = rDialog.left = rDialog.right;
+			const int Height = rDialog.bottom - rDialog.top;
+
+			int DialogPosX;
+			int DialogPosY;
+			DialogPosX = ((rectScreen.right - rectScreen.left) / 2 - Width / 2);
+			DialogPosY = ((rectScreen.bottom - rectScreen.top) / 2 - Height / 2);
+			SetWindowPos(hParent, NULL, DialogPosX, DialogPosY, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+		}
+		break;
+
+		case WM_NOTIFY:
+		{
+			// 常に出力ファイル名を固定する
+
+			NMHDR *pnmh;
+			OFNOTIFY *pnot;
+
+			pnot = (OFNOTIFY *)lParam;
+			pnmh = &pnot->hdr;
+
+			tstring &nowName = *(tstring *)pnot->lpOFN->lCustData;
+
+			switch (pnmh->code)
+			{
+			case CDN_SELCHANGE:
+			{
+				HWND hParent = GetParent(hdlg);
+				CommDlg_OpenSave_SetControlText(hParent, edt1, nowName.c_str());
+			}
+			break;
+			}
+		}
+		break;
+		}
+
+		return 0L;
+	}
+
 public:
 	DialogEvent() : dh(nullptr), mode("noise_scale"), noise_level(1), scale_ratio(2.0), model_dir(TEXT("models/anime_style_art_rgb")),
 		process("gpu"), outputExt(TEXT("png")), inputFileExt(TEXT("png:jpg:jpeg:tif:tiff:bmp:tga")),
@@ -1113,6 +1244,58 @@ public:
 		}
 	}
 
+	LRESULT OnSetInputFilePath(const TCHAR *tPath)
+	{
+		HWND hWnd = GetDlgItem(dh, IDC_EDIT_INPUT);
+
+		boost::filesystem::path path(tPath);
+
+		if (!boost::filesystem::exists(path))
+		{
+			MessageBox(dh, TEXT("入力ファイル/フォルダが存在しません"), TEXT("エラー"), MB_OK | MB_ICONERROR);
+			return 0L;
+		}
+
+		if (!SyncMember(true))
+			return 0L;
+
+		if (boost::filesystem::is_directory(path))
+		{
+			HWND ho = GetDlgItem(dh, IDC_EDIT_OUTPUT);
+
+			const tstring addstr(AddName());
+			autoSetAddName = AddName();
+
+			const auto str = getTString(path.branch_path() / (path.stem().wstring() + addstr));
+			SetWindowText(ho, str.c_str());
+
+			SetWindowText(hWnd, tPath);
+		}
+		else
+		{
+			HWND ho = GetDlgItem(dh, IDC_EDIT_OUTPUT);
+
+			tstring outputFileName = tPath;
+
+			const auto tailDot = outputFileName.find_last_of('.');
+			if (tailDot != outputFileName.npos)
+				outputFileName.erase(tailDot, outputFileName.length());
+
+			const tstring addstr(AddName());
+			autoSetAddName = addstr;
+
+			outputFileName += addstr + outputExt;
+
+			SetWindowText(ho, outputFileName.c_str());
+
+			SetWindowText(hWnd, tPath);
+		}
+
+		SetCropSizeList(path);
+
+		return 0L;
+	}
+
 	// ここで渡されるhWndはIDC_EDITのHWND(コントロールのイベントだから)
 	LRESULT DropInput(HWND hWnd, WPARAM wParam, LPARAM lParam, WNDPROC OrgSubWnd, LPVOID lpData)
 	{
@@ -1123,51 +1306,9 @@ public:
 		if (FileNum >= 1)
 		{
 			DragQueryFile((HDROP)wParam, 0, szTmp, _countof(szTmp));
+			szTmp[_countof(szTmp) - 1] = TEXT('\0');
 
-			boost::filesystem::path path(szTmp);
-
-			if (!boost::filesystem::exists(path))
-			{
-				MessageBox(dh, TEXT("入力ファイル/フォルダが存在しません"), TEXT("エラー"), MB_OK | MB_ICONERROR);
-				return 0L;
-			}
-
-			if (!SyncMember(true))
-				return 0L;
-
-			if (boost::filesystem::is_directory(path))
-			{
-				HWND ho = GetDlgItem(dh, IDC_EDIT_OUTPUT);
-
-				const tstring addstr(AddName());
-				autoSetAddName = AddName();
-
-				const auto str = getTString(path.branch_path() / (path.stem().wstring() + addstr));
-				SetWindowText(ho, str.c_str());
-
-				SetWindowText(hWnd, szTmp);
-			}
-			else
-			{
-				HWND ho = GetDlgItem(dh, IDC_EDIT_OUTPUT);
-
-				tstring outputFileName = szTmp;
-
-				const auto tailDot = outputFileName.find_last_of('.');
-				if (tailDot != outputFileName.npos)
-					outputFileName.erase(tailDot, outputFileName.length());
-
-				const tstring addstr(AddName());
-				autoSetAddName = addstr;
-
-				outputFileName += addstr + outputExt;
-
-				SetWindowText(ho, outputFileName.c_str());
-
-				SetWindowText(hWnd, szTmp);
-			}
-
-			SetCropSizeList(path);
+			OnSetInputFilePath(szTmp);
 		}
 
 		return 0L;
@@ -1194,6 +1335,103 @@ public:
 		const auto ret = CallWindowProc(OrgSubWnd, hWnd, WM_CHAR, wParam, lParam);
 		ReplaceAddString();
 		return ret;
+	}
+
+	void InputRef(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
+	{
+		OPENFILENAME ofn;
+		TCHAR szPath[AR_PATH_MAX] = TEXT("");
+		TCHAR szFile[AR_PATH_MAX] = TEXT("");
+
+		GetCurrentDirectory(_countof(szPath), szPath);
+		szPath[_countof(szPath) - 1] = TEXT('\0');
+
+		ofn.lStructSize = sizeof(ofn);
+		ofn.hwndOwner = NULL;
+		ofn.lpstrFile = szFile;
+		ofn.nMaxFile = _countof(szFile);
+		ofn.lpstrFilter = TEXT("すべてのファイル、フォルダ(*.*)\0*.*\0");
+		ofn.nFilterIndex = 1;
+		ofn.lpstrTitle = TEXT("入力するファイルかフォルダを選択してください");
+		ofn.lpstrInitialDir = szPath;
+		ofn.lpstrCustomFilter = NULL;
+		ofn.nMaxCustFilter = 0;
+		ofn.lpstrFileTitle = NULL;
+		ofn.nMaxFileTitle = 0;
+		ofn.nFileOffset = 0;
+		ofn.nFileExtension = 0;
+		ofn.lpstrDefExt = NULL;
+		ofn.lCustData = 0;
+		ofn.lpfnHook = OFNHookProcIn;
+		ofn.lpTemplateName = 0;
+		ofn.Flags = OFN_HIDEREADONLY | OFN_NOVALIDATE | OFN_PATHMUSTEXIST | OFN_READONLY | OFN_EXPLORER | OFN_ENABLEHOOK;
+		if (GetOpenFileName(&ofn))
+		{
+			szFile[_countof(szFile) - 1] = TEXT('\0');
+			OnSetInputFilePath(szFile);
+		}
+	}
+
+	void OutputRef(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
+	{
+		OPENFILENAME ofn;
+		TCHAR szPath[AR_PATH_MAX] = TEXT("");
+		TCHAR szFile[AR_PATH_MAX] = TEXT("");
+
+		tstring nowName;
+		bool isDir = false;
+
+		GetWindowText(GetDlgItem(dh, IDC_EDIT_INPUT), szFile, _countof(szFile));
+		szFile[_countof(szPath) - 1] = TEXT('\0');
+		if (*szFile != TEXT('\0'))
+		{
+			boost::filesystem::path p(szFile);
+			isDir = boost::filesystem::is_directory(p);
+		}
+
+		GetWindowText(GetDlgItem(dh, IDC_EDIT_OUTPUT), szFile, _countof(szFile));
+		szFile[_countof(szPath) - 1] = TEXT('\0');
+		if (*szFile == TEXT('\0'))
+		{
+			nowName = TEXT("");
+			GetCurrentDirectory(_countof(szPath), szPath);
+			szPath[_countof(szPath) - 1] = TEXT('\0');
+		}
+		else
+		{
+			boost::filesystem::path p(szFile);
+			const auto filename = getTString(p.filename());
+			const auto dir = getTString(p.branch_path());
+
+			nowName = filename;
+			_tcscpy(szFile, filename.c_str());
+			_tcscpy(szPath, dir.c_str());
+		}
+
+		ofn.lStructSize = sizeof(ofn);
+		ofn.hwndOwner = NULL;
+		ofn.lpstrFile = szFile;
+		ofn.nMaxFile = _countof(szFile);
+		ofn.lpstrFilter = TEXT("すべてのフォルダ\0*.folder\0");
+		ofn.nFilterIndex = 1;
+		ofn.lpstrTitle = TEXT("出力するフォルダを選択してください");
+		ofn.lpstrInitialDir = szPath;
+		ofn.lpstrCustomFilter = NULL;
+		ofn.nMaxCustFilter = 0;
+		ofn.lpstrFileTitle = NULL;
+		ofn.nMaxFileTitle = 0;
+		ofn.nFileOffset = 0;
+		ofn.nFileExtension = 0;
+		ofn.lpstrDefExt = NULL;
+		ofn.lCustData = (LPARAM)&nowName;
+		ofn.lpfnHook = OFNHookProcOut;
+		ofn.lpTemplateName = 0;
+		ofn.Flags = OFN_HIDEREADONLY | OFN_NOVALIDATE | OFN_PATHMUSTEXIST | OFN_READONLY | OFN_EXPLORER | OFN_ENABLEHOOK | OFN_OVERWRITEPROMPT;
+		if (GetSaveFileName(&ofn))
+		{
+			szFile[_countof(szFile) - 1] = TEXT('\0');
+			SetWindowText(GetDlgItem(dh, IDC_EDIT_OUTPUT), szFile);
+		}
 	}
 };
 
@@ -1243,6 +1481,8 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	// 各コントロールのイベントで実行する関数の登録
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::Exec, &cDialogEvent), NULL, IDC_BUTTON_EXEC);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::Cancel, &cDialogEvent), NULL, IDC_BUTTON_CANCEL);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::InputRef, &cDialogEvent), NULL, IDC_BUTTON_INPUT_REF);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::OutputRef, &cDialogEvent), NULL, IDC_BUTTON_OUTPUT_REF);
 
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_RADIO_MODE_NOISE);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_RADIO_MODE_SCALE);
