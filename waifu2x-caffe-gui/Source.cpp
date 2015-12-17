@@ -1360,6 +1360,11 @@ int WINAPI WinMain(HINSTANCE hInstance,
 {
 	Waifu2x::init_liblary();
 
+	// 管理者権限で起動してもファイルのドロップを受け付けるようにする
+	ChangeWindowMessageFilter(WM_DROPFILES, MSGFLT_ADD);
+	ChangeWindowMessageFilter(WM_COPYDATA, MSGFLT_ADD);
+	ChangeWindowMessageFilter(0x0049, MSGFLT_ADD);
+
 	// Caffeのエラーでないログを保存しないようにする
 	google::SetLogDestination(google::INFO, "");
 	google::SetLogDestination(google::WARNING, "");
