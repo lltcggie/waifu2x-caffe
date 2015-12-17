@@ -1277,6 +1277,8 @@ public:
 
 	void InputRef(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 	{
+		SyncMember(false);
+
 		OPENFILENAME ofn;
 		TCHAR szPath[AR_PATH_MAX] = TEXT("");
 		TCHAR szFile[AR_PATH_MAX] = TEXT("");
@@ -1284,11 +1286,50 @@ public:
 		GetCurrentDirectory(_countof(szPath), szPath);
 		szPath[_countof(szPath) - 1] = TEXT('\0');
 
+		tstring extStr;
+		for (const auto &ext : extList)
+		{
+			if (extStr.length() != 0)
+				extStr += TEXT(";*") + ext;
+			else
+				extStr = TEXT("*") + ext;
+		}
+
+		TCHAR szFilter[AR_PATH_MAX] = TEXT("");
+		TCHAR *tfp = szFilter;
+
+		if (extStr.length() > 0)
+		{
+			tfp += _stprintf(tfp, TEXT("指定された変換対象拡張子(%s)"), extStr.c_str(), extStr.c_str());
+			tfp++;
+
+			memcpy(tfp, extStr.c_str(), extStr.length() * sizeof(TCHAR));
+			tfp += extStr.length();
+
+			*tfp = TEXT('\0');
+			tfp++;
+		}
+
+		const tstring allFilesTitle(TEXT("すべてのファイル、フォルダ(*.*)"));
+		memcpy(tfp, allFilesTitle.c_str(), allFilesTitle.length() * sizeof(TCHAR));
+		tfp += allFilesTitle.length();
+		*tfp = TEXT('\0');
+		tfp++;
+
+		const tstring allFilesExt(TEXT("*.*"));
+		memcpy(tfp, allFilesExt.c_str(), allFilesExt.length() * sizeof(TCHAR));
+		tfp += allFilesExt.length();
+
+		*tfp = TEXT('\0');
+		tfp++;
+		*tfp = TEXT('\0');
+		tfp++;
+
 		ofn.lStructSize = sizeof(ofn);
 		ofn.hwndOwner = NULL;
 		ofn.lpstrFile = szFile;
 		ofn.nMaxFile = _countof(szFile);
-		ofn.lpstrFilter = TEXT("すべてのファイル、フォルダ(*.*)\0*.*\0");
+		ofn.lpstrFilter = szFilter;
 		ofn.nFilterIndex = 1;
 		ofn.lpstrTitle = TEXT("入力するファイルかフォルダを選択してください");
 		ofn.lpstrInitialDir = szPath;
