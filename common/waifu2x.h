@@ -9,7 +9,7 @@
 #include <boost/filesystem.hpp>
 #include <opencv2/opencv.hpp>
 
-#define CUDNN_DLL_NAME "cudnn64_70.dll"
+#define CUDNN_DLL_NAME "cudnn64_4.dll"
 
 
 namespace caffe
