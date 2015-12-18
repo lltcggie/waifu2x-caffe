@@ -643,7 +643,7 @@ private:
 			const int sec = t % 60; t /= 60;
 			const int min = t % 60; t /= 60;
 			const int hour = (int)t;
-			ptr += _stprintf(ptr, TEXT("処理時間: %02d:%02d:%02d.%d\r\n"), hour, min, sec, msec);
+			ptr += _stprintf(ptr, TEXT("処理時間: %02d:%02d:%02d.%03d\r\n"), hour, min, sec, msec);
 		}
 
 		{
@@ -652,7 +652,7 @@ private:
 			const int sec = t % 60; t /= 60;
 			const int min = t % 60; t /= 60;
 			const int hour = (int)t;
-			ptr += _stprintf(ptr, TEXT("初期化時間: %02d:%02d:%02d.%d\r\n"), hour, min, sec, msec);
+			ptr += _stprintf(ptr, TEXT("初期化時間: %02d:%02d:%02d.%03d\r\n"), hour, min, sec, msec);
 		}
 
 		if (process == "gpu" || process == "cudnn")
@@ -662,7 +662,7 @@ private:
 			const int sec = t % 60; t /= 60;
 			const int min = t % 60; t /= 60;
 			const int hour = (int)t;
-			ptr += _stprintf(ptr, TEXT("cuDNNチェック時間: %02d:%02d:%02d.%d"), hour, min, sec, msec);
+			ptr += _stprintf(ptr, TEXT("cuDNNチェック時間: %02d:%02d:%02d.%03d"), hour, min, sec, msec);
 		}
 
 		AddLogMessage(msg);
