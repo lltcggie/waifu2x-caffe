@@ -109,7 +109,9 @@
     <ClInclude Include="CWindow.h" />
     <ClInclude Include="CWindowBase.h" />
     <ClInclude Include="GUICommon.h" />
+    <ClInclude Include="LangStringList.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="tstring.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc" />

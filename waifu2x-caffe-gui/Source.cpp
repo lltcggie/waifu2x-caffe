@@ -20,6 +20,8 @@
 #include <cblas.h>
 #include <dlgs.h>
 #include "resource.h"
+#include "tstring.h"
+#include "LangStringList.h"
 #include "../common/waifu2x.h"
 
 #include "CDialog.h"
@@ -39,22 +41,9 @@ const std::pair<int, int> DefaultCommonDivisorRange = {90, 140};
 
 const TCHAR * const CropSizeListName = TEXT("crop_size_list.txt");
 const TCHAR * const SettingFileName = TEXT("setting.ini");
+const TCHAR * const LangDir = TEXT("lang");
 const TCHAR * const LangListFileName = TEXT("lang/LangList.txt");
 
-
-#ifdef UNICODE
-typedef std::wstring tstring;
-inline tstring getTString(const boost::filesystem::path& p)
-{
-	return p.wstring();
-}
-#else
-typedef std::string tstring;
-inline tstring getTString(const boost::filesystem::path& p)
-{
-	return p.string();
-}
-#endif
 
 // http://stackoverflow.com/questions/10167382/boostfilesystem-get-relative-path
 boost::filesystem::path relativePath(const boost::filesystem::path &path, const boost::filesystem::path &relative_to)
@@ -115,160 +104,6 @@ std::vector<int> CommonDivisorList(const int N)
 
 	return list;
 }
-
-class LangStringList
-{
-public:
-	struct stLangSetting
-	{
-		std::wstring LangName;
-		WORD LangID;
-		WORD SubLangID;
-		std::wstring FileName;
-
-		stLangSetting() : LangID(0), SubLangID(0)
-		{}
-	};
-
-private:
-	tstring LangBaseDir;
-	std::vector<stLangSetting> LangList;
-	stLangSetting NowLang;
-	LANGID NowLangID = GetUserDefaultUILanguage();
-
-private:
-	static std::wstring Utf8ToUtf16(const char *src, int src_size = -1)
-	{
-		int ret;
-
-		ret = MultiByteToWideChar(CP_UTF8, 0, src, src_size, NULL, 0);
-		if (ret == 0)
-			return std::wstring();
-
-		std::vector<wchar_t> buf(ret);
-
-		ret = MultiByteToWideChar(CP_UTF8, 0, src, src_size, buf.data(), ret);
-		if (ret == 0)
-			return std::wstring();
-
-		if (buf.back() != L'\0')
-			buf.push_back(L'\0');
-
-		return std::wstring(buf.data());
-	}
-
-	static int getNum(const std::string &str)
-	{
-		if (str.length() >= 3 && str.substr(0, 2) == "0x")
-			return strtol(str.c_str(), NULL, 16);
-		else
-			return strtol(str.c_str(), NULL, 10);
-	}
-
-	const stLangSetting& GetLang(const LANGID id) const
-	{
-		const auto Primarylang = PRIMARYLANGID(id);
-		const auto Sublang = SUBLANGID(id);
-
-		int FindPrimary = -1;
-		int FindSub = -1;
-
-		for (size_t i = 0; i < LangList.size(); i++)
-		{
-			const auto &l = LangList[i];
-
-			if (Primarylang == l.LangID)
-			{
-				FindPrimary = (int)i;
-				if (Primarylang == l.SubLangID)
-				{
-					FindSub = (int)i;
-					break;
-				}
-			}
-		}
-
-		if (FindPrimary >= 0 && FindSub >= 0) // 現在の言語にピッタリ合うやつが見つかった
-			return LangList[FindSub];
-		else if (FindPrimary >= 0) // 現在の言語に属するものが見つかった
-			return LangList[FindPrimary];
-
-		// 見つからなかったから一番最初に書かれているやつにする
-		if (LangList.size() > 0)
-			return LangList[0];
-
-		return stLangSetting();
-	}
-
-	void ReadLangFile(const stLangSetting &lang)
-	{
-	}
-
-public:
-	void SetLangBaseDir(const tstring &LangBaseDir)
-	{
-		this->LangBaseDir = LangBaseDir;
-	}
-
-	bool ReadLangList(const tstring &LangListPath)
-	{
-		std::ifstream ifs(LangListPath);
-		if (ifs.fail())
-			return false;
-
-		LangList.clear();
-
-		std::string str;
-		while (getline(ifs, str))
-		{
-			if (str.length() > 0 && str.front() == ';')
-				continue;
-
-			boost::char_separator<char> sep("\t");
-			boost::tokenizer<boost::char_separator<char>> tokens(str, sep);
-
-			std::vector<std::string> list;
-			for (const auto& t : tokens)
-				list.emplace_back(t);
-
-			if (list.size() != 4)
-				continue;
-
-			stLangSetting ls;
-			ls.LangName = Utf8ToUtf16(list[0].c_str(), list[0].length());
-			ls.LangID = getNum(list[1]);
-			ls.SubLangID = getNum(list[2]);
-			ls.FileName = Utf8ToUtf16(list[1].c_str(), list[1].length());
-
-			LangList.push_back(ls);
-		}
-
-		if (NowLangID != 0)
-			SetLang(NowLangID);
-
-		return true;
-	}
-
-	void SetLang(const LANGID id)
-	{
-		NowLang = GetLang(id);
-		NowLangID = id;
-	}
-
-	void SetLang()
-	{
-		SetLang(GetUserDefaultUILanguage());
-	}
-
-	const stLangSetting& GetLang() const
-	{
-		return NowLang;
-	}
-
-	std::wstring GetString(const wchar_t *key) const
-	{
-	}
-};
 
 // ダイアログ用
 class DialogEvent
@@ -1109,6 +944,45 @@ public:
 		}
 	}
 
+	void SetWindowTextLang()
+	{
+#define SET_WINDOW_TEXT(id) SetWindowTextW(GetDlgItem(dh, id), langStringList.GetString(L#id).c_str());
+
+		SET_WINDOW_TEXT(IDC_STATIC_IO_SETTING);
+		SET_WINDOW_TEXT(IDC_STATIC_INPUT_PATH);
+		SET_WINDOW_TEXT(IDC_BUTTON_INPUT_REF);
+		SET_WINDOW_TEXT(IDC_STATIC_OUTPUT_PATH);
+		SET_WINDOW_TEXT(IDC_STATIC_TANS_EXT_LIST);
+		SET_WINDOW_TEXT(IDC_STATIC_OUTPUT_EXT);
+		SET_WINDOW_TEXT(IDC_STATIC_OUTPUT_QUALITY);
+		SET_WINDOW_TEXT(IDC_STATIC_QUALITY_PROCESS_SETTING);
+		SET_WINDOW_TEXT(IDC_STATIC_TRANS_MODE);
+		SET_WINDOW_TEXT(IDC_RADIO_MODE_NOISE_SCALE);
+		SET_WINDOW_TEXT(IDC_RADIO_MODE_SCALE);
+		SET_WINDOW_TEXT(IDC_RADIO_MODE_NOISE);
+		SET_WINDOW_TEXT(IDC_RADIO_AUTO_SCALE);
+		SET_WINDOW_TEXT(IDC_STATIC_JPEG_NOISE_LEVEL);
+		SET_WINDOW_TEXT(IDC_RADIONOISE_LEVEL1);
+		SET_WINDOW_TEXT(IDC_RADIONOISE_LEVEL2);
+		SET_WINDOW_TEXT(IDC_STATIC_SCALE_RATE);
+		SET_WINDOW_TEXT(IDC_STATIC_MODEL);
+		SET_WINDOW_TEXT(IDC_RADIO_MODEL_RGB);
+		SET_WINDOW_TEXT(IDC_RADIO_MODEL_PHOTO);
+		SET_WINDOW_TEXT(IDC_RADIO_MODEL_Y);
+		SET_WINDOW_TEXT(IDC_CHECK_TTA);
+		SET_WINDOW_TEXT(IDC_STATIC_PROCESS_SPEED_SETTING);
+		SET_WINDOW_TEXT(IDC_STATIC_PROCESSOR);
+		SET_WINDOW_TEXT(IDC_RADIO_MODE_GPU);
+		SET_WINDOW_TEXT(IDC_RADIO_MODE_CPU);
+		SET_WINDOW_TEXT(IDC_STATIC_CROP_SIZE);
+		SET_WINDOW_TEXT(IDC_BUTTON_CHECK_CUDNN);
+		SET_WINDOW_TEXT(IDC_BUTTON_CANCEL);
+		SET_WINDOW_TEXT(IDC_BUTTON_EXEC);
+		SET_WINDOW_TEXT(IDC_STATIC_LANG_UI);
+
+#undef SET_WINDOW_TEXT
+	}
+
 	void Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 	{
 		dh = hWnd;
@@ -1123,9 +997,37 @@ public:
 		}
 
 		{
+			const boost::filesystem::path LangDirPath(exeDir / LangDir);
 			const boost::filesystem::path LangListPath(exeDir / LangListFileName);
-			langStringList.SetLangBaseDir(getTString(exeDir));
+			langStringList.SetLangBaseDir(getTString(LangDirPath));
 			langStringList.ReadLangList(getTString(LangListPath));
+		}
+
+		SetWindowTextLang();
+
+		{
+			HWND hlang = GetDlgItem(dh, IDC_COMBO_LANG);
+
+			const auto &list = langStringList.GetLangList();
+			for (const auto &lang : list)
+			{
+				const int index = SendMessageW(hlang, CB_ADDSTRING, 0, (LPARAM)lang.LangName.c_str());
+			}
+
+			int defaultListIndex = 0;
+			const auto &DefaultLang = langStringList.GetLang();
+			for (size_t i = 0; i < list.size(); i++)
+			{
+				const auto &lang = list[i];
+				if (lang.LangName == DefaultLang.LangName && lang.LangID == DefaultLang.LangID
+					&& lang.SubLangID == DefaultLang.SubLangID && lang.FileName == DefaultLang.FileName)
+				{
+					(int)defaultListIndex = i;
+					break;
+				}
+			}
+
+			SendMessage(hlang, CB_SETCURSEL, defaultListIndex, 0);
 		}
 
 		const boost::filesystem::path CropSizeListPath(exeDir / CropSizeListName);
@@ -1514,6 +1416,25 @@ public:
 			OnSetInputFilePath(szFile);
 		}
 	}
+
+	void LangChange(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
+	{
+		if (HIWORD(wParam) != CBN_SELCHANGE)
+			return;
+
+		HWND hlang = GetDlgItem(dh, IDC_COMBO_LANG);
+
+		const int cur = SendMessage(hlang, CB_GETCURSEL, 0, 0);
+
+		const auto &list = langStringList.GetLangList();
+
+		if (list.size() <= cur)
+			return;
+
+		langStringList.SetLang(list[cur]);
+
+		SetWindowTextLang();
+	}
 };
 
 int WINAPI WinMain(HINSTANCE hInstance,
@@ -1583,6 +1504,8 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_CHECK_TTA);
 
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::CheckCUDNN, &cDialogEvent), NULL, IDC_BUTTON_CHECK_CUDNN);
+
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::LangChange, &cDialogEvent), NULL, IDC_COMBO_LANG);
 
 	// ダイアログのイベントで実行する関数の登録
 	cDialog.SetEventCallBack(SetClassFunc(DialogEvent::Create, &cDialogEvent), NULL, WM_INITDIALOG);
