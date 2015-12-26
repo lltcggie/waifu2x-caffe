@@ -15,6 +15,7 @@
 #include <boost/tokenizer.hpp>
 #include <boost/foreach.hpp>
 #include <boost/math/common_factor_rt.hpp>
+#include <boost/lexical_cast.hpp>
 #include <opencv2/opencv.hpp>
 #include <cblas.h>
 #include <dlgs.h>
@@ -38,6 +39,7 @@ const std::pair<int, int> DefaultCommonDivisorRange = {90, 140};
 
 const TCHAR * const CropSizeListName = TEXT("crop_size_list.txt");
 const TCHAR * const SettingFileName = TEXT("setting.ini");
+const TCHAR * const LangListFileName = TEXT("lang/LangList.txt");
 
 
 #ifdef UNICODE
@@ -114,6 +116,160 @@ std::vector<int> CommonDivisorList(const int N)
 	return list;
 }
 
+class LangStringList
+{
+public:
+	struct stLangSetting
+	{
+		std::wstring LangName;
+		WORD LangID;
+		WORD SubLangID;
+		std::wstring FileName;
+
+		stLangSetting() : LangID(0), SubLangID(0)
+		{}
+	};
+
+private:
+	tstring LangBaseDir;
+	std::vector<stLangSetting> LangList;
+	stLangSetting NowLang;
+	LANGID NowLangID = GetUserDefaultUILanguage();
+
+private:
+	static std::wstring Utf8ToUtf16(const char *src, int src_size = -1)
+	{
+		int ret;
+
+		ret = MultiByteToWideChar(CP_UTF8, 0, src, src_size, NULL, 0);
+		if (ret == 0)
+			return std::wstring();
+
+		std::vector<wchar_t> buf(ret);
+
+		ret = MultiByteToWideChar(CP_UTF8, 0, src, src_size, buf.data(), ret);
+		if (ret == 0)
+			return std::wstring();
+
+		if (buf.back() != L'\0')
+			buf.push_back(L'\0');
+
+		return std::wstring(buf.data());
+	}
+
+	static int getNum(const std::string &str)
+	{
+		if (str.length() >= 3 && str.substr(0, 2) == "0x")
+			return strtol(str.c_str(), NULL, 16);
+		else
+			return strtol(str.c_str(), NULL, 10);
+	}
+
+	const stLangSetting& GetLang(const LANGID id) const
+	{
+		const auto Primarylang = PRIMARYLANGID(id);
+		const auto Sublang = SUBLANGID(id);
+
+		int FindPrimary = -1;
+		int FindSub = -1;
+
+		for (size_t i = 0; i < LangList.size(); i++)
+		{
+			const auto &l = LangList[i];
+
+			if (Primarylang == l.LangID)
+			{
+				FindPrimary = (int)i;
+				if (Primarylang == l.SubLangID)
+				{
+					FindSub = (int)i;
+					break;
+				}
+			}
+		}
+
+		if (FindPrimary >= 0 && FindSub >= 0) // 現在の言語にピッタリ合うやつが見つかった
+			return LangList[FindSub];
+		else if (FindPrimary >= 0) // 現在の言語に属するものが見つかった
+			return LangList[FindPrimary];
+
+		// 見つからなかったから一番最初に書かれているやつにする
+		if (LangList.size() > 0)
+			return LangList[0];
+
+		return stLangSetting();
+	}
+
+	void ReadLangFile(const stLangSetting &lang)
+	{
+	}
+
+public:
+	void SetLangBaseDir(const tstring &LangBaseDir)
+	{
+		this->LangBaseDir = LangBaseDir;
+	}
+
+	bool ReadLangList(const tstring &LangListPath)
+	{
+		std::ifstream ifs(LangListPath);
+		if (ifs.fail())
+			return false;
+
+		LangList.clear();
+
+		std::string str;
+		while (getline(ifs, str))
+		{
+			if (str.length() > 0 && str.front() == ';')
+				continue;
+
+			boost::char_separator<char> sep("\t");
+			boost::tokenizer<boost::char_separator<char>> tokens(str, sep);
+
+			std::vector<std::string> list;
+			for (const auto& t : tokens)
+				list.emplace_back(t);
+
+			if (list.size() != 4)
+				continue;
+
+			stLangSetting ls;
+			ls.LangName = Utf8ToUtf16(list[0].c_str(), list[0].length());
+			ls.LangID = getNum(list[1]);
+			ls.SubLangID = getNum(list[2]);
+			ls.FileName = Utf8ToUtf16(list[1].c_str(), list[1].length());
+
+			LangList.push_back(ls);
+		}
+
+		if (NowLangID != 0)
+			SetLang(NowLangID);
+
+		return true;
+	}
+
+	void SetLang(const LANGID id)
+	{
+		NowLang = GetLang(id);
+		NowLangID = id;
+	}
+
+	void SetLang()
+	{
+		SetLang(GetUserDefaultUILanguage());
+	}
+
+	const stLangSetting& GetLang() const
+	{
+		return NowLang;
+	}
+
+	std::wstring GetString(const wchar_t *key) const
+	{
+	}
+};
+
 // ダイアログ用
 class DialogEvent
 {
@@ -162,6 +318,8 @@ private:
 	};
 
 	eModelType modelType;
+
+	LangStringList langStringList;
 
 private:
 	template<typename T>
@@ -964,6 +1122,12 @@ public:
 			exeDir = exePath.branch_path();
 		}
 
+		{
+			const boost::filesystem::path LangListPath(exeDir / LangListFileName);
+			langStringList.SetLangBaseDir(getTString(exeDir));
+			langStringList.ReadLangList(getTString(LangListPath));
+		}
+
 		const boost::filesystem::path CropSizeListPath(exeDir / CropSizeListName);
 		std::ifstream ifs(CropSizeListPath.wstring());
 		if (ifs)
@@ -1351,7 +1515,6 @@ public:
 		}
 	}
 };
-
 
 int WINAPI WinMain(HINSTANCE hInstance,
 	HINSTANCE hPrevInstance,
