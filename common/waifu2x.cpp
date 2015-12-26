@@ -116,6 +116,8 @@ const int MinCudaDriverVersion = 7050;
 // floatな画像をuint8_tな画像に変換する際の四捨五入に使う値
 // https://github.com/nagadomi/waifu2x/commit/797b45ae23665a1c5e3c481c018e48e6f0d0e383
 const double clip_eps8 = (1.0 / 255.0) * 0.5 - (1.0e-7 * (1.0 / 255.0) * 0.5);
+const double clip_eps16 = (1.0 / 65535.0) * 0.5 - (1.0e-7 * (1.0 / 65535.0) * 0.5);
+const double clip_eps32 = 1.0 * 0.5 - (1.0e-7 * 0.5);
 
 const int kProtoReadBytesLimit = INT_MAX;  // Max size of 2 GB minus 1 byte.
 
@@ -512,7 +514,21 @@ Waifu2x::eWaifu2xError Waifu2x::LoadMat(cv::Mat &float_image, const boost::files
 	}
 
 	cv::Mat convert;
-	original_image.convertTo(convert, CV_32F, 1.0 / 255.0);
+	switch (original_image.depth())
+	{
+	case CV_8U:
+		original_image.convertTo(convert, CV_32F, 1.0 / GetValumeMaxFromCVDepth(CV_8U));
+		break;
+
+	case CV_16U:
+		original_image.convertTo(convert, CV_32F, 1.0 / GetValumeMaxFromCVDepth(CV_16U));
+		break;
+
+	case CV_32F:
+		convert = original_image; // 元から0.0～1.0のはずなので変換は必要ない
+		break;
+	}
+	
 	original_image.release();
 
 	if (convert.channels() == 1)
@@ -1612,6 +1628,10 @@ Waifu2x::eWaifu2xError Waifu2x::AfterReconstructFloatMatProcess(const bool isRec
 			cv::resize(process_image, process_image, ns, 0.0, 0.0, cv::INTER_LINEAR);
 	}
 
+	// 値を0～1にクリッピング
+	cv::threshold(process_image, process_image, 1.0, 1.0, cv::THRESH_TRUNC);
+	cv::threshold(process_image, process_image, 0.0, 0.0, cv::THRESH_TOZERO);
+
 	out = process_image;
 
 	return eWaifu2xError_OK;
@@ -1649,12 +1669,21 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const boost::filesystem::path &input_fil
 
 	float_image.release();
 
+	const int cv_depth = DepthBitToCVDepth(output_depth);
+	const double max_val = GetValumeMaxFromCVDepth(cv_depth);
+	const double eps = GetEPS(cv_depth);
+
 	cv::Mat write_iamge;
-	process_image.convertTo(write_iamge, CV_8U, 255.0, clip_eps8);
+	if (output_depth != 32) // 出力がfloat形式なら変換しない
+		process_image.convertTo(write_iamge, cv_depth, max_val, eps);
+	else
+		write_iamge = process_image;
+
 	process_image.release();
 
 	// 完全透明のピクセルの色を消す(処理の都合上、完全透明のピクセルにも色を付けたから)
-	// モデルによっては画像全域の完全透明の場所にごく小さい値のアルファが広がることがある。それを消すためにuint8_tに変換してからこの処理を行うことにした
+	// モデルによっては画像全域の完全透明の場所にごく小さい値のアルファが広がることがある。それを消すためにcv_depthへ変換してからこの処理を行うことにした
+	// (ただしcv_depthが32の場合だと意味は無いが)
 	if (write_iamge.channels() > 3)
 	{
 		std::vector<cv::Mat> planes;
@@ -1683,4 +1712,58 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const boost::filesystem::path &input_fil
 const std::string& Waifu2x::used_process() const
 {
 	return process;
+}
+
+int Waifu2x::DepthBitToCVDepth(const int depth_bit)
+{
+	switch (depth_bit)
+	{
+	case 8:
+		return CV_8U;
+
+	case 16:
+		return CV_16U;
+
+	case 32:
+		return CV_32F;
+	}
+
+	// 不明だけどとりあえずCV_8Uを返しておく
+	return CV_8U;
+}
+
+double Waifu2x::GetValumeMaxFromCVDepth(const int cv_depth)
+{
+	switch (cv_depth)
+	{
+	case CV_8U:
+		return 255.0;
+
+	case CV_16U:
+		return 65535.0;
+
+	case CV_32F:
+		return 1.0;
+	}
+
+	// 不明だけどとりあえず255.0を返しておく
+	return 255.0;
+}
+
+double Waifu2x::GetEPS(const int cv_depth)
+{
+	switch (cv_depth)
+	{
+	case CV_8U:
+		return clip_eps8;
+
+	case CV_16U:
+		return clip_eps16;
+
+	case CV_32F:
+		return clip_eps32;
+	}
+
+	// 不明だけどとりあえずclip_eps8返しておく
+	return clip_eps8;
 }

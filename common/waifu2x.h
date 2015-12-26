@@ -133,6 +133,10 @@ private:
 	eWaifu2xError Reconstruct(const bool isReconstructNoise, const bool isReconstructScale, const waifu2xCancelFunc cancel_func, const cv::Mat &in, cv::Mat &out);
 	eWaifu2xError AfterReconstructFloatMatProcess(const bool isReconstructScale, const waifu2xCancelFunc cancel_func, const cv::Mat &floatim, const cv::Mat &in, cv::Mat &out);
 
+	static int DepthBitToCVDepth(const int depth_bit);
+	static double GetValumeMaxFromCVDepth(const int cv_depth);
+	static double GetEPS(const int cv_depth);
+
 public:
 	Waifu2x();
 	~Waifu2x();
