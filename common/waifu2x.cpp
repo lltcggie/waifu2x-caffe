@@ -190,7 +190,16 @@ static bool writeFile(boost::iostreams::stream<boost::iostreams::file_descriptor
 template<typename BufType>
 static bool writeFile(const boost::filesystem::path &path, std::vector<BufType> &buf)
 {
-	boost::iostreams::stream<boost::iostreams::file_descriptor> os(path, std::ios_base::out | std::ios_base::binary | std::ios_base::trunc);
+	boost::iostreams::stream<boost::iostreams::file_descriptor> os;
+
+	try
+	{
+		os.open(path, std::ios_base::out | std::ios_base::binary | std::ios_base::trunc);
+	}
+	catch (...)
+	{
+		return false;
+	}
 
 	return writeFile(os, buf);
 }
@@ -215,14 +224,32 @@ static bool readFile(boost::iostreams::stream<boost::iostreams::file_descriptor_
 template<typename BufType>
 static bool readFile(const boost::filesystem::path &path, std::vector<BufType> &buf)
 {
-	boost::iostreams::stream<boost::iostreams::file_descriptor_source> is(path, std::ios_base::in | std::ios_base::binary);
+	boost::iostreams::stream<boost::iostreams::file_descriptor_source> is;
+
+	try
+	{
+		is.open(path, std::ios_base::in | std::ios_base::binary);
+	}
+	catch (...)
+	{
+		return false;
+	}
 
 	return readFile(is, buf);
 }
 
 static Waifu2x::eWaifu2xError readProtoText(const boost::filesystem::path &path, ::google::protobuf::Message* proto)
 {
-	boost::iostreams::stream<boost::iostreams::file_descriptor_source> is(path, std::ios_base::in);
+	boost::iostreams::stream<boost::iostreams::file_descriptor_source> is;
+
+	try
+	{
+		is.open(path, std::ios_base::in);
+	}
+	catch (...)
+	{
+		return Waifu2x::eWaifu2xError_FailedOpenModelFile;
+	}
 
 	if (!is)
 		return Waifu2x::eWaifu2xError_FailedOpenModelFile;
@@ -274,7 +301,16 @@ static Waifu2x::eWaifu2xError readProtoBinary(const boost::filesystem::path &pat
 
 static Waifu2x::eWaifu2xError writeProtoBinary(const ::google::protobuf::Message& proto, const boost::filesystem::path &path)
 {
-	boost::iostreams::stream<boost::iostreams::file_descriptor> os(path, std::ios_base::out | std::ios_base::binary | std::ios_base::trunc);
+	boost::iostreams::stream<boost::iostreams::file_descriptor> os;
+
+	try
+	{
+		os.open(path, std::ios_base::out | std::ios_base::binary | std::ios_base::trunc);
+	}
+	catch (...)
+	{
+		return Waifu2x::eWaifu2xError_FailedOpenModelFile;
+	}
 
 	if (!os)
 		return Waifu2x::eWaifu2xError_FailedWriteModelFile;
@@ -721,6 +757,16 @@ Waifu2x::eWaifu2xError Waifu2x::LoadParameterFromJson(boost::shared_ptr<caffe::N
 	try
 	{
 		boost::iostreams::stream<boost::iostreams::file_descriptor_source> is(param_path, std::ios_base::in | std::ios_base::binary);
+
+		try
+		{
+			is.open(param_path, std::ios_base::in | std::ios_base::binary);
+		}
+		catch (...)
+		{
+			return Waifu2x::eWaifu2xError_FailedOpenModelFile;
+		}
+
 		if(!is)
 			return eWaifu2xError_FailedOpenModelFile;
 
@@ -1267,7 +1313,17 @@ Waifu2x::eWaifu2xError Waifu2x::WriteMat(const cv::Mat &im, const boost::filesys
 			}
 		}
 
-		boost::iostreams::stream<boost::iostreams::file_descriptor> os(output_file, std::ios_base::out | std::ios_base::binary | std::ios_base::trunc);
+		boost::iostreams::stream<boost::iostreams::file_descriptor> os;
+
+		try
+		{
+			os.open(output_file, std::ios_base::out | std::ios_base::binary | std::ios_base::trunc);
+		}
+		catch (...)
+		{
+			return Waifu2x::eWaifu2xError_FailedOpenOutputFile;
+		}
+
 		if(!os)
 			return eWaifu2xError_FailedOpenOutputFile;
 
