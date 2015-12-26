@@ -1377,7 +1377,7 @@ public:
 		case Waifu2x::eWaifu2xcuDNNError_NotFind:
 		{
 			TCHAR msg[1024 * 2];
-			_stprintf(msg, langStringList.GetString(L"MessagecuDNNNotFind").c_str(), TEXT(CUDNN_DLL_NAME));
+			_stprintf(msg, langStringList.GetString(L"MessagecuDNNNotFindError").c_str(), TEXT(CUDNN_DLL_NAME));
 			MessageBox(dh, msg, langStringList.GetString(L"MessageTitleResult").c_str(), MB_OK | MB_ICONERROR);
 			break;
 		}
