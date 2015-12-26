@@ -158,6 +158,7 @@ private:
 	eModelType modelType;
 
 	LangStringList langStringList;
+	std::wstring LangName;
 
 private:
 	template<typename T>
@@ -740,6 +741,8 @@ private:
 		WritePrivateProfileString(TEXT("Setting"), TEXT("LastOutputQuality"), boost::lexical_cast<tstring>(output_quality).c_str(), getTString(SettingFilePath).c_str());
 
 		WritePrivateProfileString(TEXT("Setting"), TEXT("LastOutputDepth"), boost::lexical_cast<tstring>(output_depth).c_str(), getTString(SettingFilePath).c_str());
+
+		WritePrivateProfileString(TEXT("Setting"), TEXT("LastLanguage"), LangName.c_str(), getTString(SettingFilePath).c_str());
 	}
 
 	// 出力パスを選択する
@@ -1097,6 +1100,8 @@ public:
 			exeDir = exePath.branch_path();
 		}
 
+		const boost::filesystem::path SettingFilePath(exeDir / SettingFileName);
+
 		{
 			const boost::filesystem::path LangDirPath(exeDir / LangDir);
 			const boost::filesystem::path LangListPath(exeDir / LangListFileName);
@@ -1104,7 +1109,14 @@ public:
 			langStringList.ReadLangList(getTString(LangListPath));
 		}
 
-		SetWindowTextLang();
+		std::wstring langName;
+		{
+			TCHAR tmp[1000];
+
+			GetPrivateProfileString(TEXT("Setting"), TEXT("LastLanguage"), TEXT(""), tmp, _countof(tmp), getTString(SettingFilePath).c_str());
+			tmp[_countof(tmp) - 1] = TEXT('\0');
+			langName = tmp;
+		}
 
 		{
 			HWND hlang = GetDlgItem(dh, IDC_COMBO_LANG);
@@ -1115,7 +1127,7 @@ public:
 				const int index = SendMessageW(hlang, CB_ADDSTRING, 0, (LPARAM)lang.LangName.c_str());
 			}
 
-			int defaultListIndex = 0;
+			size_t defaultListIndex = 0;
 			const auto &DefaultLang = langStringList.GetLang();
 			for (size_t i = 0; i < list.size(); i++)
 			{
@@ -1123,13 +1135,31 @@ public:
 				if (lang.LangName == DefaultLang.LangName && lang.LangID == DefaultLang.LangID
 					&& lang.SubLangID == DefaultLang.SubLangID && lang.FileName == DefaultLang.FileName)
 				{
-					(int)defaultListIndex = i;
+					defaultListIndex = i;
 					break;
+				}
+			}
+
+			if (langName.length() > 0) // 前回起動時の言語があったらそっちを優先
+			{
+				for (size_t i = 0; i < list.size(); i++)
+				{
+					const auto &lang = list[i];
+					if (lang.LangName == langName)
+					{
+						defaultListIndex = i;
+						langStringList.SetLang(list[i]);
+
+						LangName = langName;
+						break;
+					}
 				}
 			}
 
 			SendMessage(hlang, CB_SETCURSEL, defaultListIndex, 0);
 		}
+
+		SetWindowTextLang();
 
 		{
 			HWND houtext = GetDlgItem(dh, IDC_COMBO_OUT_EXT);
@@ -1183,8 +1213,6 @@ public:
 			if (GetWindowTextLength(hcrop) == 0)
 				SendMessage(hcrop, CB_SETCURSEL, defaultListIndex, 0);
 		}
-
-		const boost::filesystem::path SettingFilePath(exeDir / SettingFileName);
 
 		tstring tScale;
 		tstring tmode;
@@ -1580,6 +1608,7 @@ public:
 			return;
 
 		langStringList.SetLang(list[cur]);
+		LangName = list[cur].LangName;
 
 		SetWindowTextLang();
 	}
