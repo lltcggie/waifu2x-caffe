@@ -7,6 +7,7 @@
 #include <functional>
 #include <boost/shared_ptr.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/optional.hpp>
 #include <opencv2/opencv.hpp>
 
 #define CUDNN_DLL_NAME "cudnn64_4.dll"
@@ -56,6 +57,18 @@ public:
 
 	typedef std::function<bool()> waifu2xCancelFunc;
 
+	struct stOutputExtentionElement
+	{
+		std::wstring ext;
+		std::vector<int> depthList;
+		boost::optional<int> imageQualityStart;
+		boost::optional<int> imageQualityEnd;
+		boost::optional<int> imageQualityDefault;
+		boost::optional<int> imageQualitySettingVolume;
+	};
+
+	const static std::vector<stOutputExtentionElement> OutputExtentionList;
+
 private:
 	bool is_inited;
 
@@ -97,6 +110,9 @@ private:
 
 	bool use_tta;
 
+	boost::optional<int> output_quality;
+	int output_depth;
+
 private:
 	static eWaifu2xError LoadMat(cv::Mat &float_image, const boost::filesystem::path &input_file);
 	static eWaifu2xError LoadMatBySTBI(cv::Mat &float_image, const std::vector<char> &img_data);
@@ -130,7 +146,7 @@ public:
 	// mode: noise or scale or noise_scale or auto_scale
 	// process: cpu or gpu or cudnn
 	eWaifu2xError init(int argc, char** argv, const std::string &mode, const int noise_level, const double scale_ratio, const boost::filesystem::path &model_dir, const std::string &process,
-		const bool use_tta = false, const int crop_size = 128, const int batch_size = 1);
+		const boost::optional<int> output_quality = boost::optional<int>(), const int output_depth = 8, const bool use_tta = false, const int crop_size = 128, const int batch_size = 1);
 
 	void destroy();
 

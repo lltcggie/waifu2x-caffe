@@ -126,6 +126,9 @@ private:
 
 	bool use_tta;
 
+	int output_quality;
+	int output_depth;
+
 	int crop_size;
 	int batch_size;
 
@@ -205,6 +208,8 @@ private:
 			addstr += TEXT("(tta)");
 		if (mode.find("scale") != mode.npos)
 			addstr += TEXT("(x") + to_tstring(scale_ratio) + TEXT(")");
+		if (output_depth != 8)
+			addstr += TEXT("(") + boost::lexical_cast<tstring>(output_depth) + TEXT("bit)");
 
 		return addstr;
 	}
@@ -276,13 +281,41 @@ private:
 		}
 
 		{
-			TCHAR buf[AR_PATH_MAX] = TEXT("");
-			GetWindowText(GetDlgItem(dh, IDC_EDIT_OUT_EXT), buf, _countof(buf));
-			buf[_countof(buf) - 1] = TEXT('\0');
+			const auto &OutputExtentionList = Waifu2x::OutputExtentionList;
 
-			outputExt = buf;
-			if (outputExt.length() > 0 && outputExt[0] != TEXT('.'))
-				outputExt = TEXT(".") + outputExt;
+			const int cur = SendMessage(GetDlgItem(dh, IDC_COMBO_OUT_EXT), CB_GETCURSEL, 0, 0);
+			if (cur < 0 || cur >= OutputExtentionList.size())
+				MessageBox(dh, langStringList.GetString(L"MessageOutputExtentionCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
+			else
+			{
+				const auto elm = OutputExtentionList[cur];
+
+				outputExt = elm.ext;
+
+				TCHAR buf[AR_PATH_MAX] = TEXT("");
+
+				GetWindowText(GetDlgItem(dh, IDC_EDIT_OUT_QUALITY), buf, _countof(buf));
+				buf[_countof(buf) - 1] = TEXT('\0');
+
+				if (elm.imageQualityStart && elm.imageQualityEnd)
+				{
+					TCHAR *ptr = nullptr;
+					output_quality = _tcstol(buf, &ptr, 10);
+					if (!ptr || *ptr != '\0' || output_quality < *elm.imageQualityStart || output_quality > *elm.imageQualityEnd)
+					{
+						output_quality = 8;
+						ret = false;
+
+						MessageBox(dh, langStringList.GetString(L"MessageOutputQualityCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
+					}
+				}
+
+				const int curDepth = SendMessage(GetDlgItem(dh, IDC_COMBO_OUTPUT_DEPTH), CB_GETCURSEL, 0, 0);
+				if (curDepth < 0 || curDepth >= elm.depthList.size())
+					MessageBox(dh, langStringList.GetString(L"MessageOutputQualityCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
+				else
+					output_depth = elm.depthList[curDepth];
+			}
 		}
 
 		if (SendMessage(GetDlgItem(dh, IDC_RADIO_MODE_CPU), BM_GETCHECK, 0, 0))
@@ -534,7 +567,7 @@ private:
 		Waifu2x::eWaifu2xError ret;
 
 		Waifu2x w;
-		ret = w.init(__argc, __argv, mode, noise_level, scale_ratio, model_dir, process, use_tta, crop_size, batch_size);
+		ret = w.init(__argc, __argv, mode, noise_level, scale_ratio, model_dir, process, output_quality, output_depth, use_tta, crop_size, batch_size);
 		if(ret != Waifu2x::eWaifu2xError_OK)
 			SendMessage(dh, WM_ON_WAIFU2X_ERROR, (WPARAM)&ret, 0);
 		else
@@ -671,7 +704,6 @@ private:
 		tstring tScale;
 		tstring tmode;
 		tstring tprcess;
-		tstring toutputExt;
 
 		tScale = to_tstring(scale_ratio);
 
@@ -689,13 +721,9 @@ private:
 		else
 			tprcess = TEXT("cpu");
 
-		toutputExt = outputExt;
-		if (toutputExt.length() > 0 && toutputExt[0] == TEXT('.'))
-			toutputExt.erase(0, 1);
-
 		WritePrivateProfileString(TEXT("Setting"), TEXT("LastScale"), tScale.c_str(), getTString(SettingFilePath).c_str());
 
-		WritePrivateProfileString(TEXT("Setting"), TEXT("LastOutputExt"), toutputExt.c_str(), getTString(SettingFilePath).c_str());
+		WritePrivateProfileString(TEXT("Setting"), TEXT("LastOutputExt"), outputExt.c_str(), getTString(SettingFilePath).c_str());
 
 		WritePrivateProfileString(TEXT("Setting"), TEXT("LastInputFileExt"), inputFileExt.c_str(), getTString(SettingFilePath).c_str());
 
@@ -708,6 +736,10 @@ private:
 		WritePrivateProfileString(TEXT("Setting"), TEXT("LastModel"), to_tstring(modelType).c_str(), getTString(SettingFilePath).c_str());
 
 		WritePrivateProfileString(TEXT("Setting"), TEXT("LastUseTTA"), to_tstring(use_tta ? 1 : 0).c_str(), getTString(SettingFilePath).c_str());
+
+		WritePrivateProfileString(TEXT("Setting"), TEXT("LastOutputQuality"), boost::lexical_cast<tstring>(output_quality).c_str(), getTString(SettingFilePath).c_str());
+
+		WritePrivateProfileString(TEXT("Setting"), TEXT("LastOutputDepth"), boost::lexical_cast<tstring>(output_depth).c_str(), getTString(SettingFilePath).c_str());
 	}
 
 	// 出力パスを選択する
@@ -780,8 +812,8 @@ private:
 
 public:
 	DialogEvent() : dh(nullptr), mode("noise_scale"), noise_level(1), scale_ratio(2.0), model_dir(TEXT("models/anime_style_art_rgb")),
-		process("gpu"), outputExt(TEXT("png")), inputFileExt(TEXT("png:jpg:jpeg:tif:tiff:bmp:tga")),
-		use_tta(false), crop_size(128), batch_size(1), isLastError(false)
+		process("gpu"), outputExt(TEXT(".png")), inputFileExt(TEXT("png:jpg:jpeg:tif:tiff:bmp:tga")),
+		use_tta(false), output_quality(100), output_depth(8), crop_size(128), batch_size(1), isLastError(false)
 	{
 	}
 
@@ -953,6 +985,7 @@ public:
 		SET_WINDOW_TEXT(IDC_STATIC_TANS_EXT_LIST);
 		SET_WINDOW_TEXT(IDC_STATIC_OUTPUT_EXT);
 		SET_WINDOW_TEXT(IDC_STATIC_OUTPUT_QUALITY);
+		SET_WINDOW_TEXT(IDC_STATIC_OUTPUT_DEPTH);
 		SET_WINDOW_TEXT(IDC_STATIC_QUALITY_PROCESS_SETTING);
 		SET_WINDOW_TEXT(IDC_STATIC_TRANS_MODE);
 		SET_WINDOW_TEXT(IDC_RADIO_MODE_NOISE_SCALE);
@@ -979,6 +1012,76 @@ public:
 		SET_WINDOW_TEXT(IDC_STATIC_LANG_UI);
 
 #undef SET_WINDOW_TEXT
+	}
+
+	void SetDepthAndQuality()
+	{
+		HWND hout = GetDlgItem(dh, IDC_COMBO_OUT_EXT);
+		HWND houtDepth = GetDlgItem(dh, IDC_COMBO_OUTPUT_DEPTH);
+
+		const int cur = SendMessage(hout, CB_GETCURSEL, 0, 0);
+		if (cur < 0)
+			return;
+
+		const auto &OutputExtentionList = Waifu2x::OutputExtentionList;
+		if (cur >= OutputExtentionList.size())
+			return;
+
+		const auto elm = OutputExtentionList[cur];
+
+		int oldDepth = 0;
+		{
+			TCHAR oldDepthStr[100] = TEXT("");
+			GetWindowText(houtDepth, oldDepthStr, _countof(oldDepthStr));
+
+			if (_tcslen(oldDepthStr) > 0)
+				oldDepth = boost::lexical_cast<int>(oldDepthStr);
+		}
+
+		// 深度のリスト初期化
+		while (SendMessage(houtDepth, CB_GETCOUNT, 0, 0) != 0)
+			SendMessage(houtDepth, CB_DELETESTRING, 0, 0);
+
+		// 深度のリスト追加
+		size_t defaultIndex = 0;
+		for (size_t i = 0; i < elm.depthList.size(); i++)
+		{
+			const auto depth = elm.depthList[i];
+
+			const auto str = boost::lexical_cast<tstring>(depth);
+			const auto index = SendMessage(houtDepth, CB_ADDSTRING, 0, (LPARAM)str.c_str());
+
+			if (depth == oldDepth)
+				defaultIndex = i;
+		}
+
+		SendMessage(houtDepth, CB_SETCURSEL, defaultIndex, 0);
+
+		if (elm.depthList.size() == 1)
+			EnableWindow(houtDepth, FALSE);
+		else
+			EnableWindow(houtDepth, TRUE);
+
+		if (!elm.imageQualityStart || !elm.imageQualityEnd || !elm.imageQualityDefault) // 画質設定は無効
+		{
+			EnableWindow(GetDlgItem(dh, IDC_EDIT_OUT_QUALITY), FALSE);
+			SetWindowTextW(GetDlgItem(dh, IDC_EDIT_OUT_QUALITY), L"");
+
+			SetWindowTextW(GetDlgItem(dh, IDC_STATIC_OUTPUT_QUALITY), langStringList.GetString(L"IDC_STATIC_OUTPUT_QUALITY").c_str());
+		}
+		else
+		{
+			HWND hedit = GetDlgItem(dh, IDC_EDIT_OUT_QUALITY);
+
+			EnableWindow(hedit, TRUE);
+			SetWindowText(hedit, boost::lexical_cast<tstring>(*elm.imageQualityDefault).c_str());
+
+			const auto wstr = langStringList.GetString(L"IDC_STATIC_OUTPUT_QUALITY");
+
+			const auto addstr = std::wstring(L" (") + boost::lexical_cast<std::wstring>(*elm.imageQualityStart)
+				+ L"～" + boost::lexical_cast<std::wstring>(*elm.imageQualityEnd) + L")";
+			SetWindowTextW(GetDlgItem(dh, IDC_STATIC_OUTPUT_QUALITY), (wstr + addstr).c_str());
+		}
 	}
 
 	void Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
@@ -1026,6 +1129,20 @@ public:
 			}
 
 			SendMessage(hlang, CB_SETCURSEL, defaultListIndex, 0);
+		}
+
+		{
+			HWND houtext = GetDlgItem(dh, IDC_COMBO_OUT_EXT);
+
+			const auto &OutputExtentionList = Waifu2x::OutputExtentionList;
+			for (const auto &elm : OutputExtentionList)
+			{
+				SendMessageW(houtext, CB_ADDSTRING, 0, (LPARAM)elm.ext.c_str());
+			}
+
+			SendMessage(houtext, CB_SETCURSEL, 0, 0);
+
+			SetDepthAndQuality();
 		}
 
 		const boost::filesystem::path CropSizeListPath(exeDir / CropSizeListName);
@@ -1100,6 +1217,10 @@ public:
 			modelType = (eModelType)GetPrivateProfileInt(TEXT("Setting"), TEXT("LastModel"), 0, getTString(SettingFilePath).c_str());
 
 			use_tta = GetPrivateProfileInt(TEXT("Setting"), TEXT("LastUseTTA"), 0, getTString(SettingFilePath).c_str()) != 0;
+
+			output_quality = GetPrivateProfileInt(TEXT("Setting"), TEXT("LastOutputQuality"), output_quality, getTString(SettingFilePath).c_str());
+
+			output_depth = GetPrivateProfileInt(TEXT("Setting"), TEXT("LastOutputDepth"), output_depth, getTString(SettingFilePath).c_str());
 		}
 
 		TCHAR *ptr = nullptr;
@@ -1107,8 +1228,8 @@ public:
 		if (!ptr || *ptr != TEXT('\0') || tempScale <= 0.0)
 			tScale = TEXT("2.00");
 
-		if (outputExt.length() > 0 && outputExt[0] == TEXT('.'))
-			outputExt.erase(0, 1);
+		if (outputExt.length() > 0 && outputExt[0] != TEXT('.'))
+			outputExt = L"." + outputExt;
 
 		if (!(1 <= noise_level && noise_level <= 2))
 			noise_level = 1;
@@ -1197,10 +1318,31 @@ public:
 			SendMessage(GetDlgItem(hWnd, IDC_CHECK_TTA), BM_SETCHECK, BST_UNCHECKED, 0);
 
 		SetWindowText(GetDlgItem(hWnd, IDC_EDIT_SCALE_RATIO), tScale.c_str());
-		SetWindowText(GetDlgItem(hWnd, IDC_EDIT_OUT_EXT), outputExt.c_str());
 		SetWindowText(GetDlgItem(hWnd, IDC_EDIT_INPUT_EXT_LIST), inputFileExt.c_str());
 
 		EnableWindow(GetDlgItem(dh, IDC_BUTTON_CANCEL), FALSE);
+
+		// 前回の拡張子設定関連を復元
+		HWND houtext = GetDlgItem(dh, IDC_COMBO_OUT_EXT);
+
+		size_t defaultIndex = 0;
+		const auto &OutputExtentionList = Waifu2x::OutputExtentionList;
+		for (size_t i = 0; i < OutputExtentionList.size(); i++)
+		{
+			const auto &elm = OutputExtentionList[i];
+			if (elm.ext == outputExt)
+			{
+				defaultIndex = i;
+				break;
+			}
+		}
+
+		SendMessage(houtext, CB_SETCURSEL, defaultIndex, 0);
+
+		SetWindowText(GetDlgItem(hWnd, IDC_EDIT_OUT_QUALITY), boost::lexical_cast<tstring>(output_quality).c_str());
+		SetWindowText(GetDlgItem(hWnd, IDC_COMBO_OUTPUT_DEPTH), boost::lexical_cast<tstring>(output_depth).c_str());
+
+		SetDepthAndQuality();
 	}
 
 	void Cancel(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
@@ -1209,7 +1351,7 @@ public:
 		EnableWindow(GetDlgItem(dh, IDC_BUTTON_CANCEL), FALSE);
 	}
 
-	void RadioButtom(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
+	void UpdateAddString(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 	{
 		ReplaceAddString();
 	}
@@ -1441,6 +1583,16 @@ public:
 
 		SetWindowTextLang();
 	}
+
+	void OutExtChange(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
+	{
+		if (HIWORD(wParam) != CBN_SELCHANGE)
+			return;
+
+		SetDepthAndQuality();
+
+		ReplaceAddString();
+	}
 };
 
 int WINAPI WinMain(HINSTANCE hInstance,
@@ -1470,7 +1622,6 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	CControl cControlInput(IDC_EDIT_INPUT);
 	CControl cControlOutput(IDC_EDIT_OUTPUT);
 	CControl cControlScale(IDC_EDIT_SCALE_RATIO);
-	CControl cControlOutExt(IDC_EDIT_OUT_EXT);
 
 	// 登録する関数がまとめられたクラス
 	// グローバル関数を使えばクラスにまとめる必要はないがこの方法が役立つこともあるはず
@@ -1482,36 +1633,35 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	cControlInput.SetEventCallBack(SetClassCustomFunc(DialogEvent::DropInput, &cDialogEvent), NULL, WM_DROPFILES);
 	cControlOutput.SetEventCallBack(SetClassCustomFunc(DialogEvent::DropOutput, &cDialogEvent), NULL, WM_DROPFILES);
 	cControlScale.SetEventCallBack(SetClassCustomFunc(DialogEvent::TextInput, &cDialogEvent), NULL, WM_CHAR);
-	cControlOutExt.SetEventCallBack(SetClassCustomFunc(DialogEvent::TextInput, &cDialogEvent), NULL, WM_CHAR);
 
 	// コントロールのサブクラスを登録
 	cDialog.AddControl(&cControlInput);
 	cDialog.AddControl(&cControlOutput);
 	cDialog.AddControl(&cControlScale);
-	cDialog.AddControl(&cControlOutExt);
 
 	// 各コントロールのイベントで実行する関数の登録
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::Exec, &cDialogEvent), NULL, IDC_BUTTON_EXEC);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::Cancel, &cDialogEvent), NULL, IDC_BUTTON_CANCEL);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::InputRef, &cDialogEvent), NULL, IDC_BUTTON_INPUT_REF);
 
-	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_RADIO_MODE_NOISE);
-	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_RADIO_MODE_SCALE);
-	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_RADIO_MODE_NOISE_SCALE);
-	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_RADIO_AUTO_SCALE);
-	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_RADIONOISE_LEVEL1);
-	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_RADIONOISE_LEVEL2);
-	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_RADIO_MODE_CPU);
-	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_RADIO_MODE_GPU);
-	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_RADIO_MODEL_RGB);
-	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_RADIO_MODEL_PHOTO);
-	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_RADIO_MODEL_Y);
-
-	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::RadioButtom, &cDialogEvent), NULL, IDC_CHECK_TTA);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIO_MODE_NOISE);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIO_MODE_SCALE);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIO_MODE_NOISE_SCALE);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIO_AUTO_SCALE);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIONOISE_LEVEL1);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIONOISE_LEVEL2);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIO_MODE_CPU);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIO_MODE_GPU);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIO_MODEL_RGB);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIO_MODEL_PHOTO);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIO_MODEL_Y);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_CHECK_TTA);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_COMBO_OUTPUT_DEPTH);
 
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::CheckCUDNN, &cDialogEvent), NULL, IDC_BUTTON_CHECK_CUDNN);
 
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::LangChange, &cDialogEvent), NULL, IDC_COMBO_LANG);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::OutExtChange, &cDialogEvent), NULL, IDC_COMBO_OUT_EXT);
 
 	// ダイアログのイベントで実行する関数の登録
 	cDialog.SetEventCallBack(SetClassFunc(DialogEvent::Create, &cDialogEvent), NULL, WM_INITDIALOG);

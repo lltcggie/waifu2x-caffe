@@ -123,6 +123,21 @@ static std::once_flag waifu2x_once_flag;
 static std::once_flag waifu2x_cudnn_once_flag;
 static std::once_flag waifu2x_cuda_once_flag;
 
+const std::vector<Waifu2x::stOutputExtentionElement> Waifu2x::OutputExtentionList =
+{
+	{ L".png", { 8, 16 }, boost::optional<int>(), boost::optional<int>(), boost::optional<int>(), boost::optional<int>() },
+	{ L".bmp", { 8 }, boost::optional<int>(), boost::optional<int>(), boost::optional<int>(), boost::optional<int>() },
+	{ L".jpg", { 8 }, 0, 100, 95, cv::IMWRITE_JPEG_QUALITY },
+	{ L".jp2", { 8, 16 }, boost::optional<int>(), boost::optional<int>(), boost::optional<int>(), boost::optional<int>() },
+	{ L".sr", { 8 }, boost::optional<int>(), boost::optional<int>(), boost::optional<int>(), boost::optional<int>() },
+	{ L".tif", { 8, 16, 32 }, boost::optional<int>(), boost::optional<int>(), boost::optional<int>(), boost::optional<int>() },
+	{ L".hdr", { 8, 16, 32 }, boost::optional<int>(), boost::optional<int>(), boost::optional<int>(), boost::optional<int>() },
+	{ L".exr", { 8, 16, 32 }, boost::optional<int>(), boost::optional<int>(), boost::optional<int>(), boost::optional<int>() },
+	{ L".ppm", { 8, 16 }, boost::optional<int>(), boost::optional<int>(), boost::optional<int>(), boost::optional<int>() },
+	{ L".webp", { 8 }, 1, 100, 100, cv::IMWRITE_WEBP_QUALITY },
+	{ L".tga", { 8 }, boost::optional<int>(), boost::optional<int>(), boost::optional<int>(), boost::optional<int>() },
+};
+
 #ifndef CUDA_CHECK_WAIFU2X
 #define CUDA_CHECK_WAIFU2X(condition) \
  do { \
@@ -1108,7 +1123,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 }
 
 Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &Mode, const int NoiseLevel, const double ScaleRatio, const boost::filesystem::path &ModelDir, const std::string &Process,
-	const bool UseTTA, const int CropSize, const int BatchSize)
+	const boost::optional<int> OutputQuality, const int OutputDepth, const bool UseTTA, const int CropSize, const int BatchSize)
 {
 	Waifu2x::eWaifu2xError ret;
 
@@ -1126,6 +1141,9 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 		model_dir = ModelDir;
 		process = Process;
 		use_tta = UseTTA;
+
+		output_quality = OutputQuality;
+		output_depth = OutputDepth;
 
 		crop_size = CropSize;
 		batch_size = BatchSize;
@@ -1331,8 +1349,28 @@ Waifu2x::eWaifu2xError Waifu2x::WriteMat(const cv::Mat &im, const boost::filesys
 
 	try
 	{
+		const boost::filesystem::path op(output_file);
+		const boost::filesystem::path opext(op.extension());
+
+		std::vector<int> params;
+
+		const auto &OutputExtentionList = Waifu2x::OutputExtentionList;
+		for (const auto &elm : OutputExtentionList)
+		{
+			if (elm.ext == opext)
+			{
+				if (elm.imageQualitySettingVolume && output_quality)
+				{
+					params.push_back(*elm.imageQualitySettingVolume);
+					params.push_back(*output_quality);
+				}
+
+				break;
+			}
+		}
+
 		std::vector<uchar> buf;
-		cv::imencode(ext, im, buf);
+		cv::imencode(ext, im, buf, params);
 
 		if (writeFile(output_file, buf))
 			return eWaifu2xError_OK;

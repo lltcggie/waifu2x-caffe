@@ -112,6 +112,14 @@ int main(int argc, char** argv)
 	TCLAP::ValueArg<std::string> cmdProcess("p", "process", "process mode",
 		false, "gpu", &cmdProcessConstraint, cmd);
 
+	TCLAP::ValueArg<int> cmdOutputQuality("q", "output_quality",
+		"output image quality", false,
+		-1, "int", cmd);
+
+	TCLAP::ValueArg<int> cmdOutputDepth("d", "output_depth",
+		"output image chaneel depth bit", false,
+		8, "int", cmd);
+
 	TCLAP::ValueArg<int> cmdCropSizeFile("c", "crop_size",
 		"input image split size", false,
 		128, "int", cmd);
@@ -272,8 +280,9 @@ int main(int argc, char** argv)
 
 	Waifu2x::eWaifu2xError ret;
 	Waifu2x w;
-	ret = w.init(argc, argv, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), cmdModelPath.getValue(), cmdProcess.getValue(), use_tta,
-		cmdCropSizeFile.getValue(), cmdBatchSizeFile.getValue());
+	ret = w.init(argc, argv, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), cmdModelPath.getValue(), cmdProcess.getValue(),
+		cmdOutputQuality.getValue() == -1 ? boost::optional<int>() : cmdOutputQuality.getValue(), cmdOutputDepth.getValue(), use_tta, cmdCropSizeFile.getValue(),
+		cmdBatchSizeFile.getValue());
 	switch (ret)
 	{
 	case Waifu2x::eWaifu2xError_InvalidParameter:
