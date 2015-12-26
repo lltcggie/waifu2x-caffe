@@ -615,7 +615,7 @@ private:
 
 		if (stem.length() > 0 && stem.length() >= autoSetAddName.length())
 		{
-			const auto pos = stem.find(autoSetAddName);
+			const auto pos = stem.rfind(autoSetAddName);
 			if (pos != tstring::npos)
 			{
 				const tstring addstr(AddName());
