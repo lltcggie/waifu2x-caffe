@@ -111,7 +111,7 @@ const int ConvertMode = CV_RGB2YUV;
 const int ConvertInverseMode = CV_YUV2RGB;
 
 // 最低限必要なCUDAドライバーのバージョン
-const int MinCudaDriverVersion = 6050;
+const int MinCudaDriverVersion = 7050;
 
 // floatな画像をuint8_tな画像に変換する際の四捨五入に使う値
 // https://github.com/nagadomi/waifu2x/commit/797b45ae23665a1c5e3c481c018e48e6f0d0e383
