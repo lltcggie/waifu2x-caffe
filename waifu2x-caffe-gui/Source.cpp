@@ -1136,6 +1136,7 @@ public:
 					&& lang.SubLangID == DefaultLang.SubLangID && lang.FileName == DefaultLang.FileName)
 				{
 					defaultListIndex = i;
+					LangName = list[i].LangName;
 					break;
 				}
 			}
