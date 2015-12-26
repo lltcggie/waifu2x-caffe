@@ -29,6 +29,15 @@
 #include <Windows.h>
 #endif
 
+#define CV_VERSION_STR CVAUX_STR(CV_MAJOR_VERSION) CVAUX_STR(CV_MINOR_VERSION) CVAUX_STR(CV_SUBMINOR_VERSION)
+
+// ビルドモード
+#ifdef _DEBUG
+#define CV_EXT_STR "d.lib"
+#else
+#define CV_EXT_STR ".lib"
+#endif
+
 #ifdef _MSC_VER
 #ifdef _DEBUG
 #pragma comment(lib, "caffe-d.lib")
@@ -48,11 +57,19 @@
 #pragma comment(lib, "cublas.lib")
 #pragma comment(lib, "cudnn.lib")
 
-#pragma comment(lib, "opencv_calib3d249d.lib")
-#pragma comment(lib, "opencv_contrib249d.lib")
-#pragma comment(lib, "opencv_core249d.lib")
-#pragma comment(lib, "opencv_highgui249d.lib")
-#pragma comment(lib, "opencv_imgproc249d.lib")
+#pragma comment(lib, "opencv_calib3d" CV_VERSION_STR CV_EXT_STR)
+#pragma comment(lib, "opencv_core" CV_VERSION_STR CV_EXT_STR)
+#pragma comment(lib, "opencv_highgui" CV_VERSION_STR CV_EXT_STR)
+#pragma comment(lib, "opencv_imgcodecs" CV_VERSION_STR CV_EXT_STR)
+#pragma comment(lib, "opencv_imgproc" CV_VERSION_STR CV_EXT_STR)
+#pragma comment(lib, "IlmImf" CV_EXT_STR)
+#pragma comment(lib, "libjasper" CV_EXT_STR)
+#pragma comment(lib, "libjpeg" CV_EXT_STR)
+#pragma comment(lib, "libpng" CV_EXT_STR)
+#pragma comment(lib, "libtiff" CV_EXT_STR)
+#pragma comment(lib, "libwebp" CV_EXT_STR)
+#pragma comment(lib, "ippicvmt.lib")
+
 #pragma comment(lib, "libboost_iostreams-vc120-mt-gd-1_59.lib")
 #else
 #pragma comment(lib, "caffe.lib")
@@ -72,11 +89,19 @@
 #pragma comment(lib, "cublas.lib")
 #pragma comment(lib, "cudnn.lib")
 
-#pragma comment(lib, "opencv_calib3d249.lib")
-#pragma comment(lib, "opencv_contrib249.lib")
-#pragma comment(lib, "opencv_core249.lib")
-#pragma comment(lib, "opencv_highgui249.lib")
-#pragma comment(lib, "opencv_imgproc249.lib")
+#pragma comment(lib, "opencv_calib3d" CV_VERSION_STR CV_EXT_STR)
+#pragma comment(lib, "opencv_core" CV_VERSION_STR CV_EXT_STR)
+#pragma comment(lib, "opencv_highgui" CV_VERSION_STR CV_EXT_STR)
+#pragma comment(lib, "opencv_imgcodecs" CV_VERSION_STR CV_EXT_STR)
+#pragma comment(lib, "opencv_imgproc" CV_VERSION_STR CV_EXT_STR)
+#pragma comment(lib, "IlmImf" CV_EXT_STR)
+#pragma comment(lib, "libjasper" CV_EXT_STR)
+#pragma comment(lib, "libjpeg" CV_EXT_STR)
+#pragma comment(lib, "libpng" CV_EXT_STR)
+#pragma comment(lib, "libtiff" CV_EXT_STR)
+#pragma comment(lib, "libwebp" CV_EXT_STR)
+#pragma comment(lib, "ippicvmt.lib")
+
 #pragma comment(lib, "libboost_iostreams-vc120-mt-1_59.lib")
 #endif
 #endif
