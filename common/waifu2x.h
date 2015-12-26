@@ -10,6 +10,7 @@
 #include <opencv2/opencv.hpp>
 
 #define CUDNN_DLL_NAME "cudnn64_4.dll"
+#define CUDNN_REQUIRE_VERION_TEXT "v4 RC"
 
 
 namespace caffe

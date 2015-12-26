@@ -255,7 +255,7 @@ private:
 				scale_ratio = 2.0;
 				ret = false;
 
-				MessageBox(dh, TEXT("拡大率は0.0より大きい正数である必要があります"), TEXT("エラー"), MB_OK | MB_ICONERROR);
+				MessageBox(dh, langStringList.GetString(L"MessageScaleRateCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
 			}
 		}
 
@@ -326,7 +326,7 @@ private:
 				crop_size = 128;
 				ret = false;
 
-				MessageBox(dh, TEXT("分割サイズは0より大きい整数である必要があります"), TEXT("エラー"), MB_OK | MB_ICONERROR);
+				MessageBox(dh, langStringList.GetString(L"MessageCropSizeCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
 			}
 		}
 
@@ -627,7 +627,7 @@ private:
 			else // if (p == "cudnn")
 				p = TEXT("cuDNN");
 
-			ptr += _stprintf(ptr, TEXT("使用プロセッサーモード: %s\r\n"), p.c_str());
+			ptr += _stprintf(ptr, (langStringList.GetString(L"MessageUseProcessorMode") + L"r\n").c_str(), p.c_str());
 		}
 
 		{
@@ -636,7 +636,7 @@ private:
 			const int sec = t % 60; t /= 60;
 			const int min = t % 60; t /= 60;
 			const int hour = (int)t;
-			ptr += _stprintf(ptr, TEXT("処理時間: %02d:%02d:%02d.%03d\r\n"), hour, min, sec, msec);
+			ptr += _stprintf(ptr, (langStringList.GetString(L"MessageProcessTime") + L"r\n").c_str(), hour, min, sec, msec);
 		}
 
 		{
@@ -645,7 +645,7 @@ private:
 			const int sec = t % 60; t /= 60;
 			const int min = t % 60; t /= 60;
 			const int hour = (int)t;
-			ptr += _stprintf(ptr, TEXT("初期化時間: %02d:%02d:%02d.%03d\r\n"), hour, min, sec, msec);
+			ptr += _stprintf(ptr, (langStringList.GetString(L"MessageInitTime") + L"r\n").c_str(), hour, min, sec, msec);
 		}
 
 		if (process == "gpu" || process == "cudnn")
@@ -655,7 +655,7 @@ private:
 			const int sec = t % 60; t /= 60;
 			const int min = t % 60; t /= 60;
 			const int hour = (int)t;
-			ptr += _stprintf(ptr, TEXT("cuDNNチェック時間: %02d:%02d:%02d.%03d"), hour, min, sec, msec);
+			ptr += _stprintf(ptr, langStringList.GetString(L"MessagecuDNNCheckTime").c_str(), hour, min, sec, msec);
 		}
 
 		AddLogMessage(msg);
@@ -795,19 +795,19 @@ public:
 
 		if (input_str.length() == 0)
 		{
-			MessageBox(dh, TEXT("入力パスを指定して下さい"), TEXT("エラー"), MB_OK | MB_ICONERROR);
+			MessageBox(dh, langStringList.GetString(L"MessageInputPathCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
 			return;
 		}
 
 		if (output_str.length() == 0)
 		{
-			MessageBox(dh, TEXT("出力パスを指定して下さい"), TEXT("エラー"), MB_OK | MB_ICONERROR);
+			MessageBox(dh, langStringList.GetString(L"MessageOutputPathCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
 			return;
 		}
 
 		if (outputExt.length() == 0)
 		{
-			MessageBox(dh, TEXT("出力拡張子を指定して下さい"), TEXT("エラー"), MB_OK | MB_ICONERROR);
+			MessageBox(dh, langStringList.GetString(L"MessageOutputExtCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
 			return;
 		}
 
@@ -817,10 +817,10 @@ public:
 			switch (flag)
 			{
 			case Waifu2x::eWaifu2xCudaError_NotFind:
-				MessageBox(dh, TEXT("GPUで変換出来ません。\r\nCUDAドライバーがインストールされていない可能性があります。\r\nCUDAドライバーをインストールして下さい。"), TEXT("エラー"), MB_OK | MB_ICONERROR);
+				MessageBox(dh, langStringList.GetString(L"MessageCudaNotFindError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
 				return;
 			case Waifu2x::eWaifu2xCudaError_OldVersion:
-				MessageBox(dh, TEXT("GPUで変換出来ません。\r\nCUDAドライバーのバージョンが古い可能性があります。\r\nCUDAドライバーを更新して下さい。"), TEXT("エラー"), MB_OK | MB_ICONERROR);
+				MessageBox(dh, langStringList.GetString(L"MessageCudaOldVersionError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
 				return;
 			}
 		}
@@ -851,13 +851,13 @@ public:
 		if (!isLastError)
 		{
 			if (!cancelFlag)
-				AddLogMessage(TEXT("変換に成功しました"));
+				AddLogMessage(langStringList.GetString(L"MessageTransSuccess").c_str());
 
 			Waifu2xTime();
 			MessageBeep(MB_ICONASTERISK);
 		}
 		else
-			MessageBox(dh, TEXT("エラーが発生しました"), TEXT("エラー"), MB_OK | MB_ICONERROR);
+			MessageBox(dh, langStringList.GetString(L"MessageErrorHappen").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
 	}
 
 	void OnDialogEnd(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
@@ -874,12 +874,10 @@ public:
 	{
 		const boost::filesystem::path *p = (const boost::filesystem::path *)wParam;
 
-		// 出力フォルダ「%s」の作成に失敗しました\n", out_absolute.string().c_str());
-		tstring msg(TEXT("出力フォルダ\r\n「"));
-		msg += getTString(*p);
-		msg += TEXT("」\r\nの作成に失敗しました");
+		TCHAR msg[1024 * 2];
+		_stprintf(msg, langStringList.GetString(L"MessageCreateOutDirError").c_str(), getTString(*p).c_str());
 
-		MessageBox(dh, msg.c_str(), TEXT("エラー"), MB_OK | MB_ICONERROR);
+		MessageBox(dh, msg, langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
 
 		isLastError = true;
 	}
@@ -897,19 +895,19 @@ public:
 				switch (ret)
 				{
 				case Waifu2x::eWaifu2xError_Cancel:
-					_stprintf(msg, TEXT("キャンセルされました"));
+					_stprintf(msg, langStringList.GetString(L"MessageCancelError").c_str());
 					break;
 				case Waifu2x::eWaifu2xError_InvalidParameter:
-					_stprintf(msg, TEXT("パラメータが不正です"));
+					_stprintf(msg, langStringList.GetString(L"MessageInvalidParameterError").c_str());
 					break;
 				case Waifu2x::eWaifu2xError_FailedOpenModelFile:
-					_stprintf(msg, TEXT("モデルファイルが開けませんでした"));
+					_stprintf(msg, langStringList.GetString(L"MessageFailedOpenModelFileError").c_str());
 					break;
 				case Waifu2x::eWaifu2xError_FailedParseModelFile:
-					_stprintf(msg, TEXT("モデルファイルが壊れています"));
+					_stprintf(msg, langStringList.GetString(L"MessageFailedParseModelFileError").c_str());
 					break;
 				case Waifu2x::eWaifu2xError_FailedConstructModel:
-					_stprintf(msg, TEXT("ネットワークの構築に失敗しました"));
+					_stprintf(msg, langStringList.GetString(L"MessageFailedConstructModelError").c_str());
 					break;
 				}
 			}
@@ -920,19 +918,19 @@ public:
 				switch (ret)
 				{
 				case Waifu2x::eWaifu2xError_Cancel:
-					_stprintf(msg, TEXT("キャンセルされました"));
+					_stprintf(msg, langStringList.GetString(L"MessageCancelError").c_str());
 					break;
 				case Waifu2x::eWaifu2xError_InvalidParameter:
-					_stprintf(msg, TEXT("パラメータが不正です"));
+					_stprintf(msg, langStringList.GetString(L"MessageInvalidParameterError").c_str());
 					break;
 				case Waifu2x::eWaifu2xError_FailedOpenInputFile:
-					_stprintf(msg, TEXT("入力画像「%s」が開けませんでした"), fp.first.c_str());
+					_stprintf(msg, langStringList.GetString(L"MessageFailedOpenInputFileError").c_str(), fp.first.c_str());
 					break;
 				case Waifu2x::eWaifu2xError_FailedOpenOutputFile:
-					_stprintf(msg, TEXT("出力画像を「%s」に書き込めませんでした"), fp.second.c_str());
+					_stprintf(msg, langStringList.GetString(L"MessageFailedOpenOutputFileError").c_str(), fp.second.c_str());
 					break;
 				case Waifu2x::eWaifu2xError_FailedProcessCaffe:
-					_stprintf(msg, TEXT("補間処理に失敗しました"));
+					_stprintf(msg, langStringList.GetString(L"MessageFailedProcessCaffeError").c_str());
 					break;
 				}
 			}
@@ -1222,29 +1220,37 @@ public:
 		switch (flag)
 		{
 		case Waifu2x::eWaifu2xCudaError_NotFind:
-			MessageBox(dh, TEXT("cuDNNは使えません。\r\nCUDAドライバーがインストールされていない可能性があります。\r\nCUDAドライバーをインストールして下さい。"), TEXT("結果"), MB_OK | MB_ICONERROR);
+			MessageBox(dh, langStringList.GetString(L"MessageCudaNotFindError").c_str(), langStringList.GetString(L"MessageTitleResult").c_str(), MB_OK | MB_ICONERROR);
 			return;
 		case Waifu2x::eWaifu2xCudaError_OldVersion:
-			MessageBox(dh, TEXT("cuDNNは使えません。\r\nCUDAドライバーのバージョンが古い可能性があります。\r\nCUDAドライバーを更新して下さい。"), TEXT("結果"), MB_OK | MB_ICONERROR);
+			MessageBox(dh, langStringList.GetString(L"MessageCudaOldVersionError").c_str(), langStringList.GetString(L"MessageTitleResult").c_str(), MB_OK | MB_ICONERROR);
 			return;
 		}
 
 		switch (Waifu2x::can_use_cuDNN())
 		{
 		case Waifu2x::eWaifu2xcuDNNError_OK:
-			MessageBox(dh, TEXT("cuDNNが使えます。"), TEXT("結果"), MB_OK | MB_ICONINFORMATION);
+			MessageBox(dh, langStringList.GetString(L"MessagecuDNNOK").c_str(), langStringList.GetString(L"MessageTitleResult").c_str(), MB_OK | MB_ICONINFORMATION);
 			break;
 		case Waifu2x::eWaifu2xcuDNNError_NotFind:
-			MessageBox(dh, TEXT("cuDNNは使えません。\r\n「") TEXT(CUDNN_DLL_NAME) TEXT("」が見つかりません。"), TEXT("結果"), MB_OK | MB_ICONERROR);
+		{
+			TCHAR msg[1024 * 2];
+			_stprintf(msg, langStringList.GetString(L"MessagecuDNNNotFind").c_str(), TEXT(CUDNN_DLL_NAME));
+			MessageBox(dh, msg, langStringList.GetString(L"MessageTitleResult").c_str(), MB_OK | MB_ICONERROR);
 			break;
+		}
 		case Waifu2x::eWaifu2xcuDNNError_OldVersion:
-			MessageBox(dh, TEXT("cuDNNは使えません。\r\n「") TEXT(CUDNN_DLL_NAME) TEXT("」のバージョンが古いです。v2を使って下さい。"), TEXT("結果"), MB_OK | MB_ICONERROR);
+		{
+			TCHAR msg[1024 * 2];
+			_stprintf(msg, langStringList.GetString(L"MessagecuDNNOldVersionError").c_str(), TEXT(CUDNN_DLL_NAME), TEXT(CUDNN_REQUIRE_VERION_TEXT));
+			MessageBox(dh, msg, langStringList.GetString(L"MessageTitleResult").c_str(), MB_OK | MB_ICONERROR);
 			break;
+		}
 		case Waifu2x::eWaifu2xcuDNNError_CannotCreate:
-			MessageBox(dh, TEXT("cuDNNは使えません。\r\ncuDNNを初期化出来ません。"), TEXT("結果"), MB_OK | MB_ICONERROR);
+			MessageBox(dh, langStringList.GetString(L"MessagecuDNNCannotCreateError").c_str(), langStringList.GetString(L"MessageTitleResult").c_str(), MB_OK | MB_ICONERROR);
 			break;
 		default:
-			MessageBox(dh, TEXT("cuDNNは使えません"), TEXT("結果"), MB_OK | MB_ICONERROR);
+			MessageBox(dh, langStringList.GetString(L"MessagecuDNNDefautlError").c_str(), langStringList.GetString(L"MessageTitleResult").c_str(), MB_OK | MB_ICONERROR);
 		}
 	}
 
@@ -1256,7 +1262,7 @@ public:
 
 		if (!boost::filesystem::exists(path))
 		{
-			MessageBox(dh, TEXT("入力ファイル/フォルダが存在しません"), TEXT("エラー"), MB_OK | MB_ICONERROR);
+			MessageBox(dh, langStringList.GetString(L"MessageInputCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
 			return 0L;
 		}
 
@@ -1366,7 +1372,7 @@ public:
 
 		if (extStr.length() > 0)
 		{
-			tfp += _stprintf(tfp, TEXT("指定された変換対象拡張子(%s)"), extStr.c_str(), extStr.c_str());
+			tfp += _stprintf(tfp, langStringList.GetString(L"MessageExtStr").c_str(), extStr.c_str());
 			tfp++;
 
 			memcpy(tfp, extStr.c_str(), extStr.length() * sizeof(TCHAR));
@@ -1376,7 +1382,7 @@ public:
 			tfp++;
 		}
 
-		const tstring allFilesTitle(TEXT("すべてのファイル、フォルダ(*.*)"));
+		const tstring allFilesTitle(langStringList.GetString(L"MessageAllFileFolder").c_str());
 		memcpy(tfp, allFilesTitle.c_str(), allFilesTitle.length() * sizeof(TCHAR));
 		tfp += allFilesTitle.length();
 		*tfp = TEXT('\0');
@@ -1397,7 +1403,7 @@ public:
 		ofn.nMaxFile = _countof(szFile);
 		ofn.lpstrFilter = szFilter;
 		ofn.nFilterIndex = 1;
-		ofn.lpstrTitle = TEXT("入力するファイルかフォルダを選択してください");
+		ofn.lpstrTitle = langStringList.GetString(L"MessageTitleInputDialog").c_str();
 		ofn.lpstrInitialDir = szPath;
 		ofn.lpstrCustomFilter = NULL;
 		ofn.nMaxCustFilter = 0;
