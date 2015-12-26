@@ -652,32 +652,32 @@ Waifu2x::eWaifu2xError Waifu2x::CreateZoomColorImage(const cv::Mat &float_image,
 // processÇ≈cudnnÇ™éwíËÇ≥ÇÍÇ»Ç©Ç¡ÇΩèÍçáÇÕcuDNNÇ™åƒÇ—èoÇ≥ÇÍÇ»Ç¢ÇÊÇ§Ç…ïœçXÇ∑ÇÈ
 Waifu2x::eWaifu2xError Waifu2x::ConstractNet(boost::shared_ptr<caffe::Net<float>> &net, const boost::filesystem::path &model_path, const boost::filesystem::path &param_path, const std::string &process)
 {
-	boost::filesystem::path caffemodel_path = param_path;
-	caffemodel_path += ".caffemodel";
 	boost::filesystem::path modelbin_path = model_path;
 	modelbin_path += ".protobin";
+	boost::filesystem::path caffemodel_path = param_path;
+	caffemodel_path += ".caffemodel";
 
-	caffe::NetParameter param;
+	caffe::NetParameter param_model;
 	caffe::NetParameter param_caffemodel;
 
-	const auto retModelBin = readProtoBinary(caffemodel_path, &param);
-	const auto retParamBin = readProtoBinary(modelbin_path, &param_caffemodel);
+	const auto retModelBin = readProtoBinary(modelbin_path, &param_model);
+	const auto retParamBin = readProtoBinary(caffemodel_path, &param_caffemodel);
 
 	if (retModelBin == eWaifu2xError_OK && retParamBin == eWaifu2xError_OK)
 	{
 		Waifu2x::eWaifu2xError ret;
 
-		ret = SetParameter(param, process);
+		ret = SetParameter(param_model, process);
 		if (ret != eWaifu2xError_OK)
 			return ret;
 
 		if (!caffe::UpgradeNetAsNeeded(caffemodel_path.string(), &param_caffemodel))
 			return Waifu2x::eWaifu2xError_FailedParseModelFile;
 
-		net = boost::shared_ptr<caffe::Net<float>>(new caffe::Net<float>(param));
+		net = boost::shared_ptr<caffe::Net<float>>(new caffe::Net<float>(param_model));
 		net->CopyTrainedLayersFrom(param_caffemodel);
 
-		input_plane = param.input_dim(1);
+		input_plane = param_model.input_dim(1);
 	}
 	else
 	{
