@@ -627,7 +627,7 @@ private:
 			else // if (p == "cudnn")
 				p = TEXT("cuDNN");
 
-			ptr += _stprintf(ptr, (langStringList.GetString(L"MessageUseProcessorMode") + L"r\n").c_str(), p.c_str());
+			ptr += _stprintf(ptr, (langStringList.GetString(L"MessageUseProcessorMode") + L"\r\n").c_str(), p.c_str());
 		}
 
 		{
@@ -636,7 +636,7 @@ private:
 			const int sec = t % 60; t /= 60;
 			const int min = t % 60; t /= 60;
 			const int hour = (int)t;
-			ptr += _stprintf(ptr, (langStringList.GetString(L"MessageProcessTime") + L"r\n").c_str(), hour, min, sec, msec);
+			ptr += _stprintf(ptr, (langStringList.GetString(L"MessageProcessTime") + L"\r\n").c_str(), hour, min, sec, msec);
 		}
 
 		{
@@ -645,7 +645,7 @@ private:
 			const int sec = t % 60; t /= 60;
 			const int min = t % 60; t /= 60;
 			const int hour = (int)t;
-			ptr += _stprintf(ptr, (langStringList.GetString(L"MessageInitTime") + L"r\n").c_str(), hour, min, sec, msec);
+			ptr += _stprintf(ptr, (langStringList.GetString(L"MessageInitTime") + L"\r\n").c_str(), hour, min, sec, msec);
 		}
 
 		if (process == "gpu" || process == "cudnn")
