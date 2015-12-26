@@ -242,10 +242,19 @@ static Waifu2x::eWaifu2xError readProtoText(const boost::filesystem::path &path,
 
 static Waifu2x::eWaifu2xError readProtoBinary(const boost::filesystem::path &path, ::google::protobuf::Message* proto)
 {
-	boost::iostreams::stream<boost::iostreams::file_descriptor_source> is(path, std::ios_base::in | std::ios_base::binary);
+	boost::iostreams::stream<boost::iostreams::file_descriptor_source> is;
+	
+	try
+	{
+		is.open(path, std::ios_base::in | std::ios_base::binary);
+	}
+	catch (...)
+	{
+		return Waifu2x::eWaifu2xError_FailedOpenModelFile;
+	}
 
 	if (!is)
-		return Waifu2x::eWaifu2xError_FailedParseModelFile;
+		return Waifu2x::eWaifu2xError_FailedOpenModelFile;
 
 	std::vector<char> tmp;
 	if (!readFile(is, tmp))
@@ -617,16 +626,16 @@ Waifu2x::eWaifu2xError Waifu2x::ConstractNet(boost::shared_ptr<caffe::Net<float>
 	modelbin_path += ".protobin";
 
 	caffe::NetParameter param;
-	if (readProtoBinary(modelbin_path, &param) == eWaifu2xError_OK)
+	caffe::NetParameter param_caffemodel;
+
+	const auto retModelBin = readProtoBinary(caffemodel_path, &param);
+	const auto retParamBin = readProtoBinary(modelbin_path, &param_caffemodel);
+
+	if (retModelBin == eWaifu2xError_OK && retParamBin == eWaifu2xError_OK)
 	{
 		Waifu2x::eWaifu2xError ret;
 
 		ret = SetParameter(param, process);
-		if (ret != eWaifu2xError_OK)
-			return ret;
-
-		caffe::NetParameter param_caffemodel;
-		ret = readProtoBinary(caffemodel_path, &param_caffemodel);
 		if (ret != eWaifu2xError_OK)
 			return ret;
 
