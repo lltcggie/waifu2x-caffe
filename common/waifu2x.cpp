@@ -1451,6 +1451,10 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructFloatMat(const bool isReconstructNois
 
 		// パディングを取り払う
 		im = im(cv::Rect(offset, offset, image_size.width, image_size.height));
+
+		// 値を0～1にクリッピング
+		cv::threshold(im, im, 1.0, 1.0, cv::THRESH_TRUNC);
+		cv::threshold(im, im, 0.0, 0.0, cv::THRESH_TOZERO);
 	}
 
 	if (cancel_func && cancel_func())
@@ -1471,6 +1475,10 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructFloatMat(const bool isReconstructNois
 
 			// パディングを取り払う
 			im = im(cv::Rect(offset, offset, image_size.width, image_size.height));
+
+			// 値を0～1にクリッピング
+			cv::threshold(im, im, 1.0, 1.0, cv::THRESH_TRUNC);
+			cv::threshold(im, im, 0.0, 0.0, cv::THRESH_TOZERO);
 		}
 	}
 
@@ -1559,6 +1567,10 @@ Waifu2x::eWaifu2xError Waifu2x::Reconstruct(const bool isReconstructNoise, const
 	{
 		cv::cvtColor(reconstruct_image, reconstruct_image, CV_RGB2GRAY); // この地点ではまだRGBなことに注意
 	}
+
+	// 値を0～1にクリッピング
+	cv::threshold(reconstruct_image, reconstruct_image, 1.0, 1.0, cv::THRESH_TRUNC);
+	cv::threshold(reconstruct_image, reconstruct_image, 0.0, 0.0, cv::THRESH_TOZERO);
 
 	out = reconstruct_image;
 
