@@ -1613,12 +1613,15 @@ Waifu2x::eWaifu2xError Waifu2x::AfterReconstructFloatMatProcess(const bool isRec
 	const double shrinkRatio = scale_ratio / std::pow(2.0, (double)scale2);
 
 	cv::Mat alpha;
-	if (floatim.channels() == 4 && isReconstructScale)
+	if (floatim.channels() == 4)
 	{
 		std::vector<cv::Mat> planes;
 		cv::split(floatim, planes);
 
-		Reconstruct(false, true, cancel_func, planes[3], alpha);
+		if (isReconstructScale)
+			Reconstruct(false, true, cancel_func, planes[3], alpha);
+		else
+			alpha = planes[3];
 	}
 
 	// アルファチャンネルがあったらアルファを付加する
