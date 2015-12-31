@@ -1665,7 +1665,7 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const boost::filesystem::path &input_fil
 
 	const bool isJpeg = boost::iequals(ipext.string(), ".jpg") || boost::iequals(ipext.string(), ".jpeg");
 	const bool isReconstructNoise = mode == "noise" || mode == "noise_scale" || (mode == "auto_scale" && isJpeg);
-	const bool isReconstructScale = mode == "scale" || mode == "noise_scale";
+	const bool isReconstructScale = mode == "scale" || mode == "noise_scale" || mode == "auto_scale";
 
 	cv::Mat float_image;
 	ret = LoadMat(float_image, input_file);
