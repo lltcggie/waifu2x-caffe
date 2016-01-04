@@ -29,7 +29,7 @@
 "IDC_STATIC_CROP_SIZE":"拆分大小",
 "IDC_BUTTON_CHECK_CUDNN":"检查cuDNN",
 "IDC_BUTTON_CANCEL":"取消",
-"IDC_BUTTON_EXEC":"确定",
+"IDC_BUTTON_EXEC":"运行",
 "IDC_STATIC_LANG_UI":"界面语言",
 "MessageUseProcessorMode":"使用的处理器模式: %s",
 "MessageProcessTime":"处理时间: %02d:%02d:%02d.%03d",
