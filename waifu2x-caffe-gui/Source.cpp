@@ -1372,6 +1372,37 @@ public:
 		SetWindowText(GetDlgItem(hWnd, IDC_COMBO_OUTPUT_DEPTH), boost::lexical_cast<tstring>(output_depth).c_str());
 
 		SetDepthAndQuality();
+
+		LVCOLUMN col;
+		col.mask = LVCF_FMT | LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
+		col.fmt = LVCFMT_LEFT;
+
+		col.iSubItem = 0;
+		col.cx = 100;
+		col.pszText = TEXT("値");
+		ListView_InsertColumn(GetDlgItem(hWnd, IDC_LIST_OUT_SETTING), 0, &col);
+
+
+		col.iSubItem = 1;
+		col.cx = 100;
+		col.pszText = TEXT("名前");
+		ListView_InsertColumn(GetDlgItem(hWnd, IDC_LIST_OUT_SETTING), 1, &col);
+
+		LVITEM item = {0};
+		item.mask = LVIF_TEXT;
+		for (int iCount = 0; iCount < 3; iCount++)
+		{
+			item.pszText = L"aaaaaa";
+			item.iItem = iCount;
+			item.iSubItem = 0;
+			ListView_InsertItem(GetDlgItem(hWnd, IDC_LIST_OUT_SETTING), &item);
+
+			item.pszText = L"b";
+			item.iItem = iCount;
+			item.iSubItem = 1;
+			ListView_SetItem(GetDlgItem(hWnd, IDC_LIST_OUT_SETTING), &item);
+		}
+
 	}
 
 	void Cancel(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
@@ -1692,6 +1723,33 @@ int WINAPI WinMain(HINSTANCE hInstance,
 
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::LangChange, &cDialogEvent), NULL, IDC_COMBO_LANG);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::OutExtChange, &cDialogEvent), NULL, IDC_COMBO_OUT_EXT);
+
+	
+	cDialog.SetEventCallBack([](HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
+	{
+		if (((LPNMHDR)lParam)->idFrom == IDC_LIST_OUT_SETTING)
+		{
+			if (((LPNMLISTVIEW)lParam)->hdr.code == NM_DBLCLK)
+			{
+				// リストビューの項目をダブルクリックしたら編集開始
+
+				LPNMITEMACTIVATE lpnmitem = (LPNMITEMACTIVATE)lParam;
+				if (lpnmitem->iItem >= 0 && lpnmitem->iSubItem >= 0)
+					ListView_EditLabel(GetDlgItem(hWnd, IDC_LIST_OUT_SETTING), lpnmitem->iItem);
+			}
+			else if (((LPNMLISTVIEW)lParam)->hdr.code == LVN_ENDLABELEDIT)
+			{
+				// 編集が終わったら項目に反映
+				HWND hEdit = ListView_GetEditControl(GetDlgItem(hWnd, IDC_LIST_OUT_SETTING));
+
+				TCHAR buf[100];
+				GetWindowText(hEdit, buf, _countof(buf));
+				buf[_countof(buf) - 1] = TEXT('\0');
+
+				ListView_SetItemText(GetDlgItem(hWnd, IDC_LIST_OUT_SETTING), ((LV_DISPINFO *)lParam)->item.iItem, 0, buf);
+			}
+		}
+	}, NULL, WM_NOTIFY);
 
 	// ダイアログのイベントで実行する関数の登録
 	cDialog.SetEventCallBack(SetClassFunc(DialogEvent::Create, &cDialogEvent), NULL, WM_INITDIALOG);
