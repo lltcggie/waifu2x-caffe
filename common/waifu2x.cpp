@@ -137,7 +137,7 @@ const std::vector<Waifu2x::stOutputExtentionElement> Waifu2x::OutputExtentionLis
 	{ L".exr", { 8, 16, 32 }, boost::optional<int>(), boost::optional<int>(), boost::optional<int>(), boost::optional<int>() },
 	{ L".ppm", { 8, 16 }, boost::optional<int>(), boost::optional<int>(), boost::optional<int>(), boost::optional<int>() },
 	{ L".webp", { 8 }, 1, 100, 100, cv::IMWRITE_WEBP_QUALITY },
-	{ L".tga", { 8 }, boost::optional<int>(), boost::optional<int>(), boost::optional<int>(), boost::optional<int>() },
+	{ L".tga", { 8 }, 0, 1, 0, 0 },
 };
 
 #ifndef CUDA_CHECK_WAIFU2X
@@ -1356,6 +1356,27 @@ Waifu2x::eWaifu2xError Waifu2x::WriteMat(const cv::Mat &im, const boost::filesys
 
 		if(!os)
 			return eWaifu2xError_FailedOpenOutputFile;
+
+		// RLE圧縮の設定
+		bool isSet = false;
+		const auto &OutputExtentionList = Waifu2x::OutputExtentionList;
+		for (const auto &elm : OutputExtentionList)
+		{
+			if (elm.ext == L".tga")
+			{
+				if (elm.imageQualitySettingVolume && output_quality)
+				{
+					stbi_write_tga_with_rle = *output_quality;
+					isSet = true;
+				}
+
+				break;
+			}
+		}
+
+		// 設定されなかったのでデフォルトにする
+		if (!isSet)
+			stbi_write_tga_with_rle = 1;
 
 		if (!stbi_write_tga_to_func(Waifu2x_stbi_write_func, &os, im.size().width, im.size().height, im.channels(), data))
 			return eWaifu2xError_FailedOpenOutputFile;

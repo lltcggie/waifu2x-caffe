@@ -107,10 +107,12 @@ cuDNN
 
 ###「出力画質設定」
      変換後の画像の画質を指定します。
+     設定できる値は整数です。
      指定できる値の範囲と意味は「出力拡張子」で設定した形式により異なります。
 
       * .jpg : 値の範囲(0～100) 数字が高いほど高画質
       * .webp : 値の範囲(1～100) 数字が高いほど高画質 100だと可逆圧縮
+      * .tga : 値の範囲(0～1) 0なら圧縮なし、1ならRLE圧縮
 
 ###「出力深度ビット数」
      変換後の画像の1チャンネルあたりのビット数を指定します
@@ -342,3 +344,4 @@ ex.
 オリジナルの[waifu2x](https://github.com/nagadomi/waifu2x)、及びモデルの制作を行い、MITライセンスの下で公開して下さった [ultraist](https://twitter.com/ultraistter)さん、
 オリジナルのwaifu2xを元に[waifu2x-converter](https://github.com/WL-Amigo/waifu2x-converter-cpp)を作成して下さった [アミーゴ](https://twitter.com/WL_Amigo)さん(READMEやLICENSE.txtの書き方、OpenCVの使い方等かなり参考にさせていただきました)
 に、感謝します。
+また、メッセージを英訳してくださった @paul70078 さん、メッセージを中国語(簡体字)に翻訳してくださった @yoonhakcher さん、中国語(簡体字)訳のプルリクエストを下さった @mzhboy さんに感謝します。
