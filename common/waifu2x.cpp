@@ -556,7 +556,7 @@ Waifu2x::eWaifu2xError Waifu2x::LoadMat(cv::Mat &float_image, const boost::files
 Waifu2x::eWaifu2xError Waifu2x::LoadMatBySTBI(cv::Mat &float_image, const std::vector<char> &img_data)
 {
 	int x, y, comp;
-	stbi_uc *data = stbi_load_from_memory((const stbi_uc *)img_data.data(), img_data.size(), &x, &y, &comp, 4);
+	stbi_uc *data = stbi_load_from_memory((const stbi_uc *)img_data.data(), img_data.size(), &x, &y, &comp, 0);
 	if (!data)
 		return eWaifu2xError_FailedOpenInputFile;
 
