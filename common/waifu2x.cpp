@@ -1300,7 +1300,7 @@ static void Waifu2x_stbi_write_func(void *context, void *data, int size)
 	osp->write((const char *)data, size);
 }
 
-Waifu2x::eWaifu2xError Waifu2x::WriteMat(const cv::Mat &im, const boost::filesystem::path &output_file)
+Waifu2x::eWaifu2xError Waifu2x::WriteMat(const cv::Mat &im, const boost::filesystem::path &output_file, const boost::optional<int> &output_quality)
 {
 	const boost::filesystem::path ip(output_file);
 	const std::string ext = ip.extension().string();
@@ -1715,7 +1715,7 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const boost::filesystem::path &input_fil
 		cv::merge(planes, write_iamge);
 	}
 
-	ret = WriteMat(write_iamge, output_file);
+	ret = WriteMat(write_iamge, output_file, output_quality);
 	if (ret != eWaifu2xError_OK)
 		return ret;
 

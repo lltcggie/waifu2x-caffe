@@ -126,7 +126,7 @@ private:
 		, const boost::filesystem::path &modelbin_path, const boost::filesystem::path &caffemodel_path, const std::string &process);
 	eWaifu2xError SetParameter(caffe::NetParameter &param, const std::string &process) const;
 	eWaifu2xError ReconstructImage(boost::shared_ptr<caffe::Net<float>> net, cv::Mat &im);
-	eWaifu2xError WriteMat(const cv::Mat &im, const boost::filesystem::path &output_file);
+	static eWaifu2xError WriteMat(const cv::Mat &im, const boost::filesystem::path &output_file, const boost::optional<int> &output_quality);
 
 	eWaifu2xError BeforeReconstructFloatMatProcess(const cv::Mat &in, cv::Mat &out, bool &convertBGRflag);
 	eWaifu2xError ReconstructFloatMat(const bool isReconstructNoise, const bool isReconstructScale, const waifu2xCancelFunc cancel_func, const cv::Mat &in, cv::Mat &out);
