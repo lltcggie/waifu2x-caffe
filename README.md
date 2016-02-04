@@ -7,7 +7,7 @@ waifu2x-caffe (for Windows)
 [Caffe](http://caffe.berkeleyvision.org/)を用いて書き直し、Windows向けにビルドしたソフトです。
 CPUで変換することも出来ますが、CUDA(あるいはcuDNN)を使うとCPUより高速に変換することが出来ます。
 
-GUI supports English and Japanese.
+GUI supports English and Japanese and Simplified Chinese.
 
 
  要求環境
