@@ -161,8 +161,8 @@ public:
 		const waifu2xCancelFunc cancel_func = nullptr);
 
 	// factor: 倍率
-	// source: (4チャンネルの場合は)BGRAな画素配列
-	// dest: (4チャンネルの場合は)処理したBGRAな画素配列
+	// source: (4チャンネルの場合は)RGBAな画素配列
+	// dest: (4チャンネルの場合は)処理したRGBAな画素配列
 	// in_stride: sourceのストライド(バイト単位)
 	// out_stride: destのストライド(バイト単位)
 	eWaifu2xError waifu2x(double factor, const void* source, void* dest, int width, int height, int in_channel, int in_stride, int out_channel, int out_stride);
