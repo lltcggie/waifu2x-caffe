@@ -34,7 +34,7 @@
 "MessageUseProcessorMode":"사용한 프로세서 : %s",
 "MessageProcessTime":"처리 시간: %02d:%02d:%02d.%03d",
 "MessageInitTime":"초기화 시간: %02d:%02d:%02d.%03d",
-"MessagecuDNNCheckTime":"cuDNN-확인 시간: %02d:%02d:%02d.%03d",
+"MessagecuDNNCheckTime":"cuDNN 확인 시간: %02d:%02d:%02d.%03d",
 "MessageTitleError":"오류",
 "MessageScaleRateCheckError":"확대 비율은 반드시 0.0 이상의 숫자를 입력하십시오.",
 "MessageCropSizeCheckError":"분할 크기는 반드시 0 이상이여야 합니다.",
