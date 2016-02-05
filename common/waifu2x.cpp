@@ -1673,37 +1673,22 @@ Waifu2x::eWaifu2xError Waifu2x::AfterReconstructFloatMatProcess(const bool isRec
 	return eWaifu2xError_OK;
 }
 
-Waifu2x::eWaifu2xError Waifu2x::waifu2x(const boost::filesystem::path &input_file, const boost::filesystem::path &output_file,
-	const waifu2xCancelFunc cancel_func)
+Waifu2x::eWaifu2xError Waifu2x::waifu2xConvetedMat(const bool isJpeg, const cv::Mat &inMat, cv::Mat &outMat, const waifu2xCancelFunc cancel_func)
 {
 	Waifu2x::eWaifu2xError ret;
 
-	if (!is_inited)
-		return eWaifu2xError_NotInitialized;
-
-	const boost::filesystem::path ip(input_file);
-	const boost::filesystem::path ipext(ip.extension());
-
-	const bool isJpeg = boost::iequals(ipext.string(), ".jpg") || boost::iequals(ipext.string(), ".jpeg");
 	const bool isReconstructNoise = mode == "noise" || mode == "noise_scale" || (mode == "auto_scale" && isJpeg);
 	const bool isReconstructScale = mode == "scale" || mode == "noise_scale" || mode == "auto_scale";
 
-	cv::Mat float_image;
-	ret = LoadMat(float_image, input_file);
-	if (ret != eWaifu2xError_OK)
-		return ret;
-
 	cv::Mat reconstruct_image;
-	ret = Reconstruct(isReconstructNoise, isReconstructScale, cancel_func, float_image, reconstruct_image);
+	ret = Reconstruct(isReconstructNoise, isReconstructScale, cancel_func, inMat, reconstruct_image);
 	if (ret != eWaifu2xError_OK)
 		return ret;
 
 	cv::Mat process_image;
-	ret = AfterReconstructFloatMatProcess(isReconstructScale, cancel_func, float_image, reconstruct_image, process_image);
+	ret = AfterReconstructFloatMatProcess(isReconstructScale, cancel_func, inMat, reconstruct_image, process_image);
 	if (ret != eWaifu2xError_OK)
 		return ret;
-
-	float_image.release();
 
 	const int cv_depth = DepthBitToCVDepth(output_depth);
 	const double max_val = GetValumeMaxFromCVDepth(cv_depth);
@@ -1736,11 +1721,115 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const boost::filesystem::path &input_fil
 		cv::merge(planes, write_iamge);
 	}
 
+	outMat = write_iamge;
+
+	return eWaifu2xError_OK;
+}
+
+Waifu2x::eWaifu2xError Waifu2x::waifu2x(const boost::filesystem::path &input_file, const boost::filesystem::path &output_file,
+	const waifu2xCancelFunc cancel_func)
+{
+	Waifu2x::eWaifu2xError ret;
+
+	if (!is_inited)
+		return eWaifu2xError_NotInitialized;
+
+	const boost::filesystem::path ip(input_file);
+	const boost::filesystem::path ipext(ip.extension());
+
+	const bool isJpeg = boost::iequals(ipext.string(), ".jpg") || boost::iequals(ipext.string(), ".jpeg");
+
+	cv::Mat float_image;
+	ret = LoadMat(float_image, input_file);
+	if (ret != eWaifu2xError_OK)
+		return ret;
+
+	cv::Mat write_iamge;
+	ret = waifu2xConvetedMat(isJpeg, float_image, write_iamge, cancel_func);
+	if (ret != eWaifu2xError_OK)
+		return ret;
+
 	ret = WriteMat(write_iamge, output_file, output_quality);
 	if (ret != eWaifu2xError_OK)
 		return ret;
 
-	write_iamge.release();
+	return eWaifu2xError_OK;
+}
+
+Waifu2x::eWaifu2xError Waifu2x::waifu2x(double factor, const void* source, void* dest, int width, int height, int in_channel, int in_stride, int out_channel, int out_stride)
+{
+	Waifu2x::eWaifu2xError ret;
+
+	if (!is_inited)
+		return eWaifu2xError_NotInitialized;
+
+	if (output_depth != 8) // 出力深度は8bitだけ
+		return eWaifu2xError_InvalidParameter;
+
+	cv::Mat float_image;
+
+	// Matへ変換
+	{
+		cv::Mat original_image(cv::Size(width, height), CV_MAKETYPE(CV_8U, in_channel), (void *)source, in_stride);
+
+		cv::Mat convert;
+		switch (original_image.depth())
+		{
+		case CV_8U:
+			original_image.convertTo(convert, CV_32F, 1.0 / GetValumeMaxFromCVDepth(CV_8U));
+			break;
+
+		case CV_16U:
+			original_image.convertTo(convert, CV_32F, 1.0 / GetValumeMaxFromCVDepth(CV_16U));
+			break;
+
+		case CV_32F:
+			convert = original_image; // 元から0.0～1.0のはずなので変換は必要ない
+			break;
+		}
+
+		original_image.release();
+
+		if (convert.channels() == 1)
+			cv::cvtColor(convert, convert, cv::COLOR_GRAY2BGR);
+		else if (convert.channels() == 4)
+		{
+			// アルファチャンネル付きだったら透明なピクセルのと不透明なピクセルの境界部分の色を広げる
+
+			std::vector<cv::Mat> planes;
+			cv::split(convert, planes);
+
+			cv::Mat alpha = planes[3];
+			planes.resize(3);
+			AlphaMakeBorder(planes, alpha, layer_num);
+
+			planes.push_back(alpha);
+			cv::merge(planes, convert);
+		}
+
+		float_image = convert;
+	}
+
+	const auto oldScale = scale_ratio;
+	scale_ratio = factor;
+
+	cv::Mat write_iamge;
+	ret = waifu2xConvetedMat(false, float_image, write_iamge);
+
+	scale_ratio = oldScale;
+
+	if (ret != eWaifu2xError_OK)
+		return ret;
+
+	float_image.release();
+
+	// 出力配列へ書き込み
+	{
+		const auto width = write_iamge.size().width;
+		const auto stride = write_iamge.step1();
+		for (int i = 0; i < write_iamge.size().height; i++)
+			memcpy((uint8_t *)dest + out_stride * i, write_iamge.data + stride * i, stride);
+	}
 
 	return eWaifu2xError_OK;
 }

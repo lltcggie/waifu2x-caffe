@@ -133,6 +133,9 @@ private:
 	eWaifu2xError Reconstruct(const bool isReconstructNoise, const bool isReconstructScale, const waifu2xCancelFunc cancel_func, const cv::Mat &in, cv::Mat &out);
 	eWaifu2xError AfterReconstructFloatMatProcess(const bool isReconstructScale, const waifu2xCancelFunc cancel_func, const cv::Mat &floatim, const cv::Mat &in, cv::Mat &out);
 
+	eWaifu2xError waifu2xConvetedMat(const bool isJpeg, const cv::Mat &inMat, cv::Mat &outMat,
+		const waifu2xCancelFunc cancel_func = nullptr);
+
 	static int DepthBitToCVDepth(const int depth_bit);
 	static double GetValumeMaxFromCVDepth(const int cv_depth);
 	static double GetEPS(const int cv_depth);
@@ -156,6 +159,13 @@ public:
 
 	eWaifu2xError waifu2x(const boost::filesystem::path &input_file, const boost::filesystem::path &output_file,
 		const waifu2xCancelFunc cancel_func = nullptr);
+
+	// factor: 倍率
+	// source: (4チャンネルの場合は)BGRAな画素配列
+	// dest: (4チャンネルの場合は)処理したBGRAな画素配列
+	// in_stride: sourceのストライド(バイト単位)
+	// out_stride: destのストライド(バイト単位)
+	eWaifu2xError waifu2x(double factor, const void* source, void* dest, int width, int height, int in_channel, int in_stride, int out_channel, int out_stride);
 
 	const std::string& used_process() const;
 

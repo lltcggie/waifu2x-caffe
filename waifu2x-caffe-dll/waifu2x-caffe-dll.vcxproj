@@ -41,15 +41,15 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\caffe-build\install\include;D:\caffe-build\install\include\boost-1_59;$(CUDA_PATH_V7_5)\include;C:\opencv249\build\include;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\caffe-build\install\lib;$(CUDA_PATH_V7_5)\lib\$(PlatformName);C:\opencv249\build\x64\vc12\lib;D:\program\boost_1_59_0\stage\x64\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\caffe-build\install\include;D:\caffe-build\install\include\boost-1_59;$(CUDA_PATH_V7_5)\include;C:\opencv310\build\include;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\caffe-build\install\lib;$(CUDA_PATH_V7_5)\lib\$(PlatformName);C:\opencv310\build\x64\vc12\lib;D:\program\boost_1_59_0\stage\x64\lib;$(LibraryPath)</LibraryPath>
     <TargetName>waifu2x-caffed</TargetName>
     <OutDir>$(SolutionDir)bin</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>D:\caffe-build\install\include;D:\caffe-build\install\include\boost-1_59;$(CUDA_PATH_V7_5)\include;C:\opencv249\build\include;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\caffe-build\install\lib;$(CUDA_PATH_V7_5)\lib\$(PlatformName);C:\opencv249\build\x64\vc12\lib;D:\program\boost_1_59_0\stage\x64\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\caffe-build\install\include;D:\caffe-build\install\include\boost-1_59;$(CUDA_PATH_V7_5)\include;C:\opencv310\build\include;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\caffe-build\install\lib;$(CUDA_PATH_V7_5)\lib\$(PlatformName);C:\opencv310\build\x64\vc12\lib;D:\program\boost_1_59_0\stage\x64\lib;$(LibraryPath)</LibraryPath>
     <TargetName>waifu2x-caffe</TargetName>
     <OutDir>$(SolutionDir)bin</OutDir>
   </PropertyGroup>
@@ -65,7 +65,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <DelayLoadDLLs>cudnn64_70.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>cudnn64_4.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
       <AdditionalDependencies>Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -85,16 +85,16 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <DelayLoadDLLs>cudnn64_70.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>cudnn64_4.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
       <AdditionalDependencies>Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\common\waifu2x.cpp" />
     <ClCompile Include="Source.cpp" />
-    <ClCompile Include="waifu2x.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="waifu2x.h" />
+    <ClInclude Include="..\common\waifu2x.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
