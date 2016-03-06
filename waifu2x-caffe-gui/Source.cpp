@@ -575,12 +575,20 @@ private:
 		{
 			const auto InitEndTime = std::chrono::system_clock::now();
 
+			const int maxFile = file_paths.size();
+			int num = 0;
+
+			ProgessFunc(maxFile, 0);
+
 			for (const auto &p : file_paths)
 			{
 				ret = w.waifu2x(p.first, p.second, [this]()
 				{
 					return cancelFlag;
 				});
+
+				num++;
+				ProgessFunc(maxFile, num);
 
 				if (ret != Waifu2x::eWaifu2xError_OK)
 				{
