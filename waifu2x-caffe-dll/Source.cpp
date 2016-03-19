@@ -10,7 +10,7 @@ void* Waifu2xInit(const char *mode, const int noise_level, const char *model_dir
 
 	char *argv[] = { "" };
 
-	if (obj->init(1, argv, mode, noise_level, 2.0, model_dir, process, boost::optional<int>(), output_depth, use_tta, crop_size, batch_size) != Waifu2x::eWaifu2xError_OK)
+	if (obj->init(1, argv, mode, noise_level, 2.0, boost::optional<int>(), boost::optional<int>(), model_dir, process, boost::optional<int>(), output_depth, use_tta, crop_size, batch_size) != Waifu2x::eWaifu2xError_OK)
 	{
 		delete obj;
 		return nullptr;

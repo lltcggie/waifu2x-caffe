@@ -100,6 +100,12 @@ int main(int argc, char** argv)
 	TCLAP::ValueArg<double> cmdScaleRatio("s", "scale_ratio",
 		"custom scale ratio", false, 2.0, "double", cmd);
 
+	TCLAP::ValueArg<double> cmdScaleWidth("w", "scale_width",
+		"custom scale width", false, 0, "double", cmd);
+
+	TCLAP::ValueArg<double> cmdScaleHeight("h", "scale_height",
+		"custom scale height", false, 0, "double", cmd);
+
 	TCLAP::ValueArg<std::string> cmdModelPath("", "model_dir",
 		"path to custom model directory (don't append last / )", false,
 		"models/anime_style_art_rgb", "string", cmd);
@@ -150,6 +156,29 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
+	boost::optional<double> ScaleRatio;
+	boost::optional<int> ScaleWidth;
+	boost::optional<int> ScaleHeight;
+
+	int valid_num = 0;
+	if (cmdScaleWidth.getValue() > 0)
+		valid_num++;
+	if (cmdScaleHeight.getValue() > 0)
+		valid_num++;
+
+	if (valid_num > 1)
+	{
+		printf("ƒGƒ‰[: scale_width‚Æscale_height‚Í“¯Žž‚ÉŽw’è‚Å‚«‚Ü‚¹‚ñ\n");
+		return 1;
+	}
+
+	if (cmdScaleWidth.getValue() > 0)
+		ScaleWidth = cmdScaleWidth.getValue();
+	else if (cmdScaleHeight.getValue() > 0)
+		ScaleHeight = cmdScaleHeight.getValue();
+	else
+		ScaleRatio = cmdScaleRatio.getValue();
+
 	const boost::filesystem::path input_path(boost::filesystem::absolute((cmdInputFile.getValue())));
 
 	std::string outputExt = cmdOutputFileExt.getValue();
@@ -175,7 +204,14 @@ int main(int argc, char** argv)
 			if (use_tta)
 				addstr += "(tta)";
 			if (mode.find("scale") != mode.npos)
-				addstr += "(x" + std::to_string(cmdScaleRatio.getValue()) + ")";
+			{
+				if(ScaleRatio)
+					addstr += "(x" + std::to_string(*ScaleRatio) + ")";
+				else if (ScaleWidth)
+					addstr += "(width " + std::to_string(*ScaleWidth) + ")";
+				else
+					addstr += "(height " + std::to_string(*ScaleHeight) + ")";
+			}
 
 			output_path = input_path.branch_path() / (input_path.stem().string() + addstr);
 		}
@@ -280,7 +316,7 @@ int main(int argc, char** argv)
 
 	Waifu2x::eWaifu2xError ret;
 	Waifu2x w;
-	ret = w.init(argc, argv, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), cmdModelPath.getValue(), cmdProcess.getValue(),
+	ret = w.init(argc, argv, cmdMode.getValue(), cmdNRLevel.getValue(), ScaleRatio, ScaleWidth, ScaleHeight, cmdModelPath.getValue(), cmdProcess.getValue(),
 		cmdOutputQuality.getValue() == -1 ? boost::optional<int>() : cmdOutputQuality.getValue(), cmdOutputDepth.getValue(), use_tta, cmdCropSizeFile.getValue(),
 		cmdBatchSizeFile.getValue());
 	switch (ret)
