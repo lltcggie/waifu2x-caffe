@@ -27,6 +27,8 @@
 #include "CDialog.h"
 #include "CControl.h"
 
+#pragma comment(lib, "winmm.lib")
+
 #undef ERROR
 
 #define WM_FAILD_CREATE_DIR (WM_APP + 5)
@@ -43,6 +45,8 @@ const TCHAR * const CropSizeListName = TEXT("crop_size_list.txt");
 const TCHAR * const SettingFileName = TEXT("setting.ini");
 const TCHAR * const LangDir = TEXT("lang");
 const TCHAR * const LangListFileName = TEXT("lang/LangList.txt");
+
+const UINT_PTR nIDEventTimeLeft = 1000;
 
 
 // http://stackoverflow.com/questions/10167382/boostfilesystem-get-relative-path
@@ -171,6 +175,9 @@ private:
 
 	LangStringList langStringList;
 	std::wstring LangName;
+
+	std::atomic<int64_t> TimeLeftThread;
+	std::atomic<DWORD> TimeLeftGetTimeThread;
 
 private:
 	template<typename T>
@@ -672,6 +679,11 @@ private:
 
 			ProgessFunc(maxFile, 0);
 
+			DWORD startTime = 0;
+
+			int64_t processeNum = 0;
+			int64_t count = 0;
+			const auto fileNum = file_paths.size();
 			for (const auto &p : file_paths)
 			{
 				ret = w.waifu2x(p.first, p.second, [this]()
@@ -682,12 +694,34 @@ private:
 				num++;
 				ProgessFunc(maxFile, num);
 
+				count++;
+
 				if (ret != Waifu2x::eWaifu2xError_OK)
 				{
 					SendMessage(dh, WM_ON_WAIFU2X_ERROR, (WPARAM)&ret, (LPARAM)&p);
 
 					if (ret == Waifu2x::eWaifu2xError_Cancel)
 						break;
+				}
+				else if(count >= 2)
+					processeNum++;
+
+				if(count == 1) // 最初の一回目は二回目以降より遅くなるはずなので残り時間の計算には使わない
+					startTime = timeGetTime();
+				if (count >= 2)
+				{
+					const auto nt = timeGetTime();
+					TimeLeftGetTimeThread = nt;
+
+					const auto ElapsedTimeMS = nt - startTime;
+
+					const double avgProcessTime = (double)ElapsedTimeMS / (double)processeNum / 1000.0;
+
+					const auto leftnum = fileNum - count;
+
+					const auto TimeLeft = avgProcessTime * leftnum;
+
+					TimeLeftThread = ceil(TimeLeft);
 				}
 			}
 
@@ -945,7 +979,8 @@ private:
 public:
 	DialogEvent() : dh(nullptr), mode("noise_scale"), noise_level(1), scale_ratio(2.0), scale_width(0), scale_height(0), model_dir(TEXT("models/anime_style_art_rgb")),
 		process("gpu"), outputExt(TEXT(".png")), inputFileExt(TEXT("png:jpg:jpeg:tif:tiff:bmp:tga")),
-		use_tta(false), output_quality(100), output_depth(8), crop_size(128), batch_size(1), isLastError(false), scaleType(eScaleTypeEnd)
+		use_tta(false), output_quality(100), output_depth(8), crop_size(128), batch_size(1), isLastError(false), scaleType(eScaleTypeEnd),
+		TimeLeftThread(-1), TimeLeftGetTimeThread(0)
 	{
 	}
 
@@ -995,6 +1030,9 @@ public:
 		cancelFlag = false;
 		isLastError = false;
 
+		TimeLeftThread = -1;
+		TimeLeftGetTimeThread = 0;
+
 		processThread = std::thread(std::bind(&DialogEvent::ProcessWaifu2x, this));
 
 		EnableWindow(GetDlgItem(dh, IDC_BUTTON_CANCEL), TRUE);
@@ -1003,10 +1041,14 @@ public:
 
 		SetWindowText(GetDlgItem(hWnd, IDC_EDIT_LOG), TEXT(""));
 		logMessage.clear();
+
+		SetTimer(dh, nIDEventTimeLeft, 1000, NULL);
 	}
 
 	void WaitThreadExit(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 	{
+		KillTimer(dh, nIDEventTimeLeft);
+
 		processThread.join();
 		EnableWindow(GetDlgItem(dh, IDC_BUTTON_CANCEL), FALSE);
 		EnableWindow(GetDlgItem(dh, IDC_BUTTON_EXEC), TRUE);
@@ -1022,6 +1064,41 @@ public:
 		}
 		else
 			MessageBox(dh, langStringList.GetString(L"MessageErrorHappen").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
+	}
+
+	void Timer(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
+	{
+		const int64_t TimeLeft = TimeLeftThread;
+		const DWORD TimeLeftGetTime = TimeLeftGetTimeThread;
+
+		if (TimeLeft == -1)
+		{
+			SetWindowText(GetDlgItem(dh, IDC_EDIT_LOG), langStringList.GetString(L"MessageTimeLeftUnkown").c_str());
+		}
+		else
+		{
+			if (TimeLeftGetTime > 0)
+			{
+				const DWORD tnow = timeGetTime();
+
+				const DWORD leftprevSec = (tnow - TimeLeftGetTime) / 1000;
+
+				int64_t TimeLeftNow = TimeLeft - (int64_t)leftprevSec;
+				if (TimeLeftNow < 0)
+					TimeLeftNow = 0;
+
+				const int64_t sec = TimeLeftNow % 60;
+				const int64_t min = (TimeLeftNow / 60) % 60;
+				const int64_t hour = (TimeLeftNow / 60 / 60) % 60;
+
+				TCHAR msg[1024];
+				_stprintf_s(msg, TEXT("%s: %02d:%02d:%02d"), langStringList.GetString(L"MessageTimeLeft").c_str(), hour, min, sec);
+				msg[_countof(msg) - 1] = TEXT('\0');
+
+				// 表示
+				SetWindowText(GetDlgItem(dh, IDC_EDIT_LOG), msg);
+			}
+		}
 	}
 
 	void OnDialogEnd(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
@@ -1923,6 +2000,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	cDialog.SetEventCallBack(SetClassFunc(DialogEvent::OnFaildCreateDir, &cDialogEvent), NULL, WM_FAILD_CREATE_DIR);
 	cDialog.SetEventCallBack(SetClassFunc(DialogEvent::OnWaifu2xError, &cDialogEvent), NULL, WM_ON_WAIFU2X_ERROR);
 	cDialog.SetEventCallBack(SetClassFunc(DialogEvent::WaitThreadExit, &cDialogEvent), NULL, WM_END_THREAD);
+	cDialog.SetEventCallBack(SetClassFunc(DialogEvent::Timer, &cDialogEvent), NULL, WM_TIMER);
 
 	// ダイアログを表示
 	cDialog.DoModal(hInstance, IDD_DIALOG);

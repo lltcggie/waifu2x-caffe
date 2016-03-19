@@ -69,5 +69,7 @@
 "MessagecuDNNDefautlError":"You can not use cuDNN",
 "MessageExtStr":"Input file extensions(%s)",
 "MessageAllFileFolder":"All files and folders(*.*)",
-"MessageTitleInputDialog":"Please select input file or folder"
+"MessageTitleInputDialog":"Please select input file or folder",
+"MessageTimeLeftUnkown":"Time Left: Unkown",
+"MessageTimeLeft":"Time Left"
 }
