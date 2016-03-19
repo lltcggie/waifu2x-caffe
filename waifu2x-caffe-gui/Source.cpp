@@ -619,7 +619,7 @@ private:
 			const boost::filesystem::path input_path(boost::filesystem::absolute(input));
 			const boost::filesystem::path output_path(boost::filesystem::absolute(output_str));
 
-			const auto filenameFunc = [&output_path](const tstring &path) -> std::wstring
+			const auto outilenameFunc = [&output_path](const tstring &path) -> std::wstring
 			{
 				const auto out = output_path / path;
 				return out.wstring();
@@ -691,8 +691,10 @@ private:
 				}
 			}
 			else
-				file_paths.emplace_back(input_path.wstring(), filenameFunc(input_path.filename().wstring()));
-
+			{
+				const auto out = output_path / (input_path.stem().wstring() + outputExt);
+				file_paths.emplace_back(input_path.wstring(), out.wstring());
+			}
 		};
 
 		{
