@@ -1089,7 +1089,7 @@ public:
 
 				const int64_t sec = TimeLeftNow % 60;
 				const int64_t min = (TimeLeftNow / 60) % 60;
-				const int64_t hour = (TimeLeftNow / 60 / 60) % 60;
+				const int64_t hour = (TimeLeftNow / 60 / 60);
 
 				TCHAR msg[1024];
 				_stprintf_s(msg, TEXT("%s: %02d:%02d:%02d"), langStringList.GetString(L"MessageTimeLeft").c_str(), hour, min, sec);
