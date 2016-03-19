@@ -119,6 +119,8 @@ private:
 	std::string mode;
 	int noise_level;
 	double scale_ratio;
+	int scale_width;
+	int scale_height;
 	tstring model_dir;
 	std::string process;
 	tstring outputExt;
@@ -146,6 +148,16 @@ private:
 	std::chrono::system_clock::duration cuDNNCheckTime;
 	std::chrono::system_clock::duration InitTime;
 	std::chrono::system_clock::duration ProcessTime;
+
+	enum eScaleType
+	{
+		eScaleTypeRatio,
+		eScaleTypeWidth,
+		eScaleTypeHeight,
+		eScaleTypeEnd,
+	};
+
+	eScaleType scaleType;
 
 	enum eModelType
 	{
@@ -207,15 +219,24 @@ private:
 			addstr += TEXT("(Level") + to_tstring(noise_level) + TEXT(")");
 		if (use_tta)
 			addstr += TEXT("(tta)");
+
 		if (mode.find("scale") != mode.npos)
-			addstr += TEXT("(x") + to_tstring(scale_ratio) + TEXT(")");
+		{
+			if (scaleType == eScaleTypeRatio)
+				addstr += TEXT("(x") + to_tstring(scale_ratio) + TEXT(")");
+			else if (scaleType == eScaleTypeWidth)
+				addstr += TEXT("(width ") + to_tstring(scale_width) + TEXT(")");
+			else
+				addstr += TEXT("(height ") + to_tstring(scale_height) + TEXT(")");
+		}
+
 		if (output_depth != 8)
 			addstr += TEXT("(") + boost::lexical_cast<tstring>(output_depth) + TEXT("bit)");
 
 		return addstr;
 	}
 
-	bool SyncMember(const bool NotSyncCropSize)
+	bool SyncMember(const bool NotSyncCropSize, const bool silent = false)
 	{
 		bool ret = true;
 
@@ -249,20 +270,74 @@ private:
 		else
 			noise_level = 2;
 
+		if (SendMessage(GetDlgItem(dh, IDC_RADIO_SCALE_RATIO), BM_GETCHECK, 0, 0))
+			scaleType = eScaleTypeRatio;
+		else if(SendMessage(GetDlgItem(dh, IDC_RADIO_SCALE_WIDTH), BM_GETCHECK, 0, 0))
+			scaleType = eScaleTypeWidth;
+		else
+			scaleType = eScaleTypeHeight;
+
 		{
 			TCHAR buf[AR_PATH_MAX] = TEXT("");
 			GetWindowText(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), buf, _countof(buf));
 			buf[_countof(buf) - 1] = TEXT('\0');
 
 			TCHAR *ptr = nullptr;
-			scale_ratio = _tcstod(buf, &ptr);
-			if (!ptr || *ptr != TEXT('\0') || scale_ratio <= 0.0)
+			const double d = _tcstod(buf, &ptr);
+			if (!ptr || *ptr != TEXT('\0') || d <= 0.0)
 			{
-				scale_ratio = 2.0;
-				ret = false;
+				if (scaleType == eScaleTypeRatio)
+				{
+					ret = false;
 
-				MessageBox(dh, langStringList.GetString(L"MessageScaleRateCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
+					if(!silent)
+						MessageBox(dh, langStringList.GetString(L"MessageScaleRateCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
+				}
 			}
+			else
+				scale_ratio = d;
+		}
+
+		{
+			TCHAR buf[AR_PATH_MAX] = TEXT("");
+			GetWindowText(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), buf, _countof(buf));
+			buf[_countof(buf) - 1] = TEXT('\0');
+
+			TCHAR *ptr = nullptr;
+			const long l = _tcstol(buf, &ptr, 10);
+			if (!ptr || *ptr != TEXT('\0') || l <= 0)
+			{
+				if (scaleType == eScaleTypeWidth)
+				{
+					ret = false;
+
+					if (!silent)
+						MessageBox(dh, langStringList.GetString(L"MessageScaleWidthCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
+				}
+			}
+			else
+				scale_width = l;
+		}
+
+		{
+			TCHAR buf[AR_PATH_MAX] = TEXT("");
+			GetWindowText(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), buf, _countof(buf));
+			buf[_countof(buf) - 1] = TEXT('\0');
+
+			TCHAR *ptr = nullptr;
+			const long l = _tcstol(buf, &ptr, 10);
+			if (!ptr || *ptr != TEXT('\0') || l <= 0)
+			{
+				if (scaleType == eScaleTypeHeight)
+				{
+					ret = false;
+
+					if (!silent)
+						MessageBox(dh, langStringList.GetString(L"MessageScaleHeightCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
+				}
+			}
+			else
+				scale_height = l;
 		}
 
 		if (SendMessage(GetDlgItem(dh, IDC_RADIO_MODEL_RGB), BM_GETCHECK, 0, 0))
@@ -612,7 +687,7 @@ private:
 
 	void ReplaceAddString() // ファイル名の自動設定部分を書き換える
 	{
-		SyncMember(true);
+		SyncMember(true, true);
 
 		const boost::filesystem::path output_path(output_str);
 		tstring stem;
@@ -710,11 +785,27 @@ private:
 
 		const boost::filesystem::path SettingFilePath(exeDir / SettingFileName);
 
-		tstring tScale;
+		tstring tScaleRatio;
+		tstring tScaleWidth;
+		tstring tScaleHeight;
 		tstring tmode;
+		tstring tScaleMode;
 		tstring tprcess;
 
-		tScale = to_tstring(scale_ratio);
+		if (scale_ratio > 0.0)
+			tScaleRatio = to_tstring(scale_ratio);
+		else
+			tScaleRatio = TEXT("");
+
+		if(scale_width > 0)
+			tScaleWidth = to_tstring(scale_width);
+		else
+			tScaleWidth = TEXT("");
+
+		if(scale_height > 0)
+			tScaleHeight = to_tstring(scale_height);
+		else
+			tScaleHeight = TEXT("");
 
 		if (mode == ("noise"))
 			tmode = TEXT("noise");
@@ -730,7 +821,20 @@ private:
 		else
 			tprcess = TEXT("cpu");
 
-		WritePrivateProfileString(TEXT("Setting"), TEXT("LastScale"), tScale.c_str(), getTString(SettingFilePath).c_str());
+		if (scaleType == eScaleTypeRatio)
+			tScaleMode = TEXT("Ratio");
+		else if (scaleType == eScaleTypeWidth)
+			tScaleMode = TEXT("Width");
+		else
+			tScaleMode = TEXT("Height");
+
+		WritePrivateProfileString(TEXT("Setting"), TEXT("LastScaleMode"), tScaleMode.c_str(), getTString(SettingFilePath).c_str());
+
+		WritePrivateProfileString(TEXT("Setting"), TEXT("LastScale"), tScaleRatio.c_str(), getTString(SettingFilePath).c_str());
+
+		WritePrivateProfileString(TEXT("Setting"), TEXT("LastScaleWidth"), tScaleWidth.c_str(), getTString(SettingFilePath).c_str());
+
+		WritePrivateProfileString(TEXT("Setting"), TEXT("LastScaleHeight"), tScaleHeight.c_str(), getTString(SettingFilePath).c_str());
 
 		WritePrivateProfileString(TEXT("Setting"), TEXT("LastOutputExt"), outputExt.c_str(), getTString(SettingFilePath).c_str());
 
@@ -822,9 +926,9 @@ private:
 	}
 
 public:
-	DialogEvent() : dh(nullptr), mode("noise_scale"), noise_level(1), scale_ratio(2.0), model_dir(TEXT("models/anime_style_art_rgb")),
+	DialogEvent() : dh(nullptr), mode("noise_scale"), noise_level(1), scale_ratio(2.0), scale_width(0), scale_height(0), model_dir(TEXT("models/anime_style_art_rgb")),
 		process("gpu"), outputExt(TEXT(".png")), inputFileExt(TEXT("png:jpg:jpeg:tif:tiff:bmp:tga")),
-		use_tta(false), output_quality(100), output_depth(8), crop_size(128), batch_size(1), isLastError(false)
+		use_tta(false), output_quality(100), output_depth(8), crop_size(128), batch_size(1), isLastError(false), scaleType(eScaleTypeEnd)
 	{
 	}
 
@@ -1007,6 +1111,9 @@ public:
 		SET_WINDOW_TEXT(IDC_RADIONOISE_LEVEL1);
 		SET_WINDOW_TEXT(IDC_RADIONOISE_LEVEL2);
 		SET_WINDOW_TEXT(IDC_STATIC_SCALE_RATE);
+		SET_WINDOW_TEXT(IDC_RADIO_SCALE_RATIO);
+		SET_WINDOW_TEXT(IDC_RADIO_SCALE_WIDTH);
+		SET_WINDOW_TEXT(IDC_RADIO_SCALE_HEIGHT);
 		SET_WINDOW_TEXT(IDC_STATIC_MODEL);
 		SET_WINDOW_TEXT(IDC_RADIO_MODEL_RGB);
 		SET_WINDOW_TEXT(IDC_RADIO_MODEL_PHOTO);
@@ -1223,7 +1330,11 @@ public:
 				SendMessage(hcrop, CB_SETCURSEL, defaultListIndex, 0);
 		}
 
-		tstring tScale;
+		tstring tScaleRatio;
+		tstring tScaleWidth;
+		tstring tScaleHeight;
+
+		tstring tScaleMode;
 		tstring tmode;
 		tstring tprcess;
 		{
@@ -1231,7 +1342,19 @@ public:
 
 			GetPrivateProfileString(TEXT("Setting"), TEXT("LastScale"), TEXT("2.00"), tmp, _countof(tmp), getTString(SettingFilePath).c_str());
 			tmp[_countof(tmp) - 1] = TEXT('\0');
-			tScale = tmp;
+			tScaleRatio = tmp;
+
+			GetPrivateProfileString(TEXT("Setting"), TEXT("LastScaleWidth"), TEXT("0"), tmp, _countof(tmp), getTString(SettingFilePath).c_str());
+			tmp[_countof(tmp) - 1] = TEXT('\0');
+			tScaleWidth = tmp;
+
+			GetPrivateProfileString(TEXT("Setting"), TEXT("LastScaleHeight"), TEXT("0"), tmp, _countof(tmp), getTString(SettingFilePath).c_str());
+			tmp[_countof(tmp) - 1] = TEXT('\0');
+			tScaleHeight = tmp;
+
+			GetPrivateProfileString(TEXT("Setting"), TEXT("LastScaleMode"), TEXT("Ratio"), tmp, _countof(tmp), getTString(SettingFilePath).c_str());
+			tmp[_countof(tmp) - 1] = TEXT('\0');
+			tScaleMode = tmp;
 
 			GetPrivateProfileString(TEXT("Setting"), TEXT("LastOutputExt"), TEXT("png"), tmp, _countof(tmp), getTString(SettingFilePath).c_str());
 			tmp[_countof(tmp) - 1] = TEXT('\0');
@@ -1261,9 +1384,17 @@ public:
 		}
 
 		TCHAR *ptr = nullptr;
-		const double tempScale = _tcstod(tScale.c_str(), &ptr);
+		const double tempScale = _tcstod(tScaleRatio.c_str(), &ptr);
 		if (!ptr || *ptr != TEXT('\0') || tempScale <= 0.0)
-			tScale = TEXT("2.00");
+			tScaleRatio = TEXT("2.00");
+
+		const long tempScaleWidth = _tcstol(tScaleWidth.c_str(), &ptr, 10);
+		if (!ptr || *ptr != TEXT('\0') || tempScaleWidth <= 0)
+			tScaleWidth = TEXT("");
+
+		const long tempScaleHeight = _tcstol(tScaleHeight.c_str(), &ptr, 10);
+		if (!ptr || *ptr != TEXT('\0') || tempScaleHeight <= 0)
+			tScaleHeight = TEXT("");
 
 		if (outputExt.length() > 0 && outputExt[0] != TEXT('.'))
 			outputExt = L"." + outputExt;
@@ -1306,6 +1437,37 @@ public:
 			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
 			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE), BM_SETCHECK, BST_UNCHECKED, 0);
 			SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+		}
+
+		if(tScaleMode == TEXT("Ratio"))
+		{
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_RATIO), BM_SETCHECK, BST_CHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_HEIGHT), BM_SETCHECK, BST_UNCHECKED, 0);
+
+			EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), TRUE);
+			EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
+			EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
+		}
+		else if (tScaleMode == TEXT("Width"))
+		{
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_RATIO), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH), BM_SETCHECK, BST_CHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_HEIGHT), BM_SETCHECK, BST_UNCHECKED, 0);
+
+			EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), FALSE);
+			EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), TRUE);
+			EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
+		}
+		else
+		{
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_RATIO), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_HEIGHT), BM_SETCHECK, BST_CHECKED, 0);
+
+			EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), FALSE);
+			EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
+			EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), TRUE);
 		}
 
 		if (noise_level == 1)
@@ -1354,7 +1516,10 @@ public:
 		else
 			SendMessage(GetDlgItem(hWnd, IDC_CHECK_TTA), BM_SETCHECK, BST_UNCHECKED, 0);
 
-		SetWindowText(GetDlgItem(hWnd, IDC_EDIT_SCALE_RATIO), tScale.c_str());
+		SetWindowText(GetDlgItem(hWnd, IDC_EDIT_SCALE_RATIO), tScaleRatio.c_str());
+		SetWindowText(GetDlgItem(hWnd, IDC_EDIT_SCALE_WIDTH), tScaleWidth.c_str());
+		SetWindowText(GetDlgItem(hWnd, IDC_EDIT_SCALE_HEIGHT), tScaleHeight.c_str());
+
 		SetWindowText(GetDlgItem(hWnd, IDC_EDIT_INPUT_EXT_LIST), inputFileExt.c_str());
 
 		EnableWindow(GetDlgItem(dh, IDC_BUTTON_CANCEL), FALSE);
@@ -1390,6 +1555,30 @@ public:
 
 	void UpdateAddString(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 	{
+		ReplaceAddString();
+	}
+
+	void ScaleRadio(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
+	{
+		if (SendMessage(GetDlgItem(dh, IDC_RADIO_SCALE_RATIO), BM_GETCHECK, 0, 0))
+		{
+			EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), TRUE);
+			EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
+			EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
+		}
+		else if (SendMessage(GetDlgItem(dh, IDC_RADIO_SCALE_WIDTH), BM_GETCHECK, 0, 0))
+		{
+			EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), FALSE);
+			EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), TRUE);
+			EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
+		}
+		else
+		{
+			EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), FALSE);
+			EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
+			EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), TRUE);
+		}
+
 		ReplaceAddString();
 	}
 
@@ -1445,8 +1634,7 @@ public:
 			return 0L;
 		}
 
-		if (!SyncMember(true))
-			return 0L;
+		SyncMember(true, true);
 
 		if (boost::filesystem::is_directory(path))
 		{
@@ -1659,7 +1847,9 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	// IDC_EDITのサブクラス
 	CControl cControlInput(IDC_EDIT_INPUT);
 	CControl cControlOutput(IDC_EDIT_OUTPUT);
-	CControl cControlScale(IDC_EDIT_SCALE_RATIO);
+	CControl cControlScaleRatio(IDC_EDIT_SCALE_RATIO);
+	CControl cControlScaleWidth(IDC_EDIT_SCALE_WIDTH);
+	CControl cControlScaleHeight(IDC_EDIT_SCALE_HEIGHT);
 
 	// 登録する関数がまとめられたクラス
 	// グローバル関数を使えばクラスにまとめる必要はないがこの方法が役立つこともあるはず
@@ -1670,12 +1860,17 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	// IDC_EDITにWM_DROPFILESが送られてきたときに実行する関数の登録
 	cControlInput.SetEventCallBack(SetClassCustomFunc(DialogEvent::DropInput, &cDialogEvent), NULL, WM_DROPFILES);
 	cControlOutput.SetEventCallBack(SetClassCustomFunc(DialogEvent::DropOutput, &cDialogEvent), NULL, WM_DROPFILES);
-	cControlScale.SetEventCallBack(SetClassCustomFunc(DialogEvent::TextInput, &cDialogEvent), NULL, WM_CHAR);
+
+	cControlScaleRatio.SetEventCallBack(SetClassCustomFunc(DialogEvent::TextInput, &cDialogEvent), NULL, WM_CHAR);
+	cControlScaleWidth.SetEventCallBack(SetClassCustomFunc(DialogEvent::TextInput, &cDialogEvent), NULL, WM_CHAR);
+	cControlScaleHeight.SetEventCallBack(SetClassCustomFunc(DialogEvent::TextInput, &cDialogEvent), NULL, WM_CHAR);
 
 	// コントロールのサブクラスを登録
 	cDialog.AddControl(&cControlInput);
 	cDialog.AddControl(&cControlOutput);
-	cDialog.AddControl(&cControlScale);
+	cDialog.AddControl(&cControlScaleRatio);
+	cDialog.AddControl(&cControlScaleWidth);
+	cDialog.AddControl(&cControlScaleHeight);
 
 	// 各コントロールのイベントで実行する関数の登録
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::Exec, &cDialogEvent), NULL, IDC_BUTTON_EXEC);
@@ -1695,6 +1890,10 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIO_MODEL_Y);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_CHECK_TTA);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_COMBO_OUTPUT_DEPTH);
+
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::ScaleRadio, &cDialogEvent), NULL, IDC_RADIO_SCALE_RATIO);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::ScaleRadio, &cDialogEvent), NULL, IDC_RADIO_SCALE_WIDTH);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::ScaleRadio, &cDialogEvent), NULL, IDC_RADIO_SCALE_HEIGHT);
 
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::CheckCUDNN, &cDialogEvent), NULL, IDC_BUTTON_CHECK_CUDNN);
 
