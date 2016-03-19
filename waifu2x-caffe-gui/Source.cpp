@@ -46,6 +46,8 @@ const TCHAR * const SettingFileName = TEXT("setting.ini");
 const TCHAR * const LangDir = TEXT("lang");
 const TCHAR * const LangListFileName = TEXT("lang/LangList.txt");
 
+const TCHAR * const MultiFileStr = TEXT("(Multi File)");
+
 const UINT_PTR nIDEventTimeLeft = 1000;
 
 
@@ -119,6 +121,7 @@ private:
 	std::vector<int> CropSizeList;
 
 	tstring input_str;
+	std::vector<tstring> input_str_multi;
 	tstring output_str;
 	std::string mode;
 	int noise_level;
@@ -247,6 +250,7 @@ private:
 	{
 		bool ret = true;
 
+		if(input_str_multi.size() == 0)
 		{
 			TCHAR buf[AR_PATH_MAX] = TEXT("");
 			GetWindowText(GetDlgItem(dh, IDC_EDIT_INPUT), buf, _countof(buf));
@@ -456,7 +460,7 @@ private:
 		HWND hcrop = GetDlgItem(dh, IDC_COMBO_CROP_SIZE);
 
 		int gcd = 1;
-		if (!boost::filesystem::is_directory(input_path))
+		if (boost::filesystem::exists(input_path) && !boost::filesystem::is_directory(input_path))
 		{
 			auto mat = Waifu2x::LoadMat(input_path.string());
 			if (mat.empty())
@@ -523,17 +527,176 @@ private:
 			SendMessage(hcrop, CB_SETCURSEL, defaultIndex, 0);
 	}
 
+	static boost::filesystem::path GetFileName(const boost::filesystem::path &input_path)
+	{
+		if (boost::filesystem::is_directory(input_path))
+			return input_path.stem();
+		else
+			return input_path.filename();
+	}
+
 	void ProcessWaifu2x()
 	{
-		const boost::filesystem::path input_path(boost::filesystem::absolute(input_str));
-
 		std::vector<std::pair<tstring, tstring>> file_paths;
-		if (boost::filesystem::is_directory(input_path)) // input_pathがフォルダならそのディレクトリ以下の画像ファイルを一括変換
+
+		const auto inputFunc = [this, &file_paths](const tstring &input)
 		{
-			boost::filesystem::path output_path(output_str);
+			const boost::filesystem::path input_path(boost::filesystem::absolute(input));
 
-			output_path = boost::filesystem::absolute(output_path);
+			if (boost::filesystem::is_directory(input_path)) // input_pathがフォルダならそのディレクトリ以下の画像ファイルを一括変換
+			{
+				boost::filesystem::path output_path(output_str);
 
+				output_path = boost::filesystem::absolute(output_path);
+
+				if (!boost::filesystem::exists(output_path))
+				{
+					if (!boost::filesystem::create_directory(output_path))
+					{
+						SendMessage(dh, WM_FAILD_CREATE_DIR, (WPARAM)&output_path, 0);
+						PostMessage(dh, WM_END_THREAD, 0, 0);
+						// printf("出力フォルダ「%s」の作成に失敗しました\n", output_path.string().c_str());
+						return;
+					}
+				}
+
+				// 変換する画像の入力、出力パスを取得
+				const auto func = [this, &input_path, &output_path, &file_paths](const boost::filesystem::path &path)
+				{
+					BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::recursive_directory_iterator(path),
+						boost::filesystem::recursive_directory_iterator()))
+					{
+						if (!boost::filesystem::is_directory(p))
+						{
+							tstring ext(getTString(p.extension()));
+#ifdef UNICODE
+							std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
+#else
+							std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+#endif
+
+							if (std::find(extList.begin(), extList.end(), ext) != extList.end())
+							{
+								const auto out_relative = relativePath(p, input_path);
+								const auto out_absolute = output_path / out_relative;
+
+								const auto out = getTString(out_absolute.branch_path() / out_absolute.stem()) + outputExt;
+
+								file_paths.emplace_back(getTString(p), out);
+							}
+						}
+					}
+
+					return true;
+				};
+
+				if (!func(input_path))
+					return;
+
+				for (const auto &p : file_paths)
+				{
+					const boost::filesystem::path out_path(p.second);
+					const boost::filesystem::path out_dir(out_path.parent_path());
+
+					if (!boost::filesystem::exists(out_dir))
+					{
+						if (!boost::filesystem::create_directories(out_dir))
+						{
+							SendMessage(dh, WM_FAILD_CREATE_DIR, (WPARAM)&out_dir, 0);
+							PostMessage(dh, WM_END_THREAD, 0, 0);
+							//printf("出力フォルダ「%s」の作成に失敗しました\n", out_absolute.string().c_str());
+							return;
+						}
+					}
+				}
+			}
+			else
+				file_paths.emplace_back(input_str, output_str);
+		};
+
+		const auto inputFuncMulti = [this, &file_paths](const tstring &input)
+		{
+			const boost::filesystem::path input_path(boost::filesystem::absolute(input));
+			const boost::filesystem::path output_path(boost::filesystem::absolute(output_str));
+
+			const auto filenameFunc = [&output_path](const tstring &path) -> std::wstring
+			{
+				const auto out = output_path / path;
+				return out.wstring();
+			};
+
+			if (boost::filesystem::is_directory(input_path)) // input_pathがフォルダならそのディレクトリ以下の画像ファイルを一括変換
+			{
+				if (!boost::filesystem::exists(output_path))
+				{
+					if (!boost::filesystem::create_directory(output_path))
+					{
+						SendMessage(dh, WM_FAILD_CREATE_DIR, (WPARAM)&output_path, 0);
+						PostMessage(dh, WM_END_THREAD, 0, 0);
+						// printf("出力フォルダ「%s」の作成に失敗しました\n", output_path.string().c_str());
+						return;
+					}
+				}
+
+				const auto inputDirName = input_path.filename();
+
+				// 変換する画像の入力、出力パスを取得
+				const auto func = [this, &input_path, &output_path, &file_paths, &inputDirName](const boost::filesystem::path &path)
+				{
+					BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::recursive_directory_iterator(path),
+						boost::filesystem::recursive_directory_iterator()))
+					{
+						if (!boost::filesystem::is_directory(p))
+						{
+							tstring ext(getTString(p.extension()));
+#ifdef UNICODE
+							std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
+#else
+							std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+#endif
+
+							if (std::find(extList.begin(), extList.end(), ext) != extList.end())
+							{
+								const auto out_relative = relativePath(p, input_path);
+								const auto out_absolute = output_path / inputDirName / out_relative;
+
+								const auto out = getTString(out_absolute.branch_path() / out_absolute.stem()) + outputExt;
+
+								file_paths.emplace_back(getTString(p), out);
+							}
+						}
+					}
+
+					return true;
+				};
+
+				if (!func(input_path))
+					return;
+
+				for (const auto &p : file_paths)
+				{
+					const boost::filesystem::path out_path(p.second);
+					const boost::filesystem::path out_dir(out_path.parent_path());
+
+					if (!boost::filesystem::exists(out_dir))
+					{
+						if (!boost::filesystem::create_directories(out_dir))
+						{
+							SendMessage(dh, WM_FAILD_CREATE_DIR, (WPARAM)&out_dir, 0);
+							PostMessage(dh, WM_END_THREAD, 0, 0);
+							//printf("出力フォルダ「%s」の作成に失敗しました\n", out_absolute.string().c_str());
+							return;
+						}
+					}
+				}
+			}
+			else
+				file_paths.emplace_back(input_path.wstring(), filenameFunc(input_path.filename().wstring()));
+
+		};
+
+		{
+			const boost::filesystem::path output_path(boost::filesystem::absolute(output_str));
 			if (!boost::filesystem::exists(output_path))
 			{
 				if (!boost::filesystem::create_directory(output_path))
@@ -544,59 +707,15 @@ private:
 					return;
 				}
 			}
-
-			// 変換する画像の入力、出力パスを取得
-			const auto func = [this, &input_path, &output_path, &file_paths](const boost::filesystem::path &path)
-			{
-				BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::recursive_directory_iterator(path),
-					boost::filesystem::recursive_directory_iterator()))
-				{
-					if (!boost::filesystem::is_directory(p))
-					{
-						tstring ext(getTString(p.extension()));
-#ifdef UNICODE
-						std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
-#else
-						std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-#endif
-
-						if (std::find(extList.begin(), extList.end(), ext) != extList.end())
-						{
-							const auto out_relative = relativePath(p, input_path);
-							const auto out_absolute = output_path / out_relative;
-
-							const auto out = getTString(out_absolute.branch_path() / out_absolute.stem()) + outputExt;
-
-							file_paths.emplace_back(getTString(p), out);
-						}
-					}
-				}
-
-				return true;
-			};
-
-			if (!func(input_path))
-				return;
-
-			for (const auto &p : file_paths)
-			{
-				const boost::filesystem::path out_path(p.second);
-				const boost::filesystem::path out_dir(out_path.parent_path());
-
-				if (!boost::filesystem::exists(out_dir))
-				{
-					if (!boost::filesystem::create_directories(out_dir))
-					{
-						SendMessage(dh, WM_FAILD_CREATE_DIR, (WPARAM)&out_dir, 0);
-						PostMessage(dh, WM_END_THREAD, 0, 0);
-						//printf("出力フォルダ「%s」の作成に失敗しました\n", out_absolute.string().c_str());
-						return;
-					}
-				}
-			}
 		}
+
+		if(input_str_multi.size() == 0)
+			inputFunc(input_str);
 		else
-			file_paths.emplace_back(input_str, output_str);
+		{
+			for (const auto &path : input_str_multi)
+				inputFuncMulti(path);
+		}
 
 		bool isFirst = true;
 
@@ -715,7 +834,7 @@ private:
 		const boost::filesystem::path output_path(output_str);
 		tstring stem;
 
-		if (!boost::filesystem::is_directory(input_str))
+		if (input_str_multi.size() == 0 && !boost::filesystem::is_directory(input_str))
 			stem = getTString(output_path.stem());
 		else
 			stem = getTString(output_path.filename());
@@ -733,7 +852,7 @@ private:
 				autoSetAddName = addstr;
 
 				boost::filesystem::path new_out_path;
-				if (!boost::filesystem::is_directory(input_str))
+				if (input_str_multi.size() == 0 && !boost::filesystem::is_directory(input_str))
 					new_out_path = output_path.branch_path() / (new_name + outputExt);
 				else
 					new_out_path = output_path.branch_path() / (new_name);
@@ -964,7 +1083,7 @@ public:
 		if (!SyncMember(false))
 			return;
 
-		if (input_str.length() == 0)
+		if (input_str.length() == 0 && input_str_multi.size() == 0)
 		{
 			MessageBox(dh, langStringList.GetString(L"MessageInputPathCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
 			return;
@@ -1700,6 +1819,8 @@ public:
 			return 0L;
 		}
 
+		input_str_multi.clear();
+
 		SyncMember(true, true);
 
 		if (boost::filesystem::is_directory(path))
@@ -1739,6 +1860,52 @@ public:
 		return 0L;
 	}
 
+	LRESULT OnSetInputFilePath(const HDROP drop, const UINT FileNum)
+	{
+		HWND hWnd = GetDlgItem(dh, IDC_EDIT_INPUT);
+
+		input_str_multi.clear();
+
+		for (UINT i = 0; i < FileNum; i++)
+		{
+			TCHAR szTmp[AR_PATH_MAX];
+
+			if (DragQueryFile(drop, i, szTmp, _countof(szTmp)) < _countof(szTmp))
+			{
+				szTmp[_countof(szTmp) - 1] = TEXT('\0');
+
+				input_str_multi.push_back(szTmp);
+			}
+		}
+
+		SyncMember(true, true);
+
+		if (input_str_multi.size() > 0)
+		{
+			SetWindowText(hWnd, MultiFileStr);
+
+			HWND ho = GetDlgItem(dh, IDC_EDIT_OUTPUT);
+
+			const tstring addstr(AddName());
+			autoSetAddName = AddName();
+
+			boost::filesystem::path baseDir(input_str_multi[0]);
+
+			tstring filename;
+			if (boost::filesystem::is_directory(baseDir))
+				filename = baseDir.filename().wstring();
+			else
+				filename = baseDir.stem().wstring();
+
+			const auto str = getTString(baseDir.branch_path() / (filename + TEXT(" multi") + addstr));
+			SetWindowText(ho, str.c_str());
+		}
+
+		SetCropSizeList(TEXT(""));
+
+		return 0L;
+	}
+
 	// ここで渡されるhWndはIDC_EDITのHWND(コントロールのイベントだから)
 	LRESULT DropInput(HWND hWnd, WPARAM wParam, LPARAM lParam, WNDPROC OrgSubWnd, LPVOID lpData)
 	{
@@ -1746,13 +1913,15 @@ public:
 
 		// ドロップされたファイル数を取得
 		UINT FileNum = DragQueryFile((HDROP)wParam, 0xFFFFFFFF, szTmp, _countof(szTmp));
-		if (FileNum >= 1)
+		if (FileNum == 1)
 		{
 			DragQueryFile((HDROP)wParam, 0, szTmp, _countof(szTmp));
 			szTmp[_countof(szTmp) - 1] = TEXT('\0');
 
 			OnSetInputFilePath(szTmp);
 		}
+		else if (FileNum > 1)
+			OnSetInputFilePath((HDROP)wParam, FileNum);
 
 		return 0L;
 	}
