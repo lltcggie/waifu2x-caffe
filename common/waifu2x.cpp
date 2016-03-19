@@ -1138,7 +1138,9 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 	return eWaifu2xError_OK;
 }
 
-Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &Mode, const int NoiseLevel, const double ScaleRatio, const boost::filesystem::path &ModelDir, const std::string &Process,
+Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &Mode, const int NoiseLevel,
+	const boost::optional<double> ScaleRatio, const boost::optional<int> ScaleWidth, const boost::optional<int> ScaleHeight,
+	const boost::filesystem::path &ModelDir, const std::string &Process,
 	const boost::optional<int> OutputQuality, const int OutputDepth, const bool UseTTA, const int CropSize, const int BatchSize)
 {
 	Waifu2x::eWaifu2xError ret;
@@ -1146,7 +1148,22 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 	if (is_inited)
 		return eWaifu2xError_OK;
 
-	if (ScaleRatio <= 0.0)
+	int valid_num = 0;
+	if (ScaleRatio)
+		valid_num++;
+	if (ScaleWidth)
+		valid_num++;
+	if (ScaleHeight)
+		valid_num++;
+
+	if (valid_num != 1)
+		return eWaifu2xError_InvalidParameter;
+
+	if (ScaleRatio && *ScaleRatio <= 0.0)
+		return eWaifu2xError_InvalidParameter;
+	if (ScaleWidth && *ScaleWidth <= 0)
+		return eWaifu2xError_InvalidParameter;
+	if (ScaleHeight && *ScaleHeight <= 0.)
 		return eWaifu2xError_InvalidParameter;
 
 	try
@@ -1154,6 +1171,8 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 		mode = Mode;
 		noise_level = NoiseLevel;
 		scale_ratio = ScaleRatio;
+		scale_width = ScaleWidth;
+		scale_height = ScaleHeight;
 		model_dir = ModelDir;
 		process = Process;
 		use_tta = UseTTA;
@@ -1481,7 +1500,8 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructFloatMat(const bool isReconstructNois
 	if (cancel_func && cancel_func())
 		return eWaifu2xError_Cancel;
 
-	const int scale2 = ceil(log2(scale_ratio));
+	const double ratio = CalcScaleRatio(image_size);
+	const int scale2 = ceil(log2(ratio));
 
 	if (isReconstructScale)
 	{
@@ -1630,8 +1650,9 @@ Waifu2x::eWaifu2xError Waifu2x::AfterReconstructFloatMatProcess(const bool isRec
 		cv::merge(planes, process_image);
 	}
 
-	const int scale2 = ceil(log2(scale_ratio));
-	const double shrinkRatio = scale_ratio / std::pow(2.0, (double)scale2);
+	const double ratio = CalcScaleRatio(image_size);
+	const int scale2 = ceil(log2(ratio));
+	const double shrinkRatio = ratio / std::pow(2.0, (double)scale2);
 
 	cv::Mat alpha;
 	if (floatim.channels() == 4)
@@ -1726,6 +1747,17 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2xConvetedMat(const bool isJpeg, const cv::
 	return eWaifu2xError_OK;
 }
 
+double Waifu2x::CalcScaleRatio(const cv::Size_<int> &size) const
+{
+	if (scale_ratio)
+		return *scale_ratio;
+
+	if (scale_width)
+		return (double)*scale_width / (double)size.width;
+
+	return (double)*scale_height / (double)size.height;
+}
+
 Waifu2x::eWaifu2xError Waifu2x::waifu2x(const boost::filesystem::path &input_file, const boost::filesystem::path &output_file,
 	const waifu2xCancelFunc cancel_func)
 {
@@ -1810,13 +1842,20 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(double factor, const void* source, void*
 		float_image = convert;
 	}
 
-	const auto oldScale = scale_ratio;
+	const auto oldScaleRatio = scale_ratio;
+	const auto oldScaleWidth = scale_width;
+	const auto oldScaleHeight = scale_height;
+
 	scale_ratio = factor;
+	scale_width.reset();
+	scale_height.reset();
 
 	cv::Mat write_iamge;
 	ret = waifu2xConvetedMat(false, float_image, write_iamge);
 
-	scale_ratio = oldScale;
+	scale_ratio = oldScaleRatio;
+	scale_width = oldScaleWidth;
+	scale_height = oldScaleHeight;
 
 	if (ret != eWaifu2xError_OK)
 		return ret;

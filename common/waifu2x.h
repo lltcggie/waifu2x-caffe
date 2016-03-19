@@ -88,7 +88,9 @@ private:
 
 	std::string mode;
 	int noise_level;
-	double scale_ratio;
+	boost::optional<double> scale_ratio;
+	boost::optional<int> scale_width;
+	boost::optional<int> scale_height;
 	boost::filesystem::path model_dir;
 	std::string process;
 
@@ -136,6 +138,8 @@ private:
 	eWaifu2xError waifu2xConvetedMat(const bool isJpeg, const cv::Mat &inMat, cv::Mat &outMat,
 		const waifu2xCancelFunc cancel_func = nullptr);
 
+	double CalcScaleRatio(const cv::Size_<int> &size) const;
+
 	static int DepthBitToCVDepth(const int depth_bit);
 	static double GetValumeMaxFromCVDepth(const int cv_depth);
 	static double GetEPS(const int cv_depth);
@@ -152,8 +156,11 @@ public:
 
 	// mode: noise or scale or noise_scale or auto_scale
 	// process: cpu or gpu or cudnn
-	eWaifu2xError init(int argc, char** argv, const std::string &mode, const int noise_level, const double scale_ratio, const boost::filesystem::path &model_dir, const std::string &process,
-		const boost::optional<int> output_quality = boost::optional<int>(), const int output_depth = 8, const bool use_tta = false, const int crop_size = 128, const int batch_size = 1);
+	eWaifu2xError init(int argc, char** argv, const std::string &mode, const int noise_level,
+		const boost::optional<double> scale_ratio, const boost::optional<int> scale_width, const boost::optional<int> scale_height,
+		const boost::filesystem::path &model_dir, const std::string &process,
+		const boost::optional<int> output_quality = boost::optional<int>(), const int output_depth = 8, const bool use_tta = false,
+		const int crop_size = 128, const int batch_size = 1);
 
 	void destroy();
 

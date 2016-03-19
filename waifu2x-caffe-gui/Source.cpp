@@ -642,8 +642,25 @@ private:
 
 		Waifu2x::eWaifu2xError ret;
 
+		boost::optional<double> ScaleRatio;
+		boost::optional<int> ScaleWidth;
+		boost::optional<int> ScaleHeight;
+
+		switch (scaleType)
+		{
+		case eScaleTypeRatio:
+			ScaleRatio = scale_ratio;
+			break;
+		case eScaleTypeWidth:
+			ScaleWidth = scale_width;
+			break;
+		default:
+			ScaleHeight = scale_height;
+			break;
+		}
+
 		Waifu2x w;
-		ret = w.init(__argc, __argv, mode, noise_level, scale_ratio, model_dir, process, output_quality, output_depth, use_tta, crop_size, batch_size);
+		ret = w.init(__argc, __argv, mode, noise_level, ScaleRatio, ScaleWidth, ScaleHeight, model_dir, process, output_quality, output_depth, use_tta, crop_size, batch_size);
 		if(ret != Waifu2x::eWaifu2xError_OK)
 			SendMessage(dh, WM_ON_WAIFU2X_ERROR, (WPARAM)&ret, 0);
 		else
