@@ -1682,7 +1682,7 @@ Waifu2x::eWaifu2xError Waifu2x::AfterReconstructFloatMatProcess(const bool isRec
 	{
 		const cv::Size_<int> ns(image_size.width * shrinkRatio, image_size.height * shrinkRatio);
 		if (image_size.width != ns.width || image_size.height != ns.height)
-			cv::resize(process_image, process_image, ns, 0.0, 0.0, cv::INTER_LINEAR);
+			cv::resize(process_image, process_image, ns, 0.0, 0.0, cv::INTER_CUBIC);
 	}
 
 	// 値を0～1にクリッピング
