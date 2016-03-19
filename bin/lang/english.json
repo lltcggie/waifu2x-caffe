@@ -16,7 +16,7 @@
 "IDC_STATIC_JPEG_NOISE_LEVEL":"JPEG denoise level",
 "IDC_RADIONOISE_LEVEL1":"Level 1",
 "IDC_RADIONOISE_LEVEL2":"Level 2",
-"IDC_STATIC_SCALE_RATE":"Magnification rate",
+"IDC_STATIC_SCALE_RATE":"Magnification size",
 "IDC_RADIO_SCALE_RATIO":"Set rate",
 "IDC_RADIO_SCALE_WIDTH":"Set trans width",
 "IDC_RADIO_SCALE_HEIGHT":"Set trans height",

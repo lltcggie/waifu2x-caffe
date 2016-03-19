@@ -1,4 +1,4 @@
-{
+﻿{
 "IDC_STATIC_IO_SETTING":"입력/출력 설정",
 "IDC_STATIC_INPUT_PATH":"입력 경로\r\n(파일 또는 폴더)",
 "IDC_BUTTON_INPUT_REF":"찾기",
@@ -16,7 +16,7 @@
 "IDC_STATIC_JPEG_NOISE_LEVEL":"JPEG 노이즈 제거 수준",
 "IDC_RADIONOISE_LEVEL1":"1단계",
 "IDC_RADIONOISE_LEVEL2":"2단계",
-"IDC_STATIC_SCALE_RATE":"확대할 비율",
+"IDC_STATIC_SCALE_RATE":"확대할 크기",
 "IDC_STATIC_MODEL":"모델",
 "IDC_RADIO_MODEL_RGB":"2D 일러스트 (RGB 모델)",
 "IDC_RADIO_MODEL_PHOTO":"사진, 애니메이션",
