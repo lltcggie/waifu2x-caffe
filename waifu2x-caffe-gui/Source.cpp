@@ -1860,23 +1860,9 @@ public:
 		return 0L;
 	}
 
-	LRESULT OnSetInputFilePath(const HDROP drop, const UINT FileNum)
+	LRESULT OnSetInputFilePath()
 	{
 		HWND hWnd = GetDlgItem(dh, IDC_EDIT_INPUT);
-
-		input_str_multi.clear();
-
-		for (UINT i = 0; i < FileNum; i++)
-		{
-			TCHAR szTmp[AR_PATH_MAX];
-
-			if (DragQueryFile(drop, i, szTmp, _countof(szTmp)) < _countof(szTmp))
-			{
-				szTmp[_countof(szTmp) - 1] = TEXT('\0');
-
-				input_str_multi.push_back(szTmp);
-			}
-		}
 
 		SyncMember(true, true);
 
@@ -1921,7 +1907,23 @@ public:
 			OnSetInputFilePath(szTmp);
 		}
 		else if (FileNum > 1)
-			OnSetInputFilePath((HDROP)wParam, FileNum);
+		{
+			input_str_multi.clear();
+
+			for (UINT i = 0; i < FileNum; i++)
+			{
+				TCHAR szTmp[AR_PATH_MAX];
+
+				if (DragQueryFile((HDROP)wParam, i, szTmp, _countof(szTmp)) < _countof(szTmp))
+				{
+					szTmp[_countof(szTmp) - 1] = TEXT('\0');
+
+					input_str_multi.push_back(szTmp);
+				}
+			}
+
+			OnSetInputFilePath();
+		}
 
 		return 0L;
 	}
@@ -1955,7 +1957,9 @@ public:
 
 		OPENFILENAME ofn;
 		TCHAR szPath[AR_PATH_MAX] = TEXT("");
-		TCHAR szFile[AR_PATH_MAX] = TEXT("");
+
+		static std::vector<TCHAR> szFile(AR_PATH_MAX * 100);
+		memset(szFile.data(), 0, szFile.size() * sizeof(TCHAR));
 
 		GetCurrentDirectory(_countof(szPath), szPath);
 		szPath[_countof(szPath) - 1] = TEXT('\0');
@@ -2001,8 +2005,8 @@ public:
 
 		ofn.lStructSize = sizeof(ofn);
 		ofn.hwndOwner = NULL;
-		ofn.lpstrFile = szFile;
-		ofn.nMaxFile = _countof(szFile);
+		ofn.lpstrFile = szFile.data();
+		ofn.nMaxFile = szFile.size();
 		ofn.lpstrFilter = szFilter;
 		ofn.nFilterIndex = 1;
 		ofn.lpstrTitle = langStringList.GetString(L"MessageTitleInputDialog").c_str();
@@ -2017,11 +2021,48 @@ public:
 		ofn.lCustData = 0;
 		ofn.lpfnHook = OFNHookProcIn;
 		ofn.lpTemplateName = 0;
-		ofn.Flags = OFN_HIDEREADONLY | OFN_NOVALIDATE | OFN_PATHMUSTEXIST | OFN_READONLY | OFN_EXPLORER | OFN_ENABLEHOOK;
+		ofn.Flags = OFN_HIDEREADONLY | OFN_NOVALIDATE | OFN_PATHMUSTEXIST | OFN_READONLY | OFN_EXPLORER | OFN_ENABLEHOOK | OFN_FILEMUSTEXIST | OFN_ALLOWMULTISELECT;
 		if (GetOpenFileName(&ofn))
 		{
-			szFile[_countof(szFile) - 1] = TEXT('\0');
-			OnSetInputFilePath(szFile);
+			szFile[szFile.size() - 1] = TEXT('\0');
+
+			input_str_multi.clear();
+
+			const TCHAR * ptr = szFile.data();
+
+			const auto firstLen = _tcslen(ptr);
+			if (firstLen > 0)
+			{
+				if(firstLen + 2 >= szFile.size() || ptr[firstLen + 1] == '\0')
+					OnSetInputFilePath(ptr);
+				else
+				{
+					const TCHAR * end = ptr + szFile.size();
+
+					const tstring baseDir(ptr);
+					ptr += firstLen + 1;
+
+					while (ptr < end)
+					{
+						if (*ptr == TEXT('\0'))
+							break;
+
+						TCHAR szTmp[AR_PATH_MAX];
+
+						const auto len = _tcslen(ptr);
+						memcpy(szTmp, ptr, len * sizeof(TCHAR));
+						szTmp[len] = TEXT('\0');
+
+						const auto str = baseDir + TEXT('\\') + szTmp;
+
+						input_str_multi.push_back(str);
+
+						ptr += len + 1;
+					}
+
+					OnSetInputFilePath();
+				}
+			}
 		}
 	}
 
