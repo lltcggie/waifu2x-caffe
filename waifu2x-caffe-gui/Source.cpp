@@ -456,35 +456,7 @@ private:
 		HWND hcrop = GetDlgItem(dh, IDC_COMBO_CROP_SIZE);
 
 		int gcd = 1;
-		if (boost::filesystem::is_directory(input_path))
-		{
-			BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::recursive_directory_iterator(input_path),
-				boost::filesystem::recursive_directory_iterator()))
-			{
-
-				if (!boost::filesystem::is_directory(p))
-				{
-					tstring ext(getTString(p.extension()));
-#ifdef UNICODE
-					std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
-#else
-					std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-#endif
-					if (std::find(extList.begin(), extList.end(), ext) != extList.end())
-					{
-						auto mat = Waifu2x::LoadMat(p.string());
-						if (mat.empty())
-							continue;
-
-						auto size = mat.size();
-						mat.release();
-
-						gcd = boost::math::gcd(size.width, size.height);
-					}
-				}
-			}
-		}
-		else
+		if (!boost::filesystem::is_directory(input_path))
 		{
 			auto mat = Waifu2x::LoadMat(input_path.string());
 			if (mat.empty())
