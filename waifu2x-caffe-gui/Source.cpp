@@ -950,6 +950,7 @@ private:
 		tstring tmode;
 		tstring tScaleMode;
 		tstring tprcess;
+		tstring tAutoMode;
 
 		if (scale_ratio > 0.0)
 			tScaleRatio = to_tstring(scale_ratio);
@@ -987,6 +988,13 @@ private:
 		else
 			tScaleMode = TEXT("Height");
 
+		if (SendMessage(GetDlgItem(dh, IDC_RADIO_AUTO_START_ONE), BM_GETCHECK, 0, 0))
+			tAutoMode = TEXT("one");
+		else if (SendMessage(GetDlgItem(dh, IDC_RADIO_AUTO_START_MULTI), BM_GETCHECK, 0, 0))
+			tAutoMode = TEXT("multi");
+		else
+			tAutoMode = TEXT("none");
+
 		WritePrivateProfileString(TEXT("Setting"), TEXT("LastScaleMode"), tScaleMode.c_str(), getTString(SettingFilePath).c_str());
 
 		WritePrivateProfileString(TEXT("Setting"), TEXT("LastScale"), tScaleRatio.c_str(), getTString(SettingFilePath).c_str());
@@ -1014,6 +1022,8 @@ private:
 		WritePrivateProfileString(TEXT("Setting"), TEXT("LastOutputDepth"), boost::lexical_cast<tstring>(output_depth).c_str(), getTString(SettingFilePath).c_str());
 
 		WritePrivateProfileString(TEXT("Setting"), TEXT("LastLanguage"), LangName.c_str(), getTString(SettingFilePath).c_str());
+
+		WritePrivateProfileString(TEXT("Setting"), TEXT("LastAutoMode"), tAutoMode.c_str(), getTString(SettingFilePath).c_str());
 	}
 
 	// 出力パスを選択する
@@ -1330,6 +1340,10 @@ public:
 		SET_WINDOW_TEXT(IDC_BUTTON_CANCEL);
 		SET_WINDOW_TEXT(IDC_BUTTON_EXEC);
 		SET_WINDOW_TEXT(IDC_STATIC_LANG_UI);
+		SET_WINDOW_TEXT(IDC_STATIC_AUTO_START);
+		SET_WINDOW_TEXT(IDC_RADIO_AUTO_START_NONE);
+		SET_WINDOW_TEXT(IDC_RADIO_AUTO_START_ONE);
+		SET_WINDOW_TEXT(IDC_RADIO_AUTO_START_MULTI);
 
 #undef SET_WINDOW_TEXT
 	}
@@ -1539,6 +1553,7 @@ public:
 		tstring tScaleMode;
 		tstring tmode;
 		tstring tprcess;
+		tstring tAutoMode;
 		{
 			TCHAR tmp[1000];
 
@@ -1583,6 +1598,10 @@ public:
 			output_quality = GetPrivateProfileInt(TEXT("Setting"), TEXT("LastOutputQuality"), output_quality, getTString(SettingFilePath).c_str());
 
 			output_depth = GetPrivateProfileInt(TEXT("Setting"), TEXT("LastOutputDepth"), output_depth, getTString(SettingFilePath).c_str());
+
+			GetPrivateProfileString(TEXT("Setting"), TEXT("LastAutoMode"), TEXT("none"), tmp, _countof(tmp), getTString(SettingFilePath).c_str());
+			tmp[_countof(tmp) - 1] = TEXT('\0');
+			tAutoMode = tmp;
 		}
 
 		TCHAR *ptr = nullptr;
@@ -1745,6 +1764,25 @@ public:
 
 		SetWindowText(GetDlgItem(hWnd, IDC_EDIT_OUT_QUALITY), boost::lexical_cast<tstring>(output_quality).c_str());
 		SetWindowText(GetDlgItem(hWnd, IDC_COMBO_OUTPUT_DEPTH), boost::lexical_cast<tstring>(output_depth).c_str());
+
+		if (tAutoMode == TEXT("one"))
+		{
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_START_NONE), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_START_MULTI), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_START_ONE), BM_SETCHECK, BST_CHECKED, 0);
+		}
+		else if (tAutoMode == TEXT("multi"))
+		{
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_START_NONE), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_START_MULTI), BM_SETCHECK, BST_CHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_START_ONE), BM_SETCHECK, BST_UNCHECKED, 0);
+		}
+		else
+		{
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_START_NONE), BM_SETCHECK, BST_CHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_START_MULTI), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_START_ONE), BM_SETCHECK, BST_UNCHECKED, 0);
+		}
 
 		SetDepthAndQuality();
 	}
@@ -1942,6 +1980,12 @@ public:
 			OnSetInputFilePath();
 		}
 
+		if (SendMessage(GetDlgItem(dh, IDC_RADIO_AUTO_START_ONE), BM_GETCHECK, 0, 0) ||
+			(SendMessage(GetDlgItem(dh, IDC_RADIO_AUTO_START_MULTI), BM_GETCHECK, 0, 0) && input_str_multi.size() > 0))
+		{
+			::PostMessage(GetDlgItem(dh, IDC_BUTTON_EXEC), BM_CLICK, 0, 0);
+		}
+
 		return 0L;
 	}
 
@@ -2078,6 +2122,12 @@ public:
 					}
 
 					OnSetInputFilePath();
+				}
+
+				if (SendMessage(GetDlgItem(dh, IDC_RADIO_AUTO_START_ONE), BM_GETCHECK, 0, 0) ||
+					(SendMessage(GetDlgItem(dh, IDC_RADIO_AUTO_START_MULTI), BM_GETCHECK, 0, 0) && input_str_multi.size() > 0))
+				{
+					::PostMessage(GetDlgItem(dh, IDC_BUTTON_EXEC), BM_CLICK, 0, 0);
 				}
 			}
 		}
