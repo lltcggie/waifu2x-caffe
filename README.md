@@ -1,4 +1,4 @@
-waifu2x-caffe (for Windows)
+﻿waifu2x-caffe (for Windows)
 ----------
 
  制作者 : lltcggie
@@ -258,7 +258,7 @@ waifu2x-caffe-cui.exe -i mywaifu.png -m noise_scale --scale_ratio 1.6 --noise_le
      画像の縦横比を維持したまま、指定された横幅になるように拡大します(単位はピクセル)。
      scale_heightと同時に指定することは出来ません。
 
-###-w <整数>, --scale_height <整数>
+###-h <整数>, --scale_height <整数>
      画像の縦横比を維持したまま、指定された縦幅になるように拡大します(単位はピクセル)。
      scale_widthと同時に指定することは出来ません。
 
@@ -309,7 +309,7 @@ waifu2x-caffe-cui.exe -i mywaifu.png -m noise_scale --scale_ratio 1.6 --noise_le
 ###--version
      バージョン情報を出力し、終了します。
 
-###-h,  --help
+###-?,  --help
      使い方を表示し、終了します。
      手軽に使い方を確認したい時などにどうぞ。
 
