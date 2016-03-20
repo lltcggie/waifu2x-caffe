@@ -182,6 +182,8 @@ private:
 	std::atomic<int64_t> TimeLeftThread;
 	std::atomic<DWORD> TimeLeftGetTimeThread;
 
+	bool isCommandLineStart;
+
 private:
 	template<typename T>
 	static tstring to_tstring(T val)
@@ -1098,7 +1100,7 @@ public:
 	DialogEvent() : dh(nullptr), mode("noise_scale"), noise_level(1), scale_ratio(2.0), scale_width(0), scale_height(0), model_dir(TEXT("models/anime_style_art_rgb")),
 		process("gpu"), outputExt(TEXT(".png")), inputFileExt(TEXT("png:jpg:jpeg:tif:tiff:bmp:tga")),
 		use_tta(false), output_quality(100), output_depth(8), crop_size(128), batch_size(1), isLastError(false), scaleType(eScaleTypeEnd),
-		TimeLeftThread(-1), TimeLeftGetTimeThread(0)
+		TimeLeftThread(-1), TimeLeftGetTimeThread(0), isCommandLineStart(false)
 	{
 	}
 
@@ -1172,16 +1174,27 @@ public:
 		EnableWindow(GetDlgItem(dh, IDC_BUTTON_EXEC), TRUE);
 		EnableWindow(GetDlgItem(dh, IDC_BUTTON_CHECK_CUDNN), TRUE);
 
+		bool endFlag = false;
 		if (!isLastError)
 		{
 			if (!cancelFlag)
+			{
 				AddLogMessage(langStringList.GetString(L"MessageTransSuccess").c_str());
+
+				if (isCommandLineStart) // コマンドライン引数を渡されて起動して、変換に成功したら終了する
+					endFlag = true;
+			}
 
 			Waifu2xTime();
 			MessageBeep(MB_ICONASTERISK);
 		}
 		else
 			MessageBox(dh, langStringList.GetString(L"MessageErrorHappen").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
+
+		isCommandLineStart = false;
+
+		if (endFlag)
+			SendMessage(dh, WM_CLOSE, 0, 0);
 	}
 
 	void Timer(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
@@ -1785,6 +1798,36 @@ public:
 		}
 
 		SetDepthAndQuality();
+
+
+		int nArgs = 0;
+		LPTSTR *lplpszArgs;
+		lplpszArgs = CommandLineToArgvW(GetCommandLine(), &nArgs);
+		if (lplpszArgs)
+		{
+			input_str_multi.clear();
+
+			if (nArgs > 1)
+			{
+				if (nArgs == 2)
+				{
+					OnSetInputFilePath(lplpszArgs[1]);
+				}
+				else if (nArgs > 2)
+				{
+					for (int i = 1; i < nArgs; i++)
+						input_str_multi.push_back(lplpszArgs[i]);
+
+					OnSetInputFilePath();
+				}
+
+				isCommandLineStart = true;
+
+				::PostMessage(GetDlgItem(dh, IDC_BUTTON_EXEC), BM_CLICK, 0, 0);
+			}
+
+			LocalFree(lplpszArgs);
+		}
 	}
 
 	void Cancel(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
