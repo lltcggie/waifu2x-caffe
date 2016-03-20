@@ -1997,36 +1997,40 @@ public:
 
 		// ドロップされたファイル数を取得
 		UINT FileNum = DragQueryFile((HDROP)wParam, 0xFFFFFFFF, szTmp, _countof(szTmp));
-		if (FileNum == 1)
+		if (FileNum > 0)
 		{
-			DragQueryFile((HDROP)wParam, 0, szTmp, _countof(szTmp));
-			szTmp[_countof(szTmp) - 1] = TEXT('\0');
-
-			OnSetInputFilePath(szTmp);
-		}
-		else if (FileNum > 1)
-		{
-			input_str_multi.clear();
-
-			for (UINT i = 0; i < FileNum; i++)
+			if (FileNum == 1)
 			{
-				TCHAR szTmp[AR_PATH_MAX];
+				DragQueryFile((HDROP)wParam, 0, szTmp, _countof(szTmp));
+				szTmp[_countof(szTmp) - 1] = TEXT('\0');
 
-				if (DragQueryFile((HDROP)wParam, i, szTmp, _countof(szTmp)) < _countof(szTmp))
+				OnSetInputFilePath(szTmp);
+			}
+			else if (FileNum > 1)
+			{
+				input_str.clear();
+				input_str_multi.clear();
+
+				for (UINT i = 0; i < FileNum; i++)
 				{
-					szTmp[_countof(szTmp) - 1] = TEXT('\0');
+					TCHAR szTmp[AR_PATH_MAX];
 
-					input_str_multi.push_back(szTmp);
+					if (DragQueryFile((HDROP)wParam, i, szTmp, _countof(szTmp)) < _countof(szTmp))
+					{
+						szTmp[_countof(szTmp) - 1] = TEXT('\0');
+
+						input_str_multi.push_back(szTmp);
+					}
 				}
+
+				OnSetInputFilePath();
 			}
 
-			OnSetInputFilePath();
-		}
-
-		if (SendMessage(GetDlgItem(dh, IDC_RADIO_AUTO_START_ONE), BM_GETCHECK, 0, 0) ||
-			(SendMessage(GetDlgItem(dh, IDC_RADIO_AUTO_START_MULTI), BM_GETCHECK, 0, 0) && input_str_multi.size() > 0))
-		{
-			::PostMessage(GetDlgItem(dh, IDC_BUTTON_EXEC), BM_CLICK, 0, 0);
+			if (SendMessage(GetDlgItem(dh, IDC_RADIO_AUTO_START_ONE), BM_GETCHECK, 0, 0) ||
+				(SendMessage(GetDlgItem(dh, IDC_RADIO_AUTO_START_MULTI), BM_GETCHECK, 0, 0) && (input_str_multi.size() > 0 || boost::filesystem::is_directory(szTmp))))
+			{
+				::PostMessage(GetDlgItem(dh, IDC_BUTTON_EXEC), BM_CLICK, 0, 0);
+			}
 		}
 
 		return 0L;
@@ -2130,13 +2134,14 @@ public:
 		{
 			szFile[szFile.size() - 1] = TEXT('\0');
 
-			input_str_multi.clear();
-
 			const TCHAR * ptr = szFile.data();
 
 			const auto firstLen = _tcslen(ptr);
 			if (firstLen > 0)
 			{
+				input_str.clear();
+				input_str_multi.clear();
+
 				if(firstLen + 2 >= szFile.size() || ptr[firstLen + 1] == '\0')
 					OnSetInputFilePath(ptr);
 				else
@@ -2167,8 +2172,8 @@ public:
 					OnSetInputFilePath();
 				}
 
-				if (SendMessage(GetDlgItem(dh, IDC_RADIO_AUTO_START_ONE), BM_GETCHECK, 0, 0) ||
-					(SendMessage(GetDlgItem(dh, IDC_RADIO_AUTO_START_MULTI), BM_GETCHECK, 0, 0) && input_str_multi.size() > 0))
+				if ( SendMessage(GetDlgItem(dh, IDC_RADIO_AUTO_START_ONE), BM_GETCHECK, 0, 0) ||
+					(SendMessage(GetDlgItem(dh, IDC_RADIO_AUTO_START_MULTI), BM_GETCHECK, 0, 0) && (input_str_multi.size() > 0 || boost::filesystem::is_directory(szFile.data()))))
 				{
 					::PostMessage(GetDlgItem(dh, IDC_BUTTON_EXEC), BM_CLICK, 0, 0);
 				}
