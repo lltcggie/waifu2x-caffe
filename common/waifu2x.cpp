@@ -1652,7 +1652,7 @@ Waifu2x::eWaifu2xError Waifu2x::AfterReconstructFloatMatProcess(const bool isRec
 
 	const double ratio = CalcScaleRatio(image_size);
 	const int scale2 = ceil(log2(ratio));
-	const double shrinkRatio = ratio / std::pow(2.0, (double)scale2);
+	const double shrinkRatio = ratio >= 1.0 ? ratio / std::pow(2.0, (double)scale2) : ratio;
 
 	cv::Mat alpha;
 	if (floatim.channels() == 4)
