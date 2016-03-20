@@ -611,7 +611,23 @@ private:
 				}
 			}
 			else
+			{
+				const boost::filesystem::path output_path(output_str);
+				const auto outDir = output_path.branch_path();
+
+				if (!boost::filesystem::exists(outDir))
+				{
+					if (!boost::filesystem::create_directories(outDir))
+					{
+						SendMessage(dh, WM_FAILD_CREATE_DIR, (WPARAM)&outDir, 0);
+						PostMessage(dh, WM_END_THREAD, 0, 0);
+						// printf("出力フォルダ「%s」の作成に失敗しました\n", output_path.string().c_str());
+						return;
+					}
+				}
+
 				file_paths.emplace_back(input_str, output_str);
+			}
 		};
 
 		const auto inputFuncMulti = [this, &file_paths](const tstring &input)
@@ -692,24 +708,23 @@ private:
 			}
 			else
 			{
+				const auto &outDir = output_path;
+
+				if (!boost::filesystem::exists(outDir))
+				{
+					if (!boost::filesystem::create_directories(outDir))
+					{
+						SendMessage(dh, WM_FAILD_CREATE_DIR, (WPARAM)&outDir, 0);
+						PostMessage(dh, WM_END_THREAD, 0, 0);
+						// printf("出力フォルダ「%s」の作成に失敗しました\n", output_path.string().c_str());
+						return;
+					}
+				}
+
 				const auto out = output_path / (input_path.stem().wstring() + outputExt);
 				file_paths.emplace_back(input_path.wstring(), out.wstring());
 			}
 		};
-
-		{
-			const boost::filesystem::path output_path(boost::filesystem::absolute(output_str));
-			if (!boost::filesystem::exists(output_path))
-			{
-				if (!boost::filesystem::create_directory(output_path))
-				{
-					SendMessage(dh, WM_FAILD_CREATE_DIR, (WPARAM)&output_path, 0);
-					PostMessage(dh, WM_END_THREAD, 0, 0);
-					// printf("出力フォルダ「%s」の作成に失敗しました\n", output_path.string().c_str());
-					return;
-				}
-			}
-		}
 
 		if(input_str_multi.size() == 0)
 			inputFunc(input_str);
