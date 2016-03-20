@@ -57,7 +57,7 @@
 "MessageFailedConstructModelError":"모델을 구성하는 데 실패했습니다.",
 "MessageFailedOpenInputFileError":"파일 %s를 여는 데 실패했습니다.",
 "MessageFailedOpenOutputFileError":"%s로 변환하는 데 실패했습니다.",
-"MessageFailedProcessCaffeError":"보정 처리에 실패했했습니다.",
+"MessageFailedProcessCaffeError":"보정 처리에 실패했습니다.",
 "MessageTitleResult":"결과",
 "MessagecuDNNOK":"cuDNN을 사용할 수 있습니다.",
 "MessagecuDNNNotFindError":"cuDNN을 사용할 수 없습니다. \r\n「%s」 파일이 없습니다.",
