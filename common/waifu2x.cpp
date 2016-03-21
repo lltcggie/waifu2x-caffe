@@ -715,7 +715,7 @@ Waifu2x::eWaifu2xError Waifu2x::ConstractNet(boost::shared_ptr<caffe::Net<float>
 		net = boost::shared_ptr<caffe::Net<float>>(new caffe::Net<float>(param_model));
 		net->CopyTrainedLayersFrom(param_caffemodel);
 
-		input_plane = param_model.input_dim(1);
+		input_plane = param_model.layer(0).input_param().shape().Get(0).dim(1);
 	}
 	else
 	{
@@ -732,14 +732,13 @@ Waifu2x::eWaifu2xError Waifu2x::SetParameter(caffe::NetParameter &param, const s
 	param.mutable_state()->set_phase(caffe::TEST);
 
 	{
-		auto mid = param.mutable_input_dim();
-
-		if (mid->size() != 4)
+		auto input_layer = param.mutable_layer(0);
+		auto mid = input_layer->mutable_input_param()->mutable_shape();
+		if (mid->size() > 0 && mid->Mutable(0)->dim_size() != 4)
 			return eWaifu2xError_FailedParseModelFile;
-
-		*mid->Mutable(0) = batch_size;
-		*mid->Mutable(2) = input_block_size;
-		*mid->Mutable(3) = input_block_size;
+		mid->Mutable(0)->set_dim(0, batch_size);
+		mid->Mutable(0)->set_dim(2, input_block_size);
+		mid->Mutable(0)->set_dim(3, input_block_size);
 	}
 
 	for (int i = 0; i < param.layer_size(); i++)

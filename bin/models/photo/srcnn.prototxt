@@ -1,9 +1,10 @@
 name: "srcnn"
-input: "input"
-input_dim: 1
-input_dim: 3
-input_dim: 142
-input_dim: 142
+layer {
+  name: "input"
+  type: "Input"
+  top: "input"
+  input_param { shape: { dim: 1 dim: 3 dim: 142 dim: 142 } }
+}
 layer {
   name: "conv1_layer"
   type: "Convolution"
