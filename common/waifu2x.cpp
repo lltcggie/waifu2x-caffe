@@ -734,7 +734,7 @@ Waifu2x::eWaifu2xError Waifu2x::SetParameter(caffe::NetParameter &param, const s
 	{
 		auto input_layer = param.mutable_layer(0);
 		auto mid = input_layer->mutable_input_param()->mutable_shape();
-		if (mid->size() > 0 && mid->Mutable(0)->dim_size() != 4)
+		if (mid->size() != 1 || mid->Mutable(0)->dim_size() != 4)
 			return eWaifu2xError_FailedParseModelFile;
 		mid->Mutable(0)->set_dim(0, batch_size);
 		mid->Mutable(0)->set_dim(2, input_block_size);
