@@ -783,7 +783,7 @@ Waifu2x::eWaifu2xError Waifu2x::LoadParameterFromJson(boost::shared_ptr<caffe::N
 
 	try
 	{
-		boost::iostreams::stream<boost::iostreams::file_descriptor_source> is(param_path, std::ios_base::in | std::ios_base::binary);
+		boost::iostreams::stream<boost::iostreams::file_descriptor_source> is;
 
 		try
 		{
