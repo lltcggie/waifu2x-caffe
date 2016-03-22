@@ -44,6 +44,7 @@
 "MessagecuDNNCheckTime":"cuDNN-check time: %02d:%02d:%02d.%03d",
 "MessageTitleError":"Error",
 "MessageScaleRateCheckError":"Enlargement factor must be greater than 0.0 and positive",
+"MessageScaleWidthCheckError":"Size must be an integer greater than 0.",
 "MessageCropSizeCheckError":"Split size must be greater than 0",
 "MessageInputPathCheckError":"Please specify the input path",
 "MessageOutputPathCheckError":"Please specify the output path",
