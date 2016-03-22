@@ -370,4 +370,5 @@ ex.
 オリジナルの[waifu2x](https://github.com/nagadomi/waifu2x)、及びモデルの制作を行い、MITライセンスの下で公開して下さった [ultraist](https://twitter.com/ultraistter)さん、
 オリジナルのwaifu2xを元に[waifu2x-converter](https://github.com/WL-Amigo/waifu2x-converter-cpp)を作成して下さった [アミーゴ](https://twitter.com/WL_Amigo)さん(READMEやLICENSE.txtの書き方、OpenCVの使い方等かなり参考にさせていただきました)
 に、感謝します。
-また、メッセージを英訳してくださった @paul70078 さん、メッセージを中国語(簡体字)に翻訳してくださった @yoonhakcher さん、中国語(簡体字)訳のプルリクエストを下さった @mzhboy さん、メッセージを韓国語に翻訳してくださった @kenin0726 さん、韓国語訳の改善を提案してくださった @aruhirin さんに感謝します。
+また、メッセージを英訳してくださった @paul70078 さん、メッセージを中国語(簡体字)に翻訳してくださった @yoonhakcher さん、中国語(簡体字)訳のプルリクエストを下さった @mzhboy さん、
+メッセージを韓国語に翻訳してくださった @kenin0726 さん、韓国語訳の改善を提案してくださった @aruhirin さん、メッセージを中国語(繁体字)に翻訳してくださった @lizardon1995 さん、@yoonhakcher さんに感謝します。
