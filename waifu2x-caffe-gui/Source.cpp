@@ -135,7 +135,7 @@ private:
 
 	bool use_tta;
 
-	int output_quality;
+	boost::optional<int> output_quality;
 	int output_depth;
 
 	int crop_size;
@@ -389,14 +389,16 @@ private:
 				if (elm.imageQualityStart && elm.imageQualityEnd)
 				{
 					TCHAR *ptr = nullptr;
-					output_quality = _tcstol(buf, &ptr, 10);
-					if (!ptr || *ptr != '\0' || output_quality < *elm.imageQualityStart || output_quality > *elm.imageQualityEnd)
+					const auto num = _tcstol(buf, &ptr, 10);
+					if (!ptr || *ptr != '\0' || num < *elm.imageQualityStart || num > *elm.imageQualityEnd)
 					{
-						output_quality = 8;
+						output_quality.reset();
 						ret = false;
 
 						MessageBox(dh, langStringList.GetString(L"MessageOutputQualityCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
 					}
+					else
+						output_quality = num;
 				}
 
 				const int curDepth = SendMessage(GetDlgItem(dh, IDC_COMBO_OUTPUT_DEPTH), CB_GETCURSEL, 0, 0);
@@ -1019,7 +1021,10 @@ private:
 
 		WritePrivateProfileString(TEXT("Setting"), TEXT("LastUseTTA"), to_tstring(use_tta ? 1 : 0).c_str(), getTString(SettingFilePath).c_str());
 
-		WritePrivateProfileString(TEXT("Setting"), TEXT("LastOutputQuality"), boost::lexical_cast<tstring>(output_quality).c_str(), getTString(SettingFilePath).c_str());
+		if(output_quality)
+			WritePrivateProfileString(TEXT("Setting"), TEXT("LastOutputQuality"), boost::lexical_cast<tstring>(*output_quality).c_str(), getTString(SettingFilePath).c_str());
+		else
+			WritePrivateProfileString(TEXT("Setting"), TEXT("LastOutputQuality"), TEXT(""), getTString(SettingFilePath).c_str());
 
 		WritePrivateProfileString(TEXT("Setting"), TEXT("LastOutputDepth"), boost::lexical_cast<tstring>(output_depth).c_str(), getTString(SettingFilePath).c_str());
 
@@ -1099,7 +1104,7 @@ private:
 public:
 	DialogEvent() : dh(nullptr), mode("noise_scale"), noise_level(1), scale_ratio(2.0), scale_width(0), scale_height(0), model_dir(TEXT("models/anime_style_art_rgb")),
 		process("gpu"), outputExt(TEXT(".png")), inputFileExt(TEXT("png:jpg:jpeg:tif:tiff:bmp:tga")),
-		use_tta(false), output_quality(100), output_depth(8), crop_size(128), batch_size(1), isLastError(false), scaleType(eScaleTypeEnd),
+		use_tta(false), output_depth(8), crop_size(128), batch_size(1), isLastError(false), scaleType(eScaleTypeEnd),
 		TimeLeftThread(-1), TimeLeftGetTimeThread(0), isCommandLineStart(false)
 	{
 	}
@@ -1361,7 +1366,7 @@ public:
 #undef SET_WINDOW_TEXT
 	}
 
-	void SetDepthAndQuality()
+	void SetDepthAndQuality(const bool SetDefaultQuality = true)
 	{
 		HWND hout = GetDlgItem(dh, IDC_COMBO_OUT_EXT);
 		HWND houtDepth = GetDlgItem(dh, IDC_COMBO_OUTPUT_DEPTH);
@@ -1415,13 +1420,16 @@ public:
 			SetWindowTextW(GetDlgItem(dh, IDC_EDIT_OUT_QUALITY), L"");
 
 			SetWindowTextW(GetDlgItem(dh, IDC_STATIC_OUTPUT_QUALITY), langStringList.GetString(L"IDC_STATIC_OUTPUT_QUALITY").c_str());
+
+			output_quality.reset();
 		}
 		else
 		{
 			HWND hedit = GetDlgItem(dh, IDC_EDIT_OUT_QUALITY);
 
 			EnableWindow(hedit, TRUE);
-			SetWindowText(hedit, boost::lexical_cast<tstring>(*elm.imageQualityDefault).c_str());
+			if(SetDefaultQuality)
+				SetWindowText(hedit, boost::lexical_cast<tstring>(*elm.imageQualityDefault).c_str());
 
 			const auto wstr = langStringList.GetString(L"IDC_STATIC_OUTPUT_QUALITY");
 
@@ -1516,8 +1524,6 @@ public:
 			}
 
 			SendMessage(houtext, CB_SETCURSEL, 0, 0);
-
-			SetDepthAndQuality();
 		}
 
 		const boost::filesystem::path CropSizeListPath(exeDir / CropSizeListName);
@@ -1608,7 +1614,10 @@ public:
 
 			use_tta = GetPrivateProfileInt(TEXT("Setting"), TEXT("LastUseTTA"), 0, getTString(SettingFilePath).c_str()) != 0;
 
-			output_quality = GetPrivateProfileInt(TEXT("Setting"), TEXT("LastOutputQuality"), output_quality, getTString(SettingFilePath).c_str());
+			output_quality.reset();
+			const int num = GetPrivateProfileInt(TEXT("Setting"), TEXT("LastOutputQuality"), -100, getTString(SettingFilePath).c_str());
+			if (num != -100)
+				output_quality = num;
 
 			output_depth = GetPrivateProfileInt(TEXT("Setting"), TEXT("LastOutputDepth"), output_depth, getTString(SettingFilePath).c_str());
 
@@ -1775,7 +1784,9 @@ public:
 
 		SendMessage(houtext, CB_SETCURSEL, defaultIndex, 0);
 
-		SetWindowText(GetDlgItem(hWnd, IDC_EDIT_OUT_QUALITY), boost::lexical_cast<tstring>(output_quality).c_str());
+		if(output_quality)
+			SetWindowText(GetDlgItem(hWnd, IDC_EDIT_OUT_QUALITY), boost::lexical_cast<tstring>(*output_quality).c_str());
+
 		SetWindowText(GetDlgItem(hWnd, IDC_COMBO_OUTPUT_DEPTH), boost::lexical_cast<tstring>(output_depth).c_str());
 
 		if (tAutoMode == TEXT("one"))
@@ -1797,7 +1808,7 @@ public:
 			SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_START_ONE), BM_SETCHECK, BST_UNCHECKED, 0);
 		}
 
-		SetDepthAndQuality();
+		SetDepthAndQuality(false);
 
 
 		int nArgs = 0;
