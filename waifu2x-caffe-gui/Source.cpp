@@ -1050,20 +1050,20 @@ private:
 			HWND hParent = GetParent(hdlg);
 
 			HWND   hwndScreen;
-			RECT   rectScreen;
+			RECT   rectScreen = { 0 };
 			hwndScreen = GetDesktopWindow();
 			GetWindowRect(hwndScreen, &rectScreen);
 
-			RECT rDialog;
+			RECT rDialog = { 0 };
 			GetWindowRect(hParent, &rDialog);
 			const int Width = rDialog.right - rDialog.left + 1;
 			const int Height = rDialog.bottom - rDialog.top + 1;
 
 			int DialogPosX;
 			int DialogPosY;
-			DialogPosX = ((rectScreen.right - rectScreen.left) / 2 - Width / 2);
-			DialogPosY = ((rectScreen.bottom - rectScreen.top) / 2 - Height / 2);
-			SetWindowPos(hParent, NULL, DialogPosX, DialogPosY, Width, Height, SWP_NOZORDER);
+			DialogPosX = ((rectScreen.right - rectScreen.left + 1) / 2 - Width / 2);
+			DialogPosY = ((rectScreen.bottom - rectScreen.top + 1) / 2 - Height / 2);
+			SetWindowPos(hParent, NULL, DialogPosX, DialogPosY, Width, Height, SWP_NOSIZE | SWP_NOZORDER);
 		}
 		break;
 
@@ -2074,7 +2074,7 @@ public:
 	{
 		SyncMember(false);
 
-		OPENFILENAME ofn;
+		OPENFILENAME ofn = { 0 };
 		TCHAR szPath[AR_PATH_MAX] = TEXT("");
 
 		static std::vector<TCHAR> szFile(AR_PATH_MAX * 100);
