@@ -1056,14 +1056,14 @@ private:
 
 			RECT rDialog;
 			GetWindowRect(hParent, &rDialog);
-			const int Width = rDialog.left = rDialog.right;
-			const int Height = rDialog.bottom - rDialog.top;
+			const int Width = rDialog.right - rDialog.left + 1;
+			const int Height = rDialog.bottom - rDialog.top + 1;
 
 			int DialogPosX;
 			int DialogPosY;
 			DialogPosX = ((rectScreen.right - rectScreen.left) / 2 - Width / 2);
 			DialogPosY = ((rectScreen.bottom - rectScreen.top) / 2 - Height / 2);
-			SetWindowPos(hParent, NULL, DialogPosX, DialogPosY, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+			SetWindowPos(hParent, NULL, DialogPosX, DialogPosY, Width, Height, SWP_NOZORDER);
 		}
 		break;
 
@@ -2123,7 +2123,7 @@ public:
 		tfp++;
 
 		ofn.lStructSize = sizeof(ofn);
-		ofn.hwndOwner = NULL;
+		ofn.hwndOwner = dh;
 		ofn.lpstrFile = szFile.data();
 		ofn.nMaxFile = szFile.size();
 		ofn.lpstrFilter = szFilter;
@@ -2140,7 +2140,8 @@ public:
 		ofn.lCustData = 0;
 		ofn.lpfnHook = OFNHookProcIn;
 		ofn.lpTemplateName = 0;
-		ofn.Flags = OFN_HIDEREADONLY | OFN_NOVALIDATE | OFN_PATHMUSTEXIST | OFN_READONLY | OFN_EXPLORER | OFN_ENABLEHOOK | OFN_FILEMUSTEXIST | OFN_ALLOWMULTISELECT;
+		//ofn.Flags = OFN_HIDEREADONLY | OFN_NOVALIDATE | OFN_PATHMUSTEXIST | OFN_READONLY | OFN_EXPLORER | OFN_ENABLEHOOK | OFN_FILEMUSTEXIST | OFN_ALLOWMULTISELECT;
+		ofn.Flags = OFN_HIDEREADONLY | OFN_NOVALIDATE | OFN_PATHMUSTEXIST | OFN_ENABLESIZING | OFN_READONLY | OFN_EXPLORER | OFN_ENABLEHOOK | OFN_FILEMUSTEXIST | OFN_ALLOWMULTISELECT;
 		if (GetOpenFileName(&ofn))
 		{
 			szFile[szFile.size() - 1] = TEXT('\0');
