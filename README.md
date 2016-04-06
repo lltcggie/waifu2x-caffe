@@ -17,7 +17,7 @@ GUI supports English and Japanese and Simplified Chinese and Korean.
 
  * OS : Windows Vista以降 64bit (32bit用exeはありません)
  * メモリ : 空きメモリ1GB以上 (ただし、変換する画像サイズによる)
- * GPU : CUDAが動くNVIDIA製GPU(CPUで変換する場合は不要)
+ * GPU : Compute Capability 2.0 以上のNVIDIA製GPU(CPUで変換する場合は不要)
  * Visual C++ 2013 再頒布可能パッケージがインストールされていること(必須)
     - 上記パッケージは[こちら](https://www.microsoft.com/ja-jp/download/details.aspx?id=40784)
     - `ダウンロード` ボタンを押した後、`vcredist_x64.exe`を選択し、ダウンロード・インストールを行って下さい。
