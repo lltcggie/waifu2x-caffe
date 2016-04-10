@@ -2237,12 +2237,12 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	ChangeWindowMessageFilter(0x0049, MSGFLT_ADD);
 
 	// Caffeのエラーでないログを保存しないようにする
-	google::SetLogDestination(google::INFO, "");
-	google::SetLogDestination(google::WARNING, "");
+	google::SetLogDestination(google::GLOG_INFO, "");
+	google::SetLogDestination(google::GLOG_WARNING, "");
 
 	// Caffeのエラーログを「error_log_～」に出力
-	google::SetLogDestination(google::ERROR, "error_log_");
-	google::SetLogDestination(google::FATAL, "error_log_");
+	google::SetLogDestination(google::GLOG_ERROR, "error_log_");
+	google::SetLogDestination(google::GLOG_FATAL, "error_log_");
 
 	// CDialogクラスでダイアログを作成する
 	CDialog cDialog;

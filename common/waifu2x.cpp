@@ -40,7 +40,7 @@
 
 #ifdef _MSC_VER
 #ifdef _DEBUG
-#pragma comment(lib, "caffe-d.lib")
+#pragma comment(lib, "caffe-nv-d.lib")
 #pragma comment(lib, "proto-d.lib")
 #pragma comment(lib, "libboost_system-vc120-mt-gd-1_59.lib")
 #pragma comment(lib, "libboost_thread-vc120-mt-gd-1_59.lib")
@@ -70,7 +70,7 @@
 
 #pragma comment(lib, "libboost_iostreams-vc120-mt-gd-1_59.lib")
 #else
-#pragma comment(lib, "caffe.lib")
+#pragma comment(lib, "caffe-nv.lib")
 #pragma comment(lib, "proto.lib")
 #pragma comment(lib, "libboost_system-vc120-mt-1_59.lib")
 #pragma comment(lib, "libboost_thread-vc120-mt-1_59.lib")
@@ -702,8 +702,8 @@ Waifu2x::eWaifu2xError Waifu2x::ConstractNet(boost::shared_ptr<caffe::Net<float>
 		if (ret != eWaifu2xError_OK)
 			return ret;
 
-		if (!caffe::UpgradeNetAsNeeded(caffemodel_path.string(), &param_caffemodel))
-			return Waifu2x::eWaifu2xError_FailedParseModelFile;
+		//if (!caffe::UpgradeNetAsNeeded(caffemodel_path.string(), &param_caffemodel))
+		//	return Waifu2x::eWaifu2xError_FailedParseModelFile;
 
 		net = boost::shared_ptr<caffe::Net<float>>(new caffe::Net<float>(param_model));
 		net->CopyTrainedLayersFrom(param_caffemodel);

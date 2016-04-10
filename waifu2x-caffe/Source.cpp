@@ -55,12 +55,12 @@ int main(int argc, char** argv)
 	Waifu2x::init_liblary();
 
 	// Caffeのエラーでないログを保存しないようにする
-	google::SetLogDestination(google::INFO, "");
-	google::SetLogDestination(google::WARNING, "");
+	google::SetLogDestination(google::GLOG_INFO, "");
+	google::SetLogDestination(google::GLOG_WARNING, "");
 
 	// Caffeのエラーログを「error_log_～」に出力
-	google::SetLogDestination(google::ERROR, "error_log_");
-	google::SetLogDestination(google::FATAL, "error_log_");
+	google::SetLogDestination(google::GLOG_ERROR, "error_log_");
+	google::SetLogDestination(google::GLOG_FATAL, "error_log_");
 
 	// definition of command line arguments
 	TCLAP::CmdLine cmd("waifu2x reimplementation using Caffe", ' ', "1.0.0");
