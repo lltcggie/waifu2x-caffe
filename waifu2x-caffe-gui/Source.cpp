@@ -280,8 +280,10 @@ private:
 
 		if (SendMessage(GetDlgItem(dh, IDC_RADIONOISE_LEVEL1), BM_GETCHECK, 0, 0))
 			noise_level = 1;
-		else
+		else if (SendMessage(GetDlgItem(dh, IDC_RADIONOISE_LEVEL2), BM_GETCHECK, 0, 0))
 			noise_level = 2;
+		else
+			noise_level = 3;
 
 		if (SendMessage(GetDlgItem(dh, IDC_RADIO_SCALE_RATIO), BM_GETCHECK, 0, 0))
 			scaleType = eScaleTypeRatio;
@@ -1340,6 +1342,7 @@ public:
 		SET_WINDOW_TEXT(IDC_STATIC_JPEG_NOISE_LEVEL);
 		SET_WINDOW_TEXT(IDC_RADIONOISE_LEVEL1);
 		SET_WINDOW_TEXT(IDC_RADIONOISE_LEVEL2);
+		SET_WINDOW_TEXT(IDC_RADIONOISE_LEVEL3);
 		SET_WINDOW_TEXT(IDC_STATIC_SCALE_RATE);
 		SET_WINDOW_TEXT(IDC_RADIO_SCALE_RATIO);
 		SET_WINDOW_TEXT(IDC_RADIO_SCALE_WIDTH);
@@ -1642,7 +1645,7 @@ public:
 		if (outputExt.length() > 0 && outputExt[0] != TEXT('.'))
 			outputExt = L"." + outputExt;
 
-		if (!(1 <= noise_level && noise_level <= 2))
+		if (!(1 <= noise_level && noise_level <= 3))
 			noise_level = 1;
 
 		if (tprcess == TEXT("gpu"))
@@ -1717,13 +1720,21 @@ public:
 		{
 			SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL1), BM_SETCHECK, BST_CHECKED, 0);
 			SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL2), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL3), BM_SETCHECK, BST_UNCHECKED, 0);
+		}
+		else if (noise_level == 2)
+		{
+			SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL1), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL2), BM_SETCHECK, BST_CHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL3), BM_SETCHECK, BST_UNCHECKED, 0);
 		}
 		else
 		{
 			SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL1), BM_SETCHECK, BST_UNCHECKED, 0);
-			SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL2), BM_SETCHECK, BST_CHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL2), BM_SETCHECK, BST_UNCHECKED, 0);
+			SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL3), BM_SETCHECK, BST_CHECKED, 0);
 		}
-		
+
 		if (process == "gpu")
 		{
 			SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_GPU), BM_SETCHECK, BST_CHECKED, 0);
@@ -2286,6 +2297,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIO_AUTO_SCALE);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIONOISE_LEVEL1);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIONOISE_LEVEL2);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIONOISE_LEVEL3);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIO_MODE_CPU);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIO_MODE_GPU);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIO_MODEL_RGB);

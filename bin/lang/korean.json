@@ -1,4 +1,4 @@
-{
+﻿{
 "IDC_STATIC_IO_SETTING":"입출력 설정",
 "IDC_STATIC_INPUT_PATH":"입력 경로\r\n(파일 및 폴더)",
 "IDC_BUTTON_INPUT_REF":"찾기",
@@ -20,6 +20,7 @@
 "IDC_STATIC_JPEG_NOISE_LEVEL":"JPEG 노이즈 제거 단계",
 "IDC_RADIONOISE_LEVEL1":"1단계",
 "IDC_RADIONOISE_LEVEL2":"2단계",
+"IDC_RADIONOISE_LEVEL3":"3단계",
 "IDC_STATIC_SCALE_RATE":"확대 크기",
 "IDC_RADIO_SCALE_RATIO":"확대율로 설정",
 "IDC_RADIO_SCALE_WIDTH":"변환 후의 가로 너비",

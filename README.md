@@ -7,7 +7,7 @@
 [Caffe](http://caffe.berkeleyvision.org/)を用いて書き直し、Windows向けにビルドしたソフトです。
 CPUで変換することも出来ますが、CUDA(あるいはcuDNN)を使うとCPUより高速に変換することが出来ます。
 
-GUI supports English and Japanese and Simplified Chinese and Korean.
+GUI supports English and Japanese and Simplified Chinese and Traditional Chinese and Korean and Turkish.
 
 
  要求環境
@@ -262,9 +262,9 @@ waifu2x-caffe-cui.exe -i mywaifu.png -m noise_scale --scale_ratio 1.6 --noise_le
      画像の縦横比を維持したまま、指定された縦幅になるように拡大します(単位はピクセル)。
      scale_widthと同時に指定することは出来ません。
 
-###-n <1|2>, --noise_level <1|2>
-     ノイズ除去レベルを指定します。ノイズ除去用のモデルはレベル1とレベル2のみ用意されているので、
-      1 もしくは 2 を指定して下さい。
+###-n <1|2|3>, --noise_level <1|2|3>
+     ノイズ除去レベルを指定します。ノイズ除去用のモデルはレベル1とレベル2とレベル3のみ用意されているので、
+      1 か 2 か 3 を指定して下さい。
      デフォルト値は`1`です。
 
 ###--model_dir <文字列>
@@ -371,4 +371,5 @@ ex.
 オリジナルのwaifu2xを元に[waifu2x-converter](https://github.com/WL-Amigo/waifu2x-converter-cpp)を作成して下さった [アミーゴ](https://twitter.com/WL_Amigo)さん(READMEやLICENSE.txtの書き方、OpenCVの使い方等かなり参考にさせていただきました)
 に、感謝します。
 また、メッセージを英訳してくださった @paul70078 さん、メッセージを中国語(簡体字)に翻訳してくださった @yoonhakcher さん、中国語(簡体字)訳のプルリクエストを下さった @mzhboy さん、
-メッセージを韓国語に翻訳してくださった @kenin0726 さん、韓国語訳の改善を提案してくださった @aruhirin さん、メッセージを中国語(繁体字)に翻訳してくださった @lizardon1995 さん、@yoonhakcher さんに感謝します。
+メッセージを韓国語に翻訳してくださった @kenin0726 さん、韓国語訳の改善を提案してくださった @aruhirin さん、
+メッセージを中国語(繁体字)に翻訳してくださった @lizardon1995 さん、@yoonhakcher さん、トルコ語訳のプルリクエストを下さった @Scharynche さん に感謝します。

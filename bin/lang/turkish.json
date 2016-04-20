@@ -1,4 +1,4 @@
-{
+﻿{
 "IDC_STATIC_IO_SETTING":"Girdi/Çıktı Ayarları",
 "IDC_STATIC_INPUT_PATH":"Girdi Yolu\r\n(dosya veya klasör)",
 "IDC_BUTTON_INPUT_REF":"Gözat",
@@ -20,6 +20,7 @@
 "IDC_STATIC_JPEG_NOISE_LEVEL":"JPEG gürültüsüzleştirme düzeyi",
 "IDC_RADIONOISE_LEVEL1":"Seviye 1",
 "IDC_RADIONOISE_LEVEL2":"Seviye 2",
+"IDC_RADIONOISE_LEVEL3":"Seviye 3",
 "IDC_STATIC_SCALE_RATE":"Büyütme oranı",
 "IDC_RADIO_SCALE_RATIO":"Oran belirle",
 "IDC_RADIO_SCALE_WIDTH":"Hedef en belirle",
