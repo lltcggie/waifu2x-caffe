@@ -133,7 +133,7 @@ private:
 	eWaifu2xError BeforeReconstructFloatMatProcess(const cv::Mat &in, cv::Mat &out, bool &convertBGRflag);
 	eWaifu2xError ReconstructFloatMat(const bool isReconstructNoise, const bool isReconstructScale, const waifu2xCancelFunc cancel_func, const cv::Mat &in, cv::Mat &out);
 	eWaifu2xError Reconstruct(const bool isReconstructNoise, const bool isReconstructScale, const waifu2xCancelFunc cancel_func, const cv::Mat &in, cv::Mat &out);
-	eWaifu2xError AfterReconstructFloatMatProcess(const bool isReconstructScale, const waifu2xCancelFunc cancel_func, const cv::Mat &floatim, const cv::Mat &in, cv::Mat &out);
+	eWaifu2xError AfterReconstructFloatMatProcess(const bool isReconstructScale, const waifu2xCancelFunc cancel_func, const cv::Mat &floatim, cv::Mat &in, cv::Mat &out);
 
 	eWaifu2xError waifu2xConvetedMat(const bool isJpeg, const cv::Mat &inMat, cv::Mat &outMat,
 		const waifu2xCancelFunc cancel_func = nullptr);
