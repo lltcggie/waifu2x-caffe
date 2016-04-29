@@ -1874,6 +1874,36 @@ Waifu2x::eWaifu2xError Waifu2x::AfterReconstructFloatMatProcess(const bool isRec
 	return eWaifu2xError_OK;
 }
 
+namespace
+{
+	template<typename T>
+	void AlphaZeroToZero(std::vector<cv::Mat> &planes)
+	{
+		cv::Mat alpha(planes[3]);
+
+		const T *aptr = (const T *)alpha.data;
+
+		T *ptr0 = (T *)planes[0].data;
+		T *ptr1 = (T *)planes[1].data;
+		T *ptr2 = (T *)planes[2].data;
+
+		const size_t Line = alpha.step1();
+		const size_t Width = alpha.size().width;
+		const size_t Height = alpha.size().height;
+
+		for (size_t i = 0; i < Height; i++)
+		{
+			for (size_t j = 0; j < Width; j++)
+			{
+				const size_t pos = Line * i + j;
+
+				if (aptr[pos] == (T)0)
+					ptr0[pos] = ptr1[pos] = ptr2[pos] = (T)0;
+			}
+		}
+	}
+}
+
 Waifu2x::eWaifu2xError Waifu2x::waifu2xConvetedMat(const bool isJpeg, const cv::Mat &inMat, cv::Mat &outMat, const waifu2xCancelFunc cancel_func)
 {
 	Waifu2x::eWaifu2xError ret;
@@ -1895,6 +1925,13 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2xConvetedMat(const bool isJpeg, const cv::
 	const double max_val = GetValumeMaxFromCVDepth(cv_depth);
 	const double eps = GetEPS(cv_depth);
 
+	{
+		std::vector<cv::Mat> planes;
+		cv::split(process_image, planes);
+		float *ptr = (float *)planes[3].data;
+		planes[0].release();
+	}
+
 	cv::Mat write_iamge;
 	if (output_depth != 32) // 出力がfloat形式なら変換しない
 		process_image.convertTo(write_iamge, cv_depth, max_val, eps);
@@ -1906,18 +1943,35 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2xConvetedMat(const bool isJpeg, const cv::
 	// 完全透明のピクセルの色を消す(処理の都合上、完全透明のピクセルにも色を付けたから)
 	// モデルによっては画像全域の完全透明の場所にごく小さい値のアルファが広がることがある。それを消すためにcv_depthへ変換してからこの処理を行うことにした
 	// (ただしcv_depthが32の場合だと意味は無いが)
+	// TODO: モデル(例えばPhoto)によっては0しかない画像を変換しても0.000114856390とかになるので、適切な値のクリッピングを行う？
 	if (write_iamge.channels() > 3)
 	{
 		std::vector<cv::Mat> planes;
 		cv::split(write_iamge, planes);
+		write_iamge.release();
 
-		cv::Mat mask;
-		cv::threshold(planes[3], mask, 0.0, 1.0, cv::THRESH_BINARY); // アルファチャンネルを二値化してマスクとして扱う
+		const auto depth = planes[0].depth();
+		switch (depth)
+		{
+		case CV_8U:
+			AlphaZeroToZero<uint8_t>(planes);
+			break;
 
-		// アルファチャンネルが0のところの色を消す
-		planes[0] = planes[0].mul(mask);
-		planes[1] = planes[1].mul(mask);
-		planes[2] = planes[2].mul(mask);
+		case CV_16U:
+			AlphaZeroToZero<uint16_t>(planes);
+			break;
+
+		case CV_32F:
+			AlphaZeroToZero<float>(planes);
+			break;
+
+		case CV_64F:
+			AlphaZeroToZero<double>(planes);
+			break;
+
+		default:
+			return eWaifu2xError_FailedUnknownType;
+		}
 
 		cv::merge(planes, write_iamge);
 	}

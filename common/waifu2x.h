@@ -38,6 +38,7 @@ public:
 		eWaifu2xError_FailedConstructModel,
 		eWaifu2xError_FailedProcessCaffe,
 		eWaifu2xError_FailedCudaCheck,
+		eWaifu2xError_FailedUnknownType,
 	};
 
 	enum eWaifu2xCudaError
