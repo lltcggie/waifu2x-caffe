@@ -139,7 +139,8 @@ private:
 				auto name = Utf8ToUtf16(it->name.GetString(), it->name.GetStringLength());
 				auto val = Utf8ToUtf16(it->value.GetString(), it->value.GetStringLength());
 
-				langStringMap.emplace(name, val);
+				if(val.length() > 0)
+					langStringMap.emplace(name, val);
 			}
 		}
 		catch (...)

@@ -16,7 +16,7 @@ public:
 	virtual ~CDialogBase(){};
 
 	// ダイアログを作成する 
-	INT_PTR DoModal(HINSTANCE hInstance, int iDialogId);
+	INT_PTR DoModal(HINSTANCE hInstance, int iDialogId, HWND hWndParent = NULL);
 
 	HWND GetDialogHWND(void);
 

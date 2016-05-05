@@ -3,9 +3,9 @@
 
 
 // ダイアログを作成する
-INT_PTR CDialogBase::DoModal(HINSTANCE hInstance, int iDialogId) 
+INT_PTR CDialogBase::DoModal(HINSTANCE hInstance, int iDialogId, HWND hWndParent)
 { 
-	return DialogBoxParam(hInstance, MAKEINTRESOURCE(iDialogId), NULL, &DispatchDialogProc, (LPARAM)this); 
+	return DialogBoxParam(hInstance, MAKEINTRESOURCE(iDialogId), hWndParent, &DispatchDialogProc, (LPARAM)this);
 }
 
 HWND CDialogBase::GetDialogHWND(void)

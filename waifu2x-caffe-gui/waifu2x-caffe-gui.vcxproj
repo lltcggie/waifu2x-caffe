@@ -99,6 +99,7 @@
     <ClCompile Include="CControl.cpp" />
     <ClCompile Include="CDialog.cpp" />
     <ClCompile Include="CDialogBase.cpp" />
+    <ClCompile Include="MainDialog.cpp" />
     <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -110,7 +111,9 @@
     <ClInclude Include="CWindowBase.h" />
     <ClInclude Include="GUICommon.h" />
     <ClInclude Include="LangStringList.h" />
+    <ClInclude Include="MainDialog.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="Source.h" />
     <ClInclude Include="tstring.h" />
   </ItemGroup>
   <ItemGroup>
