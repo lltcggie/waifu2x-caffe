@@ -2529,5 +2529,10 @@ void DialogEvent::AppSetting(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 		isOutputNoOverwrite = cAppSettingDialogEvent.isOutputNoOverwrite;
 		tInputDirFix = cAppSettingDialogEvent.tInputDirFix;
 		tOutputDirFix = cAppSettingDialogEvent.tOutputDirFix;
+
+		if (tOutputDirFix.length() > 0 && boost::filesystem::exists(tOutputDirFix))
+		{
+			output_dir = tOutputDirFix;
+		}
 	}
 }
