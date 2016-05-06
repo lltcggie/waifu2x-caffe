@@ -936,6 +936,33 @@ void DialogEvent::SaveIni(const bool isSyncMember)
 	WritePrivateProfileString(TEXT("Setting"), TEXT("LastOutputDirFix"), tOutputDirFix.c_str(), getTString(SettingFilePath).c_str());
 }
 
+struct stFindParam
+{
+	const TCHAR *WindowName;
+	HWND hWnd;
+};
+
+static BOOL CALLBACK EnumChildWindowsProc(HWND hWnd, LPARAM lParam)
+{
+	stFindParam *ptr = (stFindParam *)lParam;
+
+	TCHAR buf[100];
+
+	if (GetWindowTextLength(hWnd) > _countof(buf) - 1)
+		return TRUE;
+
+	GetWindowText(hWnd, buf, _countof(buf));
+	buf[_countof(buf) - 1] = TEXT('\0');
+
+	if (_tcscmp(ptr->WindowName, buf) == 0)
+	{
+		ptr->hWnd = hWnd;
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
 // “ü—ÍƒpƒX‚ð‘I‘ð‚·‚é
 UINT_PTR DialogEvent::OFNHookProcIn(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -980,14 +1007,41 @@ UINT_PTR DialogEvent::OFNHookProcIn(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM
 		{
 			TCHAR szPath[AR_PATH_MAX] = TEXT("");
 			HWND hParent = GetParent(hdlg);
-			if (CommDlg_OpenSave_GetFilePath(hParent, szPath, _countof(szPath)) > 0)
+
+			stFindParam param;
+			param.WindowName = TEXT("FolderView");
+			param.hWnd = NULL;
+
+			EnumChildWindows(hParent, EnumChildWindowsProc, (LPARAM)&param);
+
+			if (param.hWnd)
 			{
-				szPath[_countof(szPath) - 1] = TEXT('\0');
+				std::vector< tstring >	results;
+				int	index = -1;
+				while (-1 != (index = ListView_GetNextItem(param.hWnd, index, LVNI_ALL | LVNI_SELECTED)))
+				{
+					std::vector< _TCHAR >	result(AR_PATH_MAX, TEXT('\0'));
+					ListView_GetItemText(param.hWnd, index, 0, &result[0], result.size());
+					results.push_back(result.data());
+				}
 
-				boost::filesystem::path p(szPath);
-				const auto filename = getTString(p.filename());
+				if (results.size() > 1)
+				{
+					TCHAR str[10000] = TEXT("");
 
-				CommDlg_OpenSave_SetControlText(hParent, edt1, filename.c_str());
+					for (const auto &p : results)
+					{
+						_tcscat_s(str, TEXT("\""));
+						_tcscat_s(str, p.c_str());
+						_tcscat_s(str, TEXT("\" "));
+					}
+
+					CommDlg_OpenSave_SetControlText(hParent, edt1, str);
+				}
+				else if(results.size() == 1)
+					CommDlg_OpenSave_SetControlText(hParent, edt1, results[0].c_str());
+				else
+					CommDlg_OpenSave_SetControlText(hParent, edt1, TEXT(""));
 			}
 		}
 		break;
