@@ -1925,13 +1925,6 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2xConvetedMat(const bool isJpeg, const cv::
 	const double max_val = GetValumeMaxFromCVDepth(cv_depth);
 	const double eps = GetEPS(cv_depth);
 
-	{
-		std::vector<cv::Mat> planes;
-		cv::split(process_image, planes);
-		float *ptr = (float *)planes[3].data;
-		planes[0].release();
-	}
-
 	cv::Mat write_iamge;
 	if (output_depth != 32) // o—Í‚ªfloatŒ`®‚È‚ç•ÏŠ·‚µ‚È‚¢
 		process_image.convertTo(write_iamge, cv_depth, max_val, eps);
