@@ -1749,6 +1749,12 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 
 	SetWindowText(GetDlgItem(hWnd, IDC_EDIT_INPUT_EXT_LIST), inputFileExt.c_str());
 
+	if (tOutputDirFix.length() > 0 && boost::filesystem::exists(tOutputDirFix))
+	{
+		output_dir = tOutputDirFix;
+		SetWindowText(GetDlgItem(hWnd, IDC_EDIT_OUTPUT), output_dir.c_str());
+	}
+
 	EnableWindow(GetDlgItem(dh, IDC_BUTTON_CANCEL), FALSE);
 
 	// ‘O‰ñ‚ÌŠg’£ŽqÝ’èŠÖ˜A‚ð•œŒ³
@@ -2166,6 +2172,11 @@ void DialogEvent::InputRef(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpDat
 	*tfp = TEXT('\0');
 	tfp++;
 
+	if (tInputDirFix.length() > 0 && boost::filesystem::exists(tInputDirFix))
+		ofn.lpstrInitialDir = tInputDirFix.c_str();
+	else
+		ofn.lpstrInitialDir = szPath;
+
 	ofn.lStructSize = sizeof(ofn);
 	ofn.hwndOwner = dh;
 	ofn.lpstrFile = szFile.data();
@@ -2173,7 +2184,6 @@ void DialogEvent::InputRef(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpDat
 	ofn.lpstrFilter = szFilter;
 	ofn.nFilterIndex = 1;
 	ofn.lpstrTitle = langStringList.GetString(L"MessageTitleInputDialog").c_str();
-	ofn.lpstrInitialDir = szPath;
 	ofn.lpstrCustomFilter = NULL;
 	ofn.nMaxCustFilter = 0;
 	ofn.lpstrFileTitle = NULL;
@@ -2264,6 +2274,11 @@ void DialogEvent::OutputRef(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpDa
 	memcpy(tfp, allFilesExt.c_str(), allFilesExt.length() * sizeof(TCHAR));
 	tfp += allFilesExt.length();
 
+	if (tOutputDirFix.length() > 0 && boost::filesystem::exists(tOutputDirFix))
+		ofn.lpstrInitialDir = tOutputDirFix.c_str();
+	else
+		ofn.lpstrInitialDir = szPath;
+
 	ofn.lStructSize = sizeof(ofn);
 	ofn.hwndOwner = dh;
 	ofn.lpstrFile = szFile.data();
@@ -2271,7 +2286,6 @@ void DialogEvent::OutputRef(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpDa
 	ofn.lpstrFilter = szFilter;
 	ofn.nFilterIndex = 1;
 	ofn.lpstrTitle = langStringList.GetString(L"MessageTitleInputDialog").c_str();
-	ofn.lpstrInitialDir = szPath;
 	ofn.lpstrCustomFilter = NULL;
 	ofn.nMaxCustFilter = 0;
 	ofn.lpstrFileTitle = NULL;
