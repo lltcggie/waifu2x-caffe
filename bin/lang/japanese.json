@@ -87,5 +87,7 @@
 "MessageTitleInputDialog":"入力するファイルかフォルダを選択してください",
 "MessageTimeLeftUnkown":"残り時間: 不明",
 "MessageTimeLeft":"残り時間",
-"MessageNoOverwrite":"出力先に既にファイルが存在します: %s"
+"MessageNoOverwrite":"出力先に既にファイルが存在します: %s",
+"OK":"OK",
+"Cancel":"キャンセル"
 }

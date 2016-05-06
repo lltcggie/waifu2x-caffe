@@ -2493,6 +2493,10 @@ void DialogEvent::AppSetting(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 	private:
 		void AppSettingDialogEvent::SetWindowTextLang()
 		{
+			SetWindowTextW(dh, langStringList.GetString(L"IDC_BUTTON_APP_SETTING").c_str());
+			SetWindowTextW(GetDlgItem(dh, IDOK), langStringList.GetString(L"OK").c_str());
+			SetWindowTextW(GetDlgItem(dh, IDCANCEL), langStringList.GetString(L"Cancel").c_str());
+
 #define SET_WINDOW_TEXT(id) SetWindowTextW(GetDlgItem(dh, id), langStringList.GetString(L#id).c_str());
 
 			SET_WINDOW_TEXT(IDC_STATIC_AUTO_START);

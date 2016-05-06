@@ -87,5 +87,7 @@
 "MessageTitleInputDialog":"Please select input file or folder",
 "MessageTimeLeftUnkown":"Time Left: Unkown",
 "MessageTimeLeft":"Time Left",
-"MessageNoOverwrite":"Already file exists in the destination: %s"
+"MessageNoOverwrite":"Already file exists in the destination: %s",
+"OK":"OK",
+"Cancel":"Cancel"
 }
