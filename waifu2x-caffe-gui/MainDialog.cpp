@@ -690,6 +690,18 @@ void DialogEvent::ProcessWaifu2x()
 		const auto fileNum = file_paths.size();
 		for (const auto &p : file_paths)
 		{
+			if (isOutputNoOverwrite && boost::filesystem::exists(p.second)) // 上書き禁止ならメッセージ表示して無視
+			{
+				SendMessage(dh, WM_ON_WAIFU2X_NO_OVERWRITE, (WPARAM)p.first.c_str(), (LPARAM)p.second.c_str());
+
+				num++;
+				ProgessFunc(maxFile, num);
+
+				count++;
+
+				continue;
+			}
+
 			ret = w.waifu2x(p.first, p.second, [this]()
 			{
 				return cancelFlag;
@@ -1270,6 +1282,17 @@ void DialogEvent::OnWaifu2xError(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID
 		if (ret != Waifu2x::eWaifu2xError_Cancel)
 			isLastError = true;
 	}
+}
+
+void DialogEvent::OnWaifu2xNoOverwrite(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
+{
+	const TCHAR *input = (const TCHAR *)wParam;
+	const TCHAR *output = (const TCHAR *)lParam;
+
+	TCHAR msg[1024] = TEXT("");
+	_stprintf(msg, langStringList.GetString(L"MessageNoOverwrite").c_str(), output);
+
+	AddLogMessage(msg);
 }
 
 void DialogEvent::SetWindowTextLang()

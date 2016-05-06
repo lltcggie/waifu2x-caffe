@@ -86,5 +86,6 @@
 "MessageAllFileFolder":"All files and folders(*.*)",
 "MessageTitleInputDialog":"Please select input file or folder",
 "MessageTimeLeftUnkown":"Time Left: Unkown",
-"MessageTimeLeft":"Time Left"
+"MessageTimeLeft":"Time Left",
+"MessageNoOverwrite":"Already file exists in the destination: %s"
 }

@@ -17,6 +17,7 @@
 
 #define WM_FAILD_CREATE_DIR (WM_APP + 5)
 #define WM_ON_WAIFU2X_ERROR (WM_APP + 6)
+#define WM_ON_WAIFU2X_NO_OVERWRITE (WM_APP + 8)
 #define WM_END_THREAD (WM_APP + 7)
 
 
@@ -168,6 +169,8 @@ public:
 	void OnFaildCreateDir(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData);
 
 	void OnWaifu2xError(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData);
+
+	void OnWaifu2xNoOverwrite(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData);
 
 	void SetWindowTextLang();
 
