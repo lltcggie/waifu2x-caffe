@@ -1835,36 +1835,35 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 
 	SetDepthAndQuality(false);
 
-	if (isArgStartAuto) // 引数指定されたら自動で実行(フラグ設定時のみ)
+	int nArgs = 0;
+	LPTSTR *lplpszArgs;
+	lplpszArgs = CommandLineToArgvW(GetCommandLine(), &nArgs);
+	if (lplpszArgs)
 	{
-		int nArgs = 0;
-		LPTSTR *lplpszArgs;
-		lplpszArgs = CommandLineToArgvW(GetCommandLine(), &nArgs);
-		if (lplpszArgs)
+		input_str_multi.clear();
+
+		if (nArgs > 1)
 		{
-			input_str_multi.clear();
-
-			if (nArgs > 1)
+			if (nArgs == 2)
 			{
-				if (nArgs == 2)
-				{
-					OnSetInputFilePath(lplpszArgs[1]);
-				}
-				else if (nArgs > 2)
-				{
-					for (int i = 1; i < nArgs; i++)
-						input_str_multi.push_back(lplpszArgs[i]);
+				OnSetInputFilePath(lplpszArgs[1]);
+			}
+			else if (nArgs > 2)
+			{
+				for (int i = 1; i < nArgs; i++)
+					input_str_multi.push_back(lplpszArgs[i]);
 
-					OnSetInputFilePath();
-				}
-
-				isCommandLineStart = true;
-
-				::PostMessage(GetDlgItem(dh, IDC_BUTTON_EXEC), BM_CLICK, 0, 0);
+				OnSetInputFilePath();
 			}
 
-			LocalFree(lplpszArgs);
+			if (isArgStartAuto) // 引数指定されたら自動で実行(フラグ設定時のみ)
+			{
+				isCommandLineStart = true;
+				::PostMessage(GetDlgItem(dh, IDC_BUTTON_EXEC), BM_CLICK, 0, 0);
+			}
 		}
+
+		LocalFree(lplpszArgs);
 	}
 }
 
