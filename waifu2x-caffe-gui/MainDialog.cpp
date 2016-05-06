@@ -1879,6 +1879,68 @@ void DialogEvent::UpdateAddString(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOI
 	ReplaceAddString();
 }
 
+void DialogEvent::OnModeChange(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
+{
+	bool isNoise = false;
+	bool isScale = false;
+
+	if (SendMessage(GetDlgItem(dh, IDC_RADIO_MODE_NOISE), BM_GETCHECK, 0, 0))
+	{
+		isNoise = true;
+		isScale = false;
+	}
+	else if (SendMessage(GetDlgItem(dh, IDC_RADIO_MODE_SCALE), BM_GETCHECK, 0, 0))
+	{
+		isNoise = false;
+		isScale = true;
+	}
+	else if (SendMessage(GetDlgItem(dh, IDC_RADIO_MODE_NOISE_SCALE), BM_GETCHECK, 0, 0))
+	{
+		isNoise = true;
+		isScale = true;
+	}
+	else
+	{
+		isNoise = true;
+		isScale = true;
+	}
+
+	if (isNoise)
+	{
+		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL1), TRUE);
+		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL2), TRUE);
+		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL3), TRUE);
+	}
+	else
+	{
+		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL1), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL2), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL3), FALSE);
+	}
+
+	if (isScale)
+	{
+		EnableWindow(GetDlgItem(dh, IDC_RADIO_SCALE_RATIO), TRUE);
+		EnableWindow(GetDlgItem(dh, IDC_RADIO_SCALE_WIDTH), TRUE);
+		EnableWindow(GetDlgItem(dh, IDC_RADIO_SCALE_HEIGHT), TRUE);
+
+		ScaleRadio(NULL, NULL, NULL, NULL); // ‚±‚±‚ÅReplaceAddString()‚â‚é‚©‚çreturn
+		return;
+	}
+	else
+	{
+		EnableWindow(GetDlgItem(dh, IDC_RADIO_SCALE_RATIO), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_RADIO_SCALE_WIDTH), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_RADIO_SCALE_HEIGHT), FALSE);
+
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
+	}
+
+	ReplaceAddString();
+}
+
 void DialogEvent::ScaleRadio(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 {
 	if (SendMessage(GetDlgItem(dh, IDC_RADIO_SCALE_RATIO), BM_GETCHECK, 0, 0))

@@ -67,15 +67,14 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::ClearOutputDir, &cDialogEvent), NULL, IDC_BUTTON_CLEAR_OUTPUT_DIR);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::AppSetting, &cDialogEvent), NULL, IDC_BUTTON_APP_SETTING);
 
-	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIO_MODE_NOISE);
-	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIO_MODE_SCALE);
-	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIO_MODE_NOISE_SCALE);
-	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIO_AUTO_SCALE);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::OnModeChange, &cDialogEvent), NULL, IDC_RADIO_MODE_NOISE);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::OnModeChange, &cDialogEvent), NULL, IDC_RADIO_MODE_SCALE);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::OnModeChange, &cDialogEvent), NULL, IDC_RADIO_MODE_NOISE_SCALE);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::OnModeChange, &cDialogEvent), NULL, IDC_RADIO_AUTO_SCALE);
+
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIONOISE_LEVEL1);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIONOISE_LEVEL2);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIONOISE_LEVEL3);
-	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIO_MODE_CPU);
-	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIO_MODE_GPU);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIO_MODEL_RGB);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIO_MODEL_PHOTO);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIO_MODEL_Y);

@@ -182,6 +182,8 @@ public:
 
 	void UpdateAddString(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData);
 
+	void OnModeChange(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData);
+
 	void ScaleRadio(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData);
 
 	void CheckCUDNN(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData);
