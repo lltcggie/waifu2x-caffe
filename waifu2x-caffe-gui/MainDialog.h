@@ -104,6 +104,8 @@ private:
 	tstring tInputDirFix;
 	tstring tOutputDirFix;
 
+	bool isNotSaveParam;
+
 private:
 	template<typename T>
 	static tstring to_tstring(T val)

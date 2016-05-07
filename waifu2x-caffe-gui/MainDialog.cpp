@@ -14,6 +14,8 @@
 #include "../common/waifu2x.h"
 #include "CDialog.h"
 #include "CControl.h"
+//#include <boost/program_options.hpp>
+#include <tclapw/CmdLine.h>
 
 
 const size_t AR_PATH_MAX(1024);
@@ -850,6 +852,9 @@ void DialogEvent::SaveIni(const bool isSyncMember)
 	if (isSyncMember)
 		SyncMember(true);
 
+	if (isNotSaveParam)
+		return;
+
 	const boost::filesystem::path SettingFilePath(exeDir / SettingFileName);
 
 	tstring tScaleRatio;
@@ -1125,7 +1130,7 @@ DialogEvent::DialogEvent() : dh(nullptr), mode("noise_scale"), noise_level(1), s
 process("gpu"), outputExt(TEXT(".png")), inputFileExt(TEXT("png:jpg:jpeg:tif:tiff:bmp:tga")),
 use_tta(false), output_depth(8), crop_size(128), batch_size(1), isLastError(false), scaleType(eScaleTypeEnd),
 TimeLeftThread(-1), TimeLeftGetTimeThread(0), isCommandLineStart(false), tAutoMode(TEXT("none")),
-isArgStartAuto(true), isArgStartSuccessFinish(true), isOutputNoOverwrite(false)
+isArgStartAuto(true), isArgStartSuccessFinish(true), isOutputNoOverwrite(false), isNotSaveParam(false)
 {}
 
 void DialogEvent::Exec(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
@@ -1844,22 +1849,367 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 
 		if (nArgs > 1)
 		{
-			if (nArgs == 2)
-			{
-				OnSetInputFilePath(lplpszArgs[1]);
-			}
-			else if (nArgs > 2)
-			{
-				for (int i = 1; i < nArgs; i++)
-					input_str_multi.push_back(lplpszArgs[i]);
+			// definition of command line arguments
+			TCLAP::CmdLine cmd(L"waifu2x reimplementation using Caffe", L' ', L"1.0.0");
 
-				OnSetInputFilePath();
-			}
+			// GUIでは-iを付けない
+			TCLAP::UnlabeledMultiArg<std::wstring> cmdInputFile(L"input_file_paths", L"input file paths", false,
+				L"string", cmd);
 
-			if (isArgStartAuto) // 引数指定されたら自動で実行(フラグ設定時のみ)
+			// GUIでは出力先フォルダのみの指定
+			TCLAP::ValueArg<std::wstring> cmdOutputDir(L"o", L"output_folder",
+				L"path to output image folder", false,
+				L"", L"string", cmd);
+
+			TCLAP::ValueArg<std::wstring> cmdInputFileExt(L"l", L"input_extention_list",
+				L"extention to input image file when input_path is folder", false, L"png:jpg:jpeg:tif:tiff:bmp:tga",
+				L"string", cmd);
+
+			TCLAP::ValueArg<std::wstring> cmdOutputFileExt(L"e", L"output_extention",
+				L"extention to output image file when output_path is (auto) or input_path is folder", false,
+				L"png", L"string", cmd);
+
+			std::vector<std::wstring> cmdModeConstraintV;
+			cmdModeConstraintV.push_back(L"noise");
+			cmdModeConstraintV.push_back(L"scale");
+			cmdModeConstraintV.push_back(L"noise_scale");
+			cmdModeConstraintV.push_back(L"auto_scale");
+			TCLAP::ValuesConstraint<std::wstring> cmdModeConstraint(cmdModeConstraintV);
+			TCLAP::ValueArg<std::wstring> cmdMode(L"m", L"mode", L"image processing mode",
+				false, L"noise_scale", &cmdModeConstraint, cmd);
+
+			std::vector<int> cmdNRLConstraintV;
+			cmdNRLConstraintV.push_back(1);
+			cmdNRLConstraintV.push_back(2);
+			cmdNRLConstraintV.push_back(3);
+			TCLAP::ValuesConstraint<int> cmdNRLConstraint(cmdNRLConstraintV);
+			TCLAP::ValueArg<int> cmdNRLevel(L"n", L"noise_level", L"noise reduction level",
+				false, 1, &cmdNRLConstraint, cmd);
+
+			TCLAP::ValueArg<double> cmdScaleRatio(L"s", L"scale_ratio",
+				L"custom scale ratio", false, 2.0, L"double", cmd);
+
+			TCLAP::ValueArg<int> cmdScaleWidth(L"w", L"scale_width",
+				L"custom scale width", false, 0, L"double", cmd);
+
+			TCLAP::ValueArg<int> cmdScaleHeight(L"h", L"scale_height",
+				L"custom scale height", false, 0, L"double", cmd);
+
+			std::vector<std::wstring> cmdProcessConstraintV;
+			cmdProcessConstraintV.push_back(L"cpu");
+			cmdProcessConstraintV.push_back(L"gpu");
+			TCLAP::ValuesConstraint<std::wstring> cmdProcessConstraint(cmdProcessConstraintV);
+			TCLAP::ValueArg<std::wstring> cmdProcess(L"p", L"process", L"process mode",
+				false, L"gpu", &cmdProcessConstraint, cmd);
+
+			TCLAP::ValueArg<int> cmdOutputQuality(L"q", L"output_quality",
+				L"output image quality", false,
+				-1, L"int", cmd);
+
+			TCLAP::ValueArg<int> cmdOutputDepth(L"d", L"output_depth",
+				L"output image chaneel depth bit", false,
+				8, L"int", cmd);
+
+			TCLAP::ValueArg<int> cmdCropSizeFile(L"c", L"crop_size",
+				L"input image split size", false,
+				128, L"int", cmd);
+
+			TCLAP::ValueArg<int> cmdBatchSizeFile(L"b", L"batch_size",
+				L"input batch size", false,
+				1, L"int", cmd);
+
+			std::vector<int> cmdBoolConstraintV;
+			cmdBoolConstraintV.push_back(0);
+			cmdBoolConstraintV.push_back(1);
+
+			TCLAP::ValuesConstraint<int> cmdTTAConstraint(cmdBoolConstraintV);
+			TCLAP::ValueArg<int> cmdTTA(L"t", L"tta", L"8x slower and slightly high quality",
+				false, 0, &cmdTTAConstraint, cmd);
+
+			// GUI独自
+			TCLAP::ValuesConstraint<int> cmdAutoStartConstraint(cmdBoolConstraintV);
+			TCLAP::ValueArg<int> cmdAutoStart(L"", L"auto_start", L"to run automatically at startup",
+				false, 0, &cmdAutoStartConstraint, cmd);
+
+			TCLAP::ValuesConstraint<int> cmdAutoExitConstraint(cmdBoolConstraintV);
+			TCLAP::ValueArg<int> cmdAutoExit(L"", L"auto_exit", L"exit when the run was succeeded",
+				false, 0, &cmdAutoExitConstraint, cmd);
+
+			TCLAP::ValuesConstraint<int> cmdNoOverwriteConstraint(cmdBoolConstraintV);
+			TCLAP::ValueArg<int> cmdNoOverwrite(L"", L"no_overwrite", L"don't overwrite output file",
+				false, 0, &cmdNoOverwriteConstraint, cmd);
+
+			std::vector<std::wstring> cmdModelTypeConstraintV;
+			cmdModelTypeConstraintV.push_back(L"anime_style_art_rgb");
+			cmdModelTypeConstraintV.push_back(L"photo");
+			cmdModelTypeConstraintV.push_back(L"anime_style_art_y");
+			TCLAP::ValuesConstraint<std::wstring> cmdModelTypeConstraint(cmdModelTypeConstraintV);
+			TCLAP::ValueArg<std::wstring> cmdModelType(L"y", L"model_type", L"model type",
+				false, L"anime_style_art_rgb", &cmdModelTypeConstraint, cmd);
+
+			// definition of command line argument : end
+
+			TCLAP::Arg::enableIgnoreMismatched();
+
+			// parse command line arguments
+			try
 			{
-				isCommandLineStart = true;
-				::PostMessage(GetDlgItem(dh, IDC_BUTTON_EXEC), BM_CLICK, 0, 0);
+				cmd.parse(nArgs, lplpszArgs);
+
+				bool isSetParam = false;
+
+				if (cmdOutputDir.isSet())
+				{
+					OnSetOutputFilePath(cmdOutputDir.getValue().c_str());
+
+					isSetParam = true;
+				}
+
+				if (cmdInputFileExt.isSet())
+				{
+					const auto inputFileExt = cmdInputFileExt.getValue();
+					SetWindowText(GetDlgItem(dh, IDC_EDIT_INPUT_EXT_LIST), inputFileExt.c_str());
+
+					isSetParam = true;
+				}
+
+				if (cmdOutputFileExt.isSet())
+				{
+					auto OutputExt = cmdInputFileExt.getValue();
+					if (OutputExt.length() > 0 && OutputExt[0] != L'.')
+						OutputExt.insert(0, L".");
+					SetWindowText(GetDlgItem(dh, IDC_COMBO_OUT_EXT), OutputExt.c_str());
+
+					isSetParam = true;
+				}
+
+				if (cmdMode.isSet())
+				{
+					tmode = cmdMode.getValue();
+
+					if (tmode == TEXT("noise"))
+					{
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE), BM_SETCHECK, BST_CHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+					}
+					else if (tmode == TEXT("scale"))
+					{
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_SCALE), BM_SETCHECK, BST_CHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE), BM_SETCHECK, BST_UNCHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+					}
+					else if (tmode == TEXT("auto_scale"))
+					{
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE), BM_SETCHECK, BST_UNCHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_SCALE), BM_SETCHECK, BST_CHECKED, 0);
+					}
+					else // noise_scale
+					{
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE_SCALE), BM_SETCHECK, BST_CHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE), BM_SETCHECK, BST_UNCHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+					}
+
+					isSetParam = true;
+				}
+
+				if (cmdNRLevel.isSet())
+				{
+					const auto noise_level = cmdNRLevel.getValue();
+
+					if (noise_level == 1)
+					{
+						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL1), BM_SETCHECK, BST_CHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL2), BM_SETCHECK, BST_UNCHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL3), BM_SETCHECK, BST_UNCHECKED, 0);
+					}
+					else if (noise_level == 2)
+					{
+						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL1), BM_SETCHECK, BST_UNCHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL2), BM_SETCHECK, BST_CHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL3), BM_SETCHECK, BST_UNCHECKED, 0);
+					}
+					else
+					{
+						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL1), BM_SETCHECK, BST_UNCHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL2), BM_SETCHECK, BST_UNCHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL3), BM_SETCHECK, BST_CHECKED, 0);
+					}
+
+					isSetParam = true;
+				}
+
+				if (cmdScaleRatio.isSet())
+				{
+					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_RATIO), BM_SETCHECK, BST_CHECKED, 0);
+					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH), BM_SETCHECK, BST_UNCHECKED, 0);
+					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_HEIGHT), BM_SETCHECK, BST_UNCHECKED, 0);
+
+					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), TRUE);
+					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
+					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
+
+					SetWindowText(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), to_tstring(cmdScaleRatio.getValue()).c_str());
+
+					isSetParam = true;
+				}
+				else if (cmdScaleWidth.isSet())
+				{
+					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_RATIO), BM_SETCHECK, BST_UNCHECKED, 0);
+					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH), BM_SETCHECK, BST_CHECKED, 0);
+					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_HEIGHT), BM_SETCHECK, BST_UNCHECKED, 0);
+
+					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), FALSE);
+					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), TRUE);
+					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
+
+					SetWindowText(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), to_tstring(cmdScaleWidth.getValue()).c_str());
+
+					isSetParam = true;
+				}
+				else if (cmdScaleHeight.isSet())
+				{
+					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_RATIO), BM_SETCHECK, BST_UNCHECKED, 0);
+					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH), BM_SETCHECK, BST_UNCHECKED, 0);
+					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_HEIGHT), BM_SETCHECK, BST_CHECKED, 0);
+
+					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), FALSE);
+					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
+					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), TRUE);
+
+					SetWindowText(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), to_tstring(cmdScaleHeight.getValue()).c_str());
+
+					isSetParam = true;
+				}
+
+				if (cmdProcess.isSet())
+				{
+					if (cmdProcess.getValue() == L"gpu")
+					{
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_GPU), BM_SETCHECK, BST_CHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_CPU), BM_SETCHECK, BST_UNCHECKED, 0);
+					}
+					else
+					{
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_GPU), BM_SETCHECK, BST_UNCHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_CPU), BM_SETCHECK, BST_CHECKED, 0);
+					}
+
+					isSetParam = true;
+				}
+
+				if (cmdOutputQuality.isSet())
+				{
+					SetWindowText(GetDlgItem(dh, IDC_EDIT_OUT_QUALITY), to_tstring(cmdOutputQuality.getValue()).c_str());
+
+					isSetParam = true;
+				}
+
+				if (cmdOutputDepth.isSet())
+				{
+					SetWindowText(GetDlgItem(dh, IDC_COMBO_OUTPUT_DEPTH), to_tstring(cmdOutputDepth.getValue()).c_str());
+
+					isSetParam = true;
+				}
+
+				if (cmdCropSizeFile.isSet())
+				{
+					SetWindowText(GetDlgItem(dh, IDC_COMBO_CROP_SIZE), to_tstring(cmdCropSizeFile.getValue()).c_str());
+
+					isSetParam = true;
+				}
+
+				if (cmdBatchSizeFile.isSet())
+				{
+					batch_size = cmdBatchSizeFile.getValue();
+
+					isSetParam = true;
+				}
+
+				if (cmdTTA.isSet())
+				{
+					SendMessage(GetDlgItem(dh, IDC_CHECK_TTA), BM_SETCHECK, cmdTTA.getValue() ? BST_CHECKED : BST_UNCHECKED, 0);
+
+					isSetParam = true;
+				}
+
+				if (cmdAutoStart.isSet())
+				{
+					isArgStartAuto = cmdAutoStart.getValue() != 0;
+
+					isSetParam = true;
+				}
+
+				if (cmdAutoExit.isSet())
+				{
+					isArgStartSuccessFinish = cmdAutoExit.getValue() != 0;
+
+					isSetParam = true;
+				}
+
+				if (cmdModelType.isSet())
+				{
+					if (cmdModelType.getValue() == L"anime_style_art_rgb")
+					{
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_RGB), BM_SETCHECK, BST_CHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_PHOTO), BM_SETCHECK, BST_UNCHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_Y), BM_SETCHECK, BST_UNCHECKED, 0);
+					}
+					else if (cmdModelType.getValue() == L"photo")
+					{
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_RGB), BM_SETCHECK, BST_UNCHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_PHOTO), BM_SETCHECK, BST_CHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_Y), BM_SETCHECK, BST_UNCHECKED, 0);
+					}
+					else
+					{
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_RGB), BM_SETCHECK, BST_UNCHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_PHOTO), BM_SETCHECK, BST_UNCHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_Y), BM_SETCHECK, BST_CHECKED, 0);
+					}
+
+					isSetParam = true;
+				}
+
+				if (cmdNoOverwrite.isSet())
+				{
+					isOutputNoOverwrite = cmdNoOverwrite.getValue() != 0;
+
+					isSetParam = true;
+				}
+
+				if (isSetParam)
+					isNotSaveParam = true;
+
+				const auto &vi = cmdInputFile.getValue();
+				if (vi.size() > 1)
+				{
+					for (size_t i = 0; i < vi.size(); i++)
+					{
+						input_str_multi.push_back(vi[i]);
+					}
+
+					OnSetInputFilePath();
+				}
+				else if (vi.size() == 1)
+				{
+					OnSetInputFilePath(vi[0].c_str());
+				}
+
+				if (isArgStartAuto) // 引数指定されたら自動で実行(フラグ設定時のみ)
+				{
+					isCommandLineStart = true;
+					::PostMessage(GetDlgItem(dh, IDC_BUTTON_EXEC), BM_CLICK, 0, 0);
+				}
+			}
+			catch (std::exception &e)
+			{
 			}
 		}
 
