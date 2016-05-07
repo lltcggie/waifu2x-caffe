@@ -88,6 +88,7 @@
 "MessageTimeLeftUnkown":"Time Left: Unkown",
 "MessageTimeLeft":"Time Left",
 "MessageNoOverwrite":"Already file exists in the destination: %s",
+"MessageCudaOldDeviceError":"Your CUDA device too old.\r\nPlease use Compute Capability 2.0 or more devices",
 "OK":"OK",
 "Cancel":"Cancel"
 }

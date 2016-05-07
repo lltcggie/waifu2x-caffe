@@ -88,6 +88,7 @@
 "MessageTimeLeftUnkown":"残り時間: 不明",
 "MessageTimeLeft":"残り時間",
 "MessageNoOverwrite":"出力先に既にファイルが存在します: %s",
+"MessageCudaOldDeviceError":"CUDAデバイスが古いです。\r\nCompute Capability 2.0以上のデバイスを使用してください",
 "OK":"OK",
 "Cancel":"キャンセル"
 }
