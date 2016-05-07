@@ -2188,7 +2188,7 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 					isNotSaveParam = true;
 
 				const auto &vi = cmdInputFile.getValue();
-				if (vi.size() > 2)
+				if (vi.size() > 1)
 				{
 					for (size_t i = 1; i < vi.size(); i++)
 					{
@@ -2197,9 +2197,9 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 
 					OnSetInputFilePath();
 				}
-				else if (vi.size() == 2)
+				else if (vi.size() == 1)
 				{
-					OnSetInputFilePath(vi[1].c_str());
+					OnSetInputFilePath(vi[0].c_str());
 				}
 
 				if (isArgStartAuto) // 引数指定されたら自動で実行(フラグ設定時のみ)
