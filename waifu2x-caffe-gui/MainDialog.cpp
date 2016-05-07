@@ -2045,21 +2045,7 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 					isSetParam = true;
 				}
 
-				if (cmdScaleRatio.isSet())
-				{
-					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_RATIO), BM_SETCHECK, BST_CHECKED, 0);
-					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH), BM_SETCHECK, BST_UNCHECKED, 0);
-					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_HEIGHT), BM_SETCHECK, BST_UNCHECKED, 0);
-
-					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), TRUE);
-					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
-					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
-
-					SetWindowText(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), to_tstring(cmdScaleRatio.getValue()).c_str());
-
-					isSetParam = true;
-				}
-				else if (cmdScaleWidth.isSet())
+				if (cmdScaleWidth.isSet())
 				{
 					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_RATIO), BM_SETCHECK, BST_UNCHECKED, 0);
 					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH), BM_SETCHECK, BST_CHECKED, 0);
@@ -2084,6 +2070,20 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), TRUE);
 
 					SetWindowText(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), to_tstring(cmdScaleHeight.getValue()).c_str());
+
+					isSetParam = true;
+				}
+				else if (cmdScaleRatio.isSet())
+				{
+					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_RATIO), BM_SETCHECK, BST_CHECKED, 0);
+					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH), BM_SETCHECK, BST_UNCHECKED, 0);
+					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_HEIGHT), BM_SETCHECK, BST_UNCHECKED, 0);
+
+					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), TRUE);
+					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
+					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
+
+					SetWindowText(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), to_tstring(cmdScaleRatio.getValue()).c_str());
 
 					isSetParam = true;
 				}
