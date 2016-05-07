@@ -2325,6 +2325,9 @@ void DialogEvent::CheckCUDNN(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 	case Waifu2x::eWaifu2xCudaError_OldVersion:
 		MessageBox(dh, langStringList.GetString(L"MessageCudaOldVersionError").c_str(), langStringList.GetString(L"MessageTitleResult").c_str(), MB_OK | MB_ICONERROR);
 		return;
+	case Waifu2x::eWaifu2xCudaError_OldDevice:
+		MessageBox(dh, langStringList.GetString(L"MessageCudaOldDeviceError").c_str(), langStringList.GetString(L"MessageTitleResult").c_str(), MB_OK | MB_ICONERROR);
+		return;
 	}
 
 	switch (Waifu2x::can_use_cuDNN())

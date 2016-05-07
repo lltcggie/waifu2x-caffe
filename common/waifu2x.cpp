@@ -406,7 +406,14 @@ Waifu2x::eWaifu2xCudaError Waifu2x::can_use_CUDA()
 				if (cudaRuntimeGetVersion(&runtimeVersion) == cudaSuccess)
 				{
 					if (runtimeVersion >= MinCudaDriverVersion && driverVersion >= runtimeVersion)
-						CudaFlag = eWaifu2xCudaError_OK;
+					{
+						cudaDeviceProp prop;
+						cudaGetDeviceProperties(&prop, 0);
+						if (prop.major >= 2)
+							CudaFlag = eWaifu2xCudaError_OK;
+						else
+							CudaFlag = eWaifu2xCudaError_OldDevice;
+					}
 					else
 						CudaFlag = eWaifu2xCudaError_OldVersion;
 				}

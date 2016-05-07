@@ -46,6 +46,7 @@ public:
 		eWaifu2xCudaError_OK = 0,
 		eWaifu2xCudaError_NotFind,
 		eWaifu2xCudaError_OldVersion,
+		eWaifu2xCudaError_OldDevice,
 	};
 
 	enum eWaifu2xcuDNNError
