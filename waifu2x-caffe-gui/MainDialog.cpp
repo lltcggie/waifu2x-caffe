@@ -513,7 +513,7 @@ void DialogEvent::ProcessWaifu2x()
 			const boost::filesystem::path output_path(output_str);
 			const auto outDir = output_path.branch_path();
 
-			if (!boost::filesystem::exists(outDir))
+			if (!outDir.empty() && !boost::filesystem::exists(outDir))
 			{
 				if (!boost::filesystem::create_directories(outDir))
 				{
