@@ -78,5 +78,8 @@
 "MessageAllFileFolder":"모든 파일과 폴더(*.*)",
 "MessageTitleInputDialog":"입력할 파일 또는 폴더를 선택해 주십시오.",
 "MessageTimeLeftUnkown":"남은 시간: 불명",
-"MessageTimeLeft":"남은 시간"
+"MessageTimeLeft":"남은 시간",
+"MessageNoOverwrite":"출력 경로에 이미 파일이 존재합니다.: %s",
+"OK":"확인",
+"Cancel":"취소"
 }
