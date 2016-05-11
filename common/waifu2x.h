@@ -8,7 +8,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/optional.hpp>
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
 
 #define CUDNN_DLL_NAME "cudnn64_5.dll"
 #define CUDNN_REQUIRE_VERION_TEXT "v5 RC"

@@ -2,7 +2,9 @@
 #include <caffe/caffe.hpp>
 #include <cudnn.h>
 #include <mutex>
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/imgcodecs.hpp>
 #include <rapidjson/document.h>
 #include <tclap/CmdLine.h>
 #include <boost/filesystem.hpp>
@@ -40,6 +42,23 @@
 #endif
 
 #ifdef _MSC_VER
+
+#pragma comment(lib, "opencv_core" CV_VERSION_STR CV_EXT_STR)
+#pragma comment(lib, "opencv_imgcodecs" CV_VERSION_STR CV_EXT_STR)
+#pragma comment(lib, "opencv_imgproc" CV_VERSION_STR CV_EXT_STR)
+//#pragma comment(lib, "IlmImf" CV_EXT_STR)
+//#pragma comment(lib, "libjasper" CV_EXT_STR)
+//#pragma comment(lib, "libjpeg" CV_EXT_STR)
+//#pragma comment(lib, "libpng" CV_EXT_STR)
+//#pragma comment(lib, "libtiff" CV_EXT_STR)
+//#pragma comment(lib, "libwebp" CV_EXT_STR)
+
+#pragma comment(lib, "libopenblas.dll.a")
+#pragma comment(lib, "cudart.lib")
+#pragma comment(lib, "curand.lib")
+#pragma comment(lib, "cublas.lib")
+#pragma comment(lib, "cudnn.lib")
+
 #ifdef _DEBUG
 #pragma comment(lib, "caffe-d.lib")
 #pragma comment(lib, "proto-d.lib")
@@ -52,22 +71,6 @@
 #pragma comment(lib, "libhdf5_hl_D.lib")
 #pragma comment(lib, "libhdf5_D.lib")
 #pragma comment(lib, "zlibstaticd.lib")
-#pragma comment(lib, "libopenblas.dll.a")
-#pragma comment(lib, "cudart.lib")
-#pragma comment(lib, "curand.lib")
-#pragma comment(lib, "cublas.lib")
-#pragma comment(lib, "cudnn.lib")
-
-#pragma comment(lib, "opencv_core" CV_VERSION_STR CV_EXT_STR)
-#pragma comment(lib, "opencv_imgcodecs" CV_VERSION_STR CV_EXT_STR)
-#pragma comment(lib, "opencv_imgproc" CV_VERSION_STR CV_EXT_STR)
-//#pragma comment(lib, "IlmImf" CV_EXT_STR)
-//#pragma comment(lib, "libjasper" CV_EXT_STR)
-//#pragma comment(lib, "libjpeg" CV_EXT_STR)
-//#pragma comment(lib, "libpng" CV_EXT_STR)
-//#pragma comment(lib, "libtiff" CV_EXT_STR)
-//#pragma comment(lib, "libwebp" CV_EXT_STR)
-//#pragma comment(lib, "ippicvmt.lib")
 
 #pragma comment(lib, "libboost_iostreams-vc120-mt-gd-1_59.lib")
 #else
@@ -82,22 +85,6 @@
 #pragma comment(lib, "libhdf5_hl.lib")
 #pragma comment(lib, "libhdf5.lib")
 #pragma comment(lib, "zlibstatic.lib")
-#pragma comment(lib, "libopenblas.dll.a")
-#pragma comment(lib, "cudart.lib")
-#pragma comment(lib, "curand.lib")
-#pragma comment(lib, "cublas.lib")
-#pragma comment(lib, "cudnn.lib")
-
-#pragma comment(lib, "opencv_core" CV_VERSION_STR CV_EXT_STR)
-#pragma comment(lib, "opencv_imgcodecs" CV_VERSION_STR CV_EXT_STR)
-#pragma comment(lib, "opencv_imgproc" CV_VERSION_STR CV_EXT_STR)
-//#pragma comment(lib, "IlmImf" CV_EXT_STR)
-//#pragma comment(lib, "libjasper" CV_EXT_STR)
-//#pragma comment(lib, "libjpeg" CV_EXT_STR)
-//#pragma comment(lib, "libpng" CV_EXT_STR)
-//#pragma comment(lib, "libtiff" CV_EXT_STR)
-//#pragma comment(lib, "libwebp" CV_EXT_STR)
-//#pragma comment(lib, "ippicvmt.lib")
 
 #pragma comment(lib, "libboost_iostreams-vc120-mt-1_59.lib")
 #endif

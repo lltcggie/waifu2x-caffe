@@ -10,7 +10,9 @@
 #include <boost/foreach.hpp>
 #include <boost/math/common_factor_rt.hpp>
 #include <boost/lexical_cast.hpp>
-#include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/imgcodecs.hpp>
 #include "../common/waifu2x.h"
 #include "CDialog.h"
 #include "CControl.h"

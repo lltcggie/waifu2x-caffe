@@ -41,15 +41,15 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\caffe-build\install\include;D:\caffe-build\install\include\boost-1_59;$(CUDA_PATH_V7_5)\include;C:\opencv310\build\include;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\caffe-build\install\lib;$(CUDA_PATH_V7_5)\lib\$(PlatformName);C:\opencv310\build\x64\vc12\lib;D:\program\boost_1_59_0\stage\x64\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\caffe-build\install\include;D:\caffe-build\install\include\boost-1_59;$(CUDA_PATH_V7_5)\include;D:\opencv310\build_vc\install\include;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\opencv310\build_vc\install\x64\vc12\lib;D:\caffe-build\install\lib;$(CUDA_PATH_V7_5)\lib\$(PlatformName);D:\program\boost_1_59_0\stage\x64\lib;$(LibraryPath)</LibraryPath>
     <TargetName>waifu2x-caffed</TargetName>
     <OutDir>$(SolutionDir)bin</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>D:\caffe-build\install\include;D:\caffe-build\install\include\boost-1_59;$(CUDA_PATH_V7_5)\include;C:\opencv310\build\include;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\caffe-build\install\lib;$(CUDA_PATH_V7_5)\lib\$(PlatformName);C:\opencv310\build\x64\vc12\lib;D:\program\boost_1_59_0\stage\x64\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\caffe-build\install\include;D:\caffe-build\install\include\boost-1_59;$(CUDA_PATH_V7_5)\include;D:\opencv310\build_vc\install\include;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\opencv310\build_vc\install\x64\vc12\lib;D:\caffe-build\install\lib;$(CUDA_PATH_V7_5)\lib\$(PlatformName);D:\program\boost_1_59_0\stage\x64\lib;$(LibraryPath)</LibraryPath>
     <TargetName>waifu2x-caffe</TargetName>
     <OutDir>$(SolutionDir)bin</OutDir>
   </PropertyGroup>
