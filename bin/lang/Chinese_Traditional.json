@@ -87,8 +87,8 @@
 "MessageTitleInputDialog":"請選擇一個文件或文件夾",
 "MessageTimeLeftUnkown":"預估剩餘時間: 未知",
 "MessageTimeLeft":"預估剩餘時間",
-"MessageNoOverwrite":"",
-"MessageCudaOldDeviceError":"",
-"OK":"",
-"Cancel":""
+"MessageNoOverwrite":"此位置已經包含相同文件: %s",
+"MessageCudaOldDeviceError":"CUDA套件版本過於老舊。請更新 \r\nCompute Capability 2.0 以上版本使用",
+"OK":"確定",
+"Cancel":"取消"
 }
