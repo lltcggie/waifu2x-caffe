@@ -426,7 +426,7 @@ void Waifu2x::quit_liblary()
 cv::Mat Waifu2x::LoadMat(const boost::filesystem::path &path)
 {
 	cv::Mat mat;
-	LoadMat(mat, path);
+	LoadMat(mat, path, 0);
 
 	return mat;
 }
@@ -486,7 +486,7 @@ Waifu2x::eWaifu2xError Waifu2x::AlphaMakeBorder(std::vector<cv::Mat> &planes, co
 }
 
 // ‰æ‘œ‚ğ“Ç‚İ‚ñ‚Å’l‚ğ0.0f`1.0f‚Ì”ÍˆÍ‚É•ÏŠ·
-Waifu2x::eWaifu2xError Waifu2x::LoadMat(cv::Mat &float_image, const boost::filesystem::path &input_file)
+Waifu2x::eWaifu2xError Waifu2x::LoadMat(cv::Mat &float_image, const boost::filesystem::path &input_file, const int alpha_offset)
 {
 	cv::Mat original_image;
 
@@ -535,7 +535,7 @@ Waifu2x::eWaifu2xError Waifu2x::LoadMat(cv::Mat &float_image, const boost::files
 
 		cv::Mat alpha = planes[3];
 		planes.resize(3);
-		AlphaMakeBorder(planes, alpha, net_offset);
+		AlphaMakeBorder(planes, alpha, alpha_offset);
 
 		planes.push_back(alpha);
 		cv::merge(planes, convert);
@@ -2074,7 +2074,7 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const boost::filesystem::path &input_fil
 	const bool isJpeg = boost::iequals(ipext.string(), ".jpg") || boost::iequals(ipext.string(), ".jpeg");
 
 	cv::Mat float_image;
-	ret = LoadMat(float_image, input_file);
+	ret = LoadMat(float_image, input_file, net_offset);
 	if (ret != eWaifu2xError_OK)
 		return ret;
 

@@ -123,7 +123,7 @@ private:
 	int inner_scale; // ƒlƒbƒg‚ÅŠg‘å‚³‚ê‚é”{—¦
 
 private:
-	eWaifu2xError LoadMat(cv::Mat &float_image, const boost::filesystem::path &input_file);
+	static eWaifu2xError LoadMat(cv::Mat &float_image, const boost::filesystem::path &input_file, const int alpha_offset);
 	static eWaifu2xError LoadMatBySTBI(cv::Mat &float_image, const std::vector<char> &img_data);
 	static eWaifu2xError AlphaMakeBorder(std::vector<cv::Mat> &planes, const cv::Mat &alpha, const int offset);
 	eWaifu2xError CreateBrightnessImage(const cv::Mat &float_image, cv::Mat &im);
@@ -184,5 +184,5 @@ public:
 
 	const std::string& used_process() const;
 
-	cv::Mat LoadMat(const boost::filesystem::path &path);
+	static cv::Mat LoadMat(const boost::filesystem::path &path);
 };
