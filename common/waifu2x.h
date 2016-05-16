@@ -81,8 +81,8 @@ private:
 
 	// ネットに入力する画像のサイズ
 	int input_block_size;
-	// ブロック変換後の出力サイズ
-	int output_size;
+	// ネットに入力するブロックのサイズ(パディングなし)
+	int block_size;
 	// ネットワークに入力する画像のサイズ(出力画像の幅はlayer_num * 2だけ小さくなる)
 	int block_width_height;
 	// srcnn.prototxtで定義された入力する画像のサイズ
@@ -117,17 +117,23 @@ private:
 	boost::optional<int> output_quality;
 	int output_depth;
 
+	int model_scale; // モデルが対象とする拡大率
+
+	int net_offset; // ネットに入力するとどれくらい削れるか
+	int inner_scale; // ネットで拡大される倍率
+
 private:
-	static eWaifu2xError LoadMat(cv::Mat &float_image, const boost::filesystem::path &input_file);
+	eWaifu2xError LoadMat(cv::Mat &float_image, const boost::filesystem::path &input_file);
 	static eWaifu2xError LoadMatBySTBI(cv::Mat &float_image, const std::vector<char> &img_data);
 	static eWaifu2xError AlphaMakeBorder(std::vector<cv::Mat> &planes, const cv::Mat &alpha, const int offset);
 	eWaifu2xError CreateBrightnessImage(const cv::Mat &float_image, cv::Mat &im);
 	eWaifu2xError PaddingImage(const cv::Mat &input, cv::Mat &output);
 	eWaifu2xError Zoom2xAndPaddingImage(const cv::Mat &input, cv::Mat &output, cv::Size_<int> &zoom_size);
 	eWaifu2xError CreateZoomColorImage(const cv::Mat &float_image, const cv::Size_<int> &zoom_size, std::vector<cv::Mat> &cubic_planes);
-	eWaifu2xError ConstractNet(boost::shared_ptr<caffe::Net<float>> &net, const boost::filesystem::path &model_path, const boost::filesystem::path &param_path, const std::string &process);
+	eWaifu2xError ConstractNet(boost::shared_ptr<caffe::Net<float>> &net, const boost::filesystem::path &model_path, const boost::filesystem::path &param_path, const boost::filesystem::path &info_path, const std::string &process);
 	eWaifu2xError LoadParameterFromJson(boost::shared_ptr<caffe::Net<float>> &net, const boost::filesystem::path &model_path, const boost::filesystem::path &param_path
 		, const boost::filesystem::path &modelbin_path, const boost::filesystem::path &caffemodel_path, const std::string &process);
+	eWaifu2xError LoadInfoFromJson(const boost::filesystem::path &info_path);
 	eWaifu2xError SetParameter(caffe::NetParameter &param, const std::string &process) const;
 	eWaifu2xError ReconstructImage(boost::shared_ptr<caffe::Net<float>> net, cv::Mat &im);
 	static eWaifu2xError WriteMat(const cv::Mat &im, const boost::filesystem::path &output_file, const boost::optional<int> &output_quality);
@@ -178,5 +184,5 @@ public:
 
 	const std::string& used_process() const;
 
-	static cv::Mat LoadMat(const boost::filesystem::path &path);
+	cv::Mat LoadMat(const boost::filesystem::path &path);
 };

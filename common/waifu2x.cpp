@@ -92,8 +92,6 @@
 
 // 入力画像のオフセット
 const int offset = 0;
-// srcnn.prototxtで定義されたレイヤーの数
-const int layer_num = 7;
 
 const int ConvertMode = CV_RGB2YUV;
 const int ConvertInverseMode = CV_YUV2RGB;
@@ -323,7 +321,7 @@ static Waifu2x::eWaifu2xError writeProtoBinary(const ::google::protobuf::Message
 }
 
 
-Waifu2x::Waifu2x() : is_inited(false), isCuda(false), input_block(nullptr), dummy_data(nullptr), output_block(nullptr)
+Waifu2x::Waifu2x() : is_inited(false), isCuda(false), input_block(nullptr), dummy_data(nullptr), output_block(nullptr), model_scale(2), net_offset(0), inner_scale(1)
 {
 }
 
@@ -537,7 +535,7 @@ Waifu2x::eWaifu2xError Waifu2x::LoadMat(cv::Mat &float_image, const boost::files
 
 		cv::Mat alpha = planes[3];
 		planes.resize(3);
-		AlphaMakeBorder(planes, alpha, layer_num);
+		AlphaMakeBorder(planes, alpha, net_offset);
 
 		planes.push_back(alpha);
 		cv::merge(planes, convert);
@@ -628,10 +626,10 @@ Waifu2x::eWaifu2xError Waifu2x::CreateBrightnessImage(const cv::Mat &float_image
 // 画像は左上配置、余白はcv::BORDER_REPLICATEで埋める
 Waifu2x::eWaifu2xError Waifu2x::PaddingImage(const cv::Mat &input, cv::Mat &output)
 {
-	const auto h_blocks = (int)floor(input.size().width / output_size) + (input.size().width % output_size == 0 ? 0 : 1);
-	const auto w_blocks = (int)floor(input.size().height / output_size) + (input.size().height % output_size == 0 ? 0 : 1);
-	const auto height = offset + h_blocks * output_size + offset;
-	const auto width = offset + w_blocks * output_size + offset;
+	const auto h_blocks = (int)floor(input.size().width / block_size) + (input.size().width % block_size == 0 ? 0 : 1);
+	const auto w_blocks = (int)floor(input.size().height / block_size) + (input.size().height % block_size == 0 ? 0 : 1);
+	const auto height = offset + h_blocks * block_size + block_size;
+	const auto width = offset + w_blocks * block_size + offset;
 	const auto pad_h1 = offset;
 	const auto pad_w1 = offset;
 	const auto pad_h2 = (height - offset) - input.size().width;
@@ -675,8 +673,14 @@ Waifu2x::eWaifu2xError Waifu2x::CreateZoomColorImage(const cv::Mat &float_image,
 
 // モデルファイルからネットワークを構築
 // processでcudnnが指定されなかった場合はcuDNNが呼び出されないように変更する
-Waifu2x::eWaifu2xError Waifu2x::ConstractNet(boost::shared_ptr<caffe::Net<float>> &net, const boost::filesystem::path &model_path, const boost::filesystem::path &param_path, const std::string &process)
+Waifu2x::eWaifu2xError Waifu2x::ConstractNet(boost::shared_ptr<caffe::Net<float>> &net, const boost::filesystem::path &model_path, const boost::filesystem::path &param_path, const boost::filesystem::path &info_path, const std::string &process)
 {
+	Waifu2x::eWaifu2xError ret;
+
+	ret = LoadInfoFromJson(info_path);
+	if (ret != eWaifu2xError_OK)
+		return ret;
+
 	boost::filesystem::path modelbin_path = model_path;
 	modelbin_path += ".protobin";
 	boost::filesystem::path caffemodel_path = param_path;
@@ -690,8 +694,6 @@ Waifu2x::eWaifu2xError Waifu2x::ConstractNet(boost::shared_ptr<caffe::Net<float>
 
 	if (retModelBin == eWaifu2xError_OK && retParamBin == eWaifu2xError_OK)
 	{
-		Waifu2x::eWaifu2xError ret;
-
 		ret = SetParameter(param_model, process);
 		if (ret != eWaifu2xError_OK)
 			return ret;
@@ -925,6 +927,56 @@ Waifu2x::eWaifu2xError Waifu2x::LoadParameterFromJson(boost::shared_ptr<caffe::N
 	return eWaifu2xError_OK;
 }
 
+Waifu2x::eWaifu2xError Waifu2x::LoadInfoFromJson(const boost::filesystem::path &info_path)
+{
+	rapidjson::Document d;
+	std::vector<char> jsonBuf;
+
+	try
+	{
+		boost::iostreams::stream<boost::iostreams::file_descriptor_source> is;
+
+		try
+		{
+			is.open(info_path, std::ios_base::in | std::ios_base::binary);
+		}
+		catch (...)
+		{
+			return Waifu2x::eWaifu2xError_FailedOpenModelFile;
+		}
+
+		if (!is)
+			return eWaifu2xError_FailedOpenModelFile;
+
+		const size_t size = is.seekg(0, std::ios::end).tellg();
+		is.seekg(0, std::ios::beg);
+
+		jsonBuf.resize(size + 1);
+		is.read(jsonBuf.data(), jsonBuf.size());
+
+		jsonBuf[jsonBuf.size() - 1] = '\0';
+
+		d.Parse(jsonBuf.data());
+
+		const bool resize = d.HasMember("resize") && d["resize"].GetBool() ? true : false;
+		const auto name = d["name"].GetString();
+		const int channels = d["channels"].GetInt();
+		net_offset = d["offset"].GetInt();
+		inner_scale = d["scale_factor"].GetInt();
+
+		inner_padding = net_offset;
+		input_block_size = crop_size + (inner_padding + outer_padding) * 2;
+		output_block_size = (crop_size + (inner_padding + outer_padding) * 2) * inner_scale - net_offset * 2;
+		original_width_height = 128 + net_offset * 2;
+	}
+	catch (...)
+	{
+		return eWaifu2xError_FailedParseModelFile;
+	}
+
+	return eWaifu2xError_OK;
+}
+
 // ネットワークを使って画像を再構築する
 Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<float>> net, cv::Mat &im)
 {
@@ -932,12 +984,12 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 	const auto Width = im.size().width;
 	const auto Line = im.step1();
 
-	assert(Width % output_size == 0);
-	assert(Height % output_size == 0);
+	assert(Width % block_size == 0);
+	assert(Height % block_size == 0);
 
 	assert(im.channels() == 1 || im.channels() == 3);
 
-	cv::Mat outim(im.rows, im.cols, im.type());
+	cv::Mat outim(im.rows * inner_scale, im.cols * inner_scale, im.type());
 
 	// float *imptr = (float *)im.data;
 	float *imptr = (float *)outim.data;
@@ -952,17 +1004,18 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 		assert(im.channels() == input_plane);
 		assert(input_blob->shape(1) == input_plane);
 
-		const int WidthNum = Width / output_size;
-		const int HeightNum = Height / output_size;
+		const int WidthNum = Width / block_size;
+		const int HeightNum = Height / block_size;
 
 		const int BlockNum = WidthNum * HeightNum;
 
 		const int input_block_plane_size = input_block_size * input_block_size * input_plane;
 		const int output_block_plane_size = output_block_size * output_block_size * input_plane;
 
-		const int output_padding = inner_padding + outer_padding - layer_num;
+		const int output_padding = (inner_padding + outer_padding) * inner_scale - net_offset;
+		const int output_no_padding_block_size = block_size * inner_scale;
 
-		// 画像は(消費メモリの都合上)output_size*output_sizeに分けて再構築する
+		// 画像は(消費メモリの都合上)block_size*block_sizeに分けて再構築する
 		for (int num = 0; num < BlockNum; num += batch_size)
 		{
 			const int processNum = (BlockNum - num) >= batch_size ? batch_size : BlockNum - num;
@@ -975,8 +1028,8 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 				const int wn = (num + n) % WidthNum;
 				const int hn = (num + n) / WidthNum;
 
-				const int w = wn * output_size;
-				const int h = hn * output_size;
+				const int w = wn * block_size;
+				const int h = hn * block_size;
 
 				if (w + crop_size <= Width && h + crop_size <= Height)
 				{
@@ -1026,7 +1079,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 
 					cv::Mat someborderimg;
 					// 画像を中央にパディング。余白はcv::BORDER_REPLICATEで埋める
-					// 実はimで画素が存在する部分は余白と認識されないが、inner_paddingがlayer_numでouter_paddingが1以上ならそこの部分の画素は結果画像として取り出す部分には影響しない
+					// 実はimで画素が存在する部分は余白と認識されないが、inner_paddingがnet_offsetでouter_paddingが1以上ならそこの部分の画素は結果画像として取り出す部分には影響しない
 					cv::copyMakeBorder(someimg, someborderimg, top, bottom, left, right, cv::BORDER_REPLICATE);
 					someimg.release();
 
@@ -1093,15 +1146,15 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 				const int wn = (num + n) % WidthNum;
 				const int hn = (num + n) / WidthNum;
 
-				const int w = wn * output_size;
-				const int h = hn * output_size;
+				const int w = wn * output_no_padding_block_size;
+				const int h = hn * output_no_padding_block_size;
 
 				const float *fptr = output_block + (output_block_plane_size * n);
 
 				// 結果を出力画像にコピー
 				if (outim.channels() == 1)
 				{
-					for (int i = 0; i < crop_size; i++)
+					for (int i = 0; i < output_no_padding_block_size; i++)
 						memcpy(imptr + (h + i) * Line + w, fptr + (i + output_padding) * output_block_size + output_padding, crop_size * sizeof(float));
 				}
 				else
@@ -1109,15 +1162,37 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 					const auto LinePixel = outim.step1() / outim.channels();
 					const auto Channel = outim.channels();
 
-					for (int i = 0; i < crop_size; i++)
+					for (int i = 0; i < output_no_padding_block_size; i++)
 					{
-						for (int j = 0; j < crop_size; j++)
+						for (int j = 0; j < output_no_padding_block_size; j++)
 						{
 							for (int ch = 0; ch < Channel; ch++)
 								imptr[((h + i) * LinePixel + (w + j)) * Channel + ch] = fptr[(ch * output_block_size + i + output_padding) * output_block_size + j + output_padding];
 						}
 					}
 				}
+
+				//{
+				//	cv::Mat testim(output_block_size, output_block_size, CV_32FC1);
+				//	float *p = (float *)testim.data;
+				//	for (int i = 0; i < output_block_size; i++)
+				//	{
+				//		for (int j = 0; j < output_block_size; j++)
+				//		{
+				//			p[testim.step1() * i + j] = fptr[i * output_block_size + j];
+				//		}
+				//	}
+
+				//	const int cv_depth = DepthBitToCVDepth(8);
+				//	const double max_val = GetValumeMaxFromCVDepth(cv_depth);
+				//	const double eps = GetEPS(cv_depth);
+
+				//	cv::Mat write_iamge;
+				//	testim.convertTo(write_iamge, cv_depth, max_val, eps);
+
+				//	cv::imwrite("ti.png", write_iamge);
+				//	testim.release();
+				//}
 			}
 		}
 	}
@@ -1176,14 +1251,9 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 		crop_size = CropSize;
 		batch_size = BatchSize;
 
-		inner_padding = layer_num;
 		outer_padding = 1;
 
-		output_size = crop_size - offset * 2;
-		input_block_size = crop_size + (inner_padding + outer_padding) * 2;
-		original_width_height = 128 + layer_num * 2;
-
-		output_block_size = crop_size + (inner_padding + outer_padding - layer_num) * 2;
+		block_size = crop_size - offset * 2;
 
 		std::call_once(waifu2x_once_flag, [argc, argv]()
 		{
@@ -1240,8 +1310,9 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 		{
 			const boost::filesystem::path model_path = (mode_dir_path / "srcnn.prototxt").string();
 			const boost::filesystem::path param_path = (mode_dir_path / ("noise" + std::to_string(noise_level) + "_model.json")).string();
+			const boost::filesystem::path info_path = mode_dir_path / "info.json";
 
-			ret = ConstractNet(net_noise, model_path, param_path, process);
+			ret = ConstractNet(net_noise, model_path, param_path, info_path, process);
 			if (ret != eWaifu2xError_OK)
 				return ret;
 		}
@@ -1250,8 +1321,9 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 		{
 			const boost::filesystem::path model_path = (mode_dir_path / "srcnn.prototxt").string();
 			const boost::filesystem::path param_path = (mode_dir_path / "scale2.0x_model.json").string();
+			const boost::filesystem::path info_path = mode_dir_path / "info.json";
 
-			ret = ConstractNet(net_scale, model_path, param_path, process);
+			ret = ConstractNet(net_scale, model_path, param_path, info_path, process);
 			if (ret != eWaifu2xError_OK)
 				return ret;
 		}
@@ -1472,7 +1544,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructFloatMat(const bool isReconstructNois
 	Waifu2x::eWaifu2xError ret;
 
 	cv::Mat im(in);
-	cv::Size_<int> image_size = im.size();
+	cv::Size_<int> image_size = im.size() * inner_scale;
 
 	if (isReconstructNoise)
 	{
@@ -1494,14 +1566,24 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructFloatMat(const bool isReconstructNois
 		return eWaifu2xError_Cancel;
 
 	const double ratio = CalcScaleRatio(image_size);
-	const int scale2 = ceil(log2(ratio));
+	const int scale2 = ceil(log(ratio) / log(model_scale));
 
 	if (isReconstructScale)
 	{
+		const int prior_scale = model_scale / inner_scale;
+
 		bool isError = false;
 		for (int i = 0; i < scale2; i++)
 		{
-			Zoom2xAndPaddingImage(im, im, image_size);
+			if (prior_scale > 1)
+			{
+				// TODO: 今は2倍拡大しか考慮していないので、それ以外に対応
+				Zoom2xAndPaddingImage(im, im, image_size);
+			}
+			else
+			{
+				PaddingImage(im, im);
+			}
 
 			ret = ReconstructImage(net_scale, im);
 			if (ret != eWaifu2xError_OK)
@@ -2053,7 +2135,7 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(double factor, const void* source, void*
 
 			cv::Mat alpha = planes[3];
 			planes.resize(3);
-			AlphaMakeBorder(planes, alpha, layer_num);
+			AlphaMakeBorder(planes, alpha, net_offset);
 
 			planes.push_back(alpha);
 			cv::merge(planes, convert);
