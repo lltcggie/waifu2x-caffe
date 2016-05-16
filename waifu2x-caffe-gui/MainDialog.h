@@ -83,6 +83,7 @@ private:
 		eModelTypeRGB,
 		eModelTypePhoto,
 		eModelTypeY,
+		eModelTypeUpConvRGB,
 		eModelTypeEnd,
 	};
 

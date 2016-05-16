@@ -119,6 +119,10 @@ tstring DialogEvent::AddName() const
 	case eModelTypeY:
 		addstr += TEXT("Y");
 		break;
+
+	case eModelTypeUpConvRGB:
+		addstr += TEXT("UpConvRGB");
+		break;
 	}
 	addstr += TEXT(")");
 
@@ -261,20 +265,33 @@ bool DialogEvent::SyncMember(const bool NotSyncCropSize, const bool silent)
 			scale_height = l;
 	}
 
-	if (SendMessage(GetDlgItem(dh, IDC_RADIO_MODEL_RGB), BM_GETCHECK, 0, 0))
 	{
-		model_dir = TEXT("models/anime_style_art_rgb");
-		modelType = eModelTypeRGB;
-	}
-	else if (SendMessage(GetDlgItem(dh, IDC_RADIO_MODEL_Y), BM_GETCHECK, 0, 0))
-	{
-		model_dir = TEXT("models/anime_style_art");
-		modelType = eModelTypeY;
-	}
-	else
-	{
-		model_dir = TEXT("models/photo");
-		modelType = eModelTypePhoto;
+		const int cur = SendMessage(GetDlgItem(dh, IDC_COMBO_MODEL), CB_GETCURSEL, 0, 0);
+		switch (cur)
+		{
+		case 0:
+			model_dir = TEXT("models/anime_style_art_rgb");
+			modelType = eModelTypeRGB;
+			break;
+
+		case 1:
+			model_dir = TEXT("models/anime_style_art");
+			modelType = eModelTypeY;
+			break;
+
+		case 2:
+			model_dir = TEXT("models/photo");
+			modelType = eModelTypePhoto;
+			break;
+
+		case 3:
+			model_dir = TEXT("models/upconv_7_anime_style_art_rgb");
+			modelType = eModelTypeUpConvRGB;
+			break;
+
+		default:
+			break;
+		}
 	}
 
 	{
@@ -1383,9 +1400,6 @@ void DialogEvent::SetWindowTextLang()
 	SET_WINDOW_TEXT(IDC_RADIO_SCALE_WIDTH);
 	SET_WINDOW_TEXT(IDC_RADIO_SCALE_HEIGHT);
 	SET_WINDOW_TEXT(IDC_STATIC_MODEL);
-	SET_WINDOW_TEXT(IDC_RADIO_MODEL_RGB);
-	SET_WINDOW_TEXT(IDC_RADIO_MODEL_PHOTO);
-	SET_WINDOW_TEXT(IDC_RADIO_MODEL_Y);
 	SET_WINDOW_TEXT(IDC_CHECK_TTA);
 	SET_WINDOW_TEXT(IDC_STATIC_PROCESS_SPEED_SETTING);
 	SET_WINDOW_TEXT(IDC_STATIC_CROP_SIZE);
@@ -1401,6 +1415,21 @@ void DialogEvent::SetWindowTextLang()
 	SET_WINDOW_TEXT(IDC_BUTTON_CLEAR_OUTPUT_DIR);
 
 #undef SET_WINDOW_TEXT
+
+	const int cur = SendMessage(GetDlgItem(dh, IDC_COMBO_MODEL), CB_GETCURSEL, 0, 0);
+
+	HWND hwndCombo = GetDlgItem(dh, IDC_COMBO_MODEL);
+	while (SendMessage(hwndCombo, CB_GETCOUNT, 0, 0) != 0)
+	{
+		SendMessage(hwndCombo, CB_DELETESTRING, 0, 0);
+	}
+
+	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_RGB").c_str());
+	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_PHOTO").c_str());
+	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_Y").c_str());
+	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_UPCONV_RGB").c_str());
+
+	SendMessage(GetDlgItem(dh, IDC_COMBO_MODEL), CB_SETCURSEL, cur, 0);
 }
 
 void DialogEvent::SetDepthAndQuality(const bool SetDefaultQuality)
@@ -1780,24 +1809,18 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL3), BM_SETCHECK, BST_CHECKED, 0);
 	}
 
+
+	int index = 0;
 	if (modelType == eModelTypeRGB)
-	{
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_RGB), BM_SETCHECK, BST_CHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_PHOTO), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_Y), BM_SETCHECK, BST_UNCHECKED, 0);
-	}
+		index = 0;
 	else if (modelType == eModelTypePhoto)
-	{
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_RGB), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_PHOTO), BM_SETCHECK, BST_CHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_Y), BM_SETCHECK, BST_UNCHECKED, 0);
-	}
+		index = 1;
+	else if (modelType == eModelTypeY)
+		index = 2;
 	else
-	{
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_RGB), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_PHOTO), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_Y), BM_SETCHECK, BST_CHECKED, 0);
-	}
+		index = 3;
+
+	SendMessage(GetDlgItem(dh, IDC_COMBO_MODEL), CB_SETCURSEL, index, 0);
 
 	if (use_tta)
 		SendMessage(GetDlgItem(hWnd, IDC_CHECK_TTA), BM_SETCHECK, BST_CHECKED, 0);
@@ -1945,6 +1968,7 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 			cmdModelTypeConstraintV.push_back(L"anime_style_art_rgb");
 			cmdModelTypeConstraintV.push_back(L"photo");
 			cmdModelTypeConstraintV.push_back(L"anime_style_art_y");
+			cmdModelTypeConstraintV.push_back(L"upconv_7_anime_style_art_rgb");
 			TCLAP::ValuesConstraint<std::wstring> cmdModelTypeConstraint(cmdModelTypeConstraintV);
 			TCLAP::ValueArg<std::wstring> cmdModelType(L"y", L"model_type", L"model type",
 				false, L"anime_style_art_rgb", &cmdModelTypeConstraint, cmd);
@@ -2157,24 +2181,17 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 
 				if (cmdModelType.isSet())
 				{
+					int index = 0;
 					if (cmdModelType.getValue() == L"anime_style_art_rgb")
-					{
-						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_RGB), BM_SETCHECK, BST_CHECKED, 0);
-						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_PHOTO), BM_SETCHECK, BST_UNCHECKED, 0);
-						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_Y), BM_SETCHECK, BST_UNCHECKED, 0);
-					}
+						index = 0;
 					else if (cmdModelType.getValue() == L"photo")
-					{
-						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_RGB), BM_SETCHECK, BST_UNCHECKED, 0);
-						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_PHOTO), BM_SETCHECK, BST_CHECKED, 0);
-						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_Y), BM_SETCHECK, BST_UNCHECKED, 0);
-					}
+						index = 1;
+					else if (cmdModelType.getValue() == L"anime_style_art_y")
+						index = 2;
 					else
-					{
-						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_RGB), BM_SETCHECK, BST_UNCHECKED, 0);
-						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_PHOTO), BM_SETCHECK, BST_UNCHECKED, 0);
-						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_Y), BM_SETCHECK, BST_CHECKED, 0);
-					}
+						index = 3;
+
+					SendMessage(GetDlgItem(dh, IDC_COMBO_MODEL), CB_SETCURSEL, index, 0);
 
 					isSetParam = true;
 				}
