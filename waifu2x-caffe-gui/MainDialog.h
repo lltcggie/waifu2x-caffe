@@ -51,6 +51,8 @@ private:
 	int crop_size;
 	int batch_size;
 
+	int gpu_no;
+
 	std::vector<tstring> extList;
 
 	std::thread processThread;
@@ -107,16 +109,6 @@ private:
 	bool isNotSaveParam;
 
 private:
-	template<typename T>
-	static tstring to_tstring(T val)
-	{
-#ifdef UNICODE
-		return std::to_wstring(val);
-#else
-		return std::to_string(val);
-#endif
-	}
-
 	tstring AddName() const;
 
 	bool SyncMember(const bool NotSyncCropSize, const bool silent = false);

@@ -172,6 +172,41 @@ namespace
 	};
 
 	IgnoreErrorCV g_IgnoreErrorCV;
+
+	class CudaDeviceSet
+	{
+	private:
+		int orgDevice;
+		bool mIsSet;
+
+	public:
+		CudaDeviceSet(const std::string &process, const int devno) : orgDevice(0), mIsSet(false)
+		{
+			if (process == "gpu" || process == "cudnn")
+			{
+				int count = 0;
+				if (cudaGetDeviceCount(&count) != CUDA_SUCCESS)
+					return;
+
+				if (devno >= count || count < 0)
+					return;
+
+				if (cudaGetDevice(&orgDevice) != CUDA_SUCCESS)
+					return;
+
+				if (cudaSetDevice(devno) != CUDA_SUCCESS)
+					return;
+
+				mIsSet = true;
+			}
+		}
+
+		~CudaDeviceSet()
+		{
+			if (mIsSet)
+				cudaSetDevice(orgDevice);
+		}
+	};
 }
 
 template<typename BufType>
@@ -323,7 +358,7 @@ static Waifu2x::eWaifu2xError writeProtoBinary(const ::google::protobuf::Message
 }
 
 
-Waifu2x::Waifu2x() : is_inited(false), isCuda(false), input_block(nullptr), dummy_data(nullptr), output_block(nullptr)
+Waifu2x::Waifu2x() : is_inited(false), isCuda(false), input_block(nullptr), dummy_data(nullptr), output_block(nullptr), gpu_no(0)
 {
 }
 
@@ -928,6 +963,8 @@ Waifu2x::eWaifu2xError Waifu2x::LoadParameterFromJson(boost::shared_ptr<caffe::N
 // ネットワークを使って画像を再構築する
 Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<float>> net, cv::Mat &im)
 {
+	CudaDeviceSet devset(process, gpu_no);
+
 	const auto Height = im.size().height;
 	const auto Width = im.size().width;
 	const auto Line = im.step1();
@@ -1134,7 +1171,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &Mode, const int NoiseLevel,
 	const boost::optional<double> ScaleRatio, const boost::optional<int> ScaleWidth, const boost::optional<int> ScaleHeight,
 	const boost::filesystem::path &ModelDir, const std::string &Process,
-	const boost::optional<int> OutputQuality, const int OutputDepth, const bool UseTTA, const int CropSize, const int BatchSize)
+	const boost::optional<int> OutputQuality, const int OutputDepth, const bool UseTTA, const int CropSize, const int BatchSize, const int GPUNo)
 {
 	Waifu2x::eWaifu2xError ret;
 
@@ -1175,6 +1212,7 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 
 		crop_size = CropSize;
 		batch_size = BatchSize;
+		gpu_no = GPUNo;
 
 		inner_padding = layer_num;
 		outer_padding = 1;
@@ -1184,17 +1222,6 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 		original_width_height = 128 + layer_num * 2;
 
 		output_block_size = crop_size + (inner_padding + outer_padding - layer_num) * 2;
-
-		std::call_once(waifu2x_once_flag, [argc, argv]()
-		{
-			assert(argc >= 1);
-
-			int tmpargc = 1;
-			char* tmpargvv[] = { argv[0] };
-			char** tmpargv = tmpargvv;
-			// glog等の初期化
-			caffe::GlobalInit(&tmpargc, &tmpargv);
-		});
 
 		const auto cuDNNCheckStartTime = std::chrono::system_clock::now();
 
@@ -1208,6 +1235,19 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 		}
 
 		const auto cuDNNCheckEndTime = std::chrono::system_clock::now();
+
+		CudaDeviceSet devset(process, gpu_no);
+
+		std::call_once(waifu2x_once_flag, [argc, argv]()
+		{
+			assert(argc >= 1);
+
+			int tmpargc = 1;
+			char* tmpargvv[] = { argv[0] };
+			char** tmpargv = tmpargvv;
+			// glog等の初期化
+			caffe::GlobalInit(&tmpargc, &tmpargv);
+		});
 
 		boost::filesystem::path mode_dir_path(model_dir);
 		if (!mode_dir_path.is_absolute()) // model_dirが相対パスなら絶対パスに直す
@@ -1287,6 +1327,8 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 
 void Waifu2x::destroy()
 {
+	CudaDeviceSet devset(process, gpu_no);
+
 	net_noise.reset();
 	net_scale.reset();
 

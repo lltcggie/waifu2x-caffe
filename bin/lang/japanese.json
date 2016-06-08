@@ -90,5 +90,6 @@
 "MessageNoOverwrite":"出力先に既にファイルが存在します: %s",
 "MessageCudaOldDeviceError":"CUDAデバイスが古いです。\r\nCompute Capability 2.0以上のデバイスを使用してください",
 "OK":"OK",
-"Cancel":"キャンセル"
+"Cancel":"キャンセル",
+"IDC_STATIC_USE_GPU_NO":"使用GPU No"
 }

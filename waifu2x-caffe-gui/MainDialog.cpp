@@ -36,68 +36,81 @@ const TCHAR * const MultiFileStr = TEXT("(Multi File)");
 const UINT_PTR nIDEventTimeLeft = 1000;
 
 
-// http://stackoverflow.com/questions/10167382/boostfilesystem-get-relative-path
-boost::filesystem::path relativePath(const boost::filesystem::path &path, const boost::filesystem::path &relative_to)
+namespace
 {
-	// create absolute paths
-	boost::filesystem::path p = boost::filesystem::absolute(path);
-	boost::filesystem::path r = boost::filesystem::absolute(relative_to);
-
-	// if root paths are different, return absolute path
-	if (p.root_path() != r.root_path())
-		return p;
-
-	// initialize relative path
-	boost::filesystem::path result;
-
-	// find out where the two paths diverge
-	boost::filesystem::path::const_iterator itr_path = p.begin();
-	boost::filesystem::path::const_iterator itr_relative_to = r.begin();
-	while (*itr_path == *itr_relative_to && itr_path != p.end() && itr_relative_to != r.end())
+	template<typename T>
+	static tstring to_tstring(T val)
 	{
-		++itr_path;
-		++itr_relative_to;
+#ifdef UNICODE
+		return std::to_wstring(val);
+#else
+		return std::to_string(val);
+#endif
 	}
 
-	// add "../" for each remaining token in relative_to
-	if (itr_relative_to != r.end())
+	// http://stackoverflow.com/questions/10167382/boostfilesystem-get-relative-path
+	boost::filesystem::path relativePath(const boost::filesystem::path &path, const boost::filesystem::path &relative_to)
 	{
-		++itr_relative_to;
-		while (itr_relative_to != r.end())
+		// create absolute paths
+		boost::filesystem::path p = boost::filesystem::absolute(path);
+		boost::filesystem::path r = boost::filesystem::absolute(relative_to);
+
+		// if root paths are different, return absolute path
+		if (p.root_path() != r.root_path())
+			return p;
+
+		// initialize relative path
+		boost::filesystem::path result;
+
+		// find out where the two paths diverge
+		boost::filesystem::path::const_iterator itr_path = p.begin();
+		boost::filesystem::path::const_iterator itr_relative_to = r.begin();
+		while (*itr_path == *itr_relative_to && itr_path != p.end() && itr_relative_to != r.end())
 		{
-			result /= "..";
+			++itr_path;
 			++itr_relative_to;
 		}
+
+		// add "../" for each remaining token in relative_to
+		if (itr_relative_to != r.end())
+		{
+			++itr_relative_to;
+			while (itr_relative_to != r.end())
+			{
+				result /= "..";
+				++itr_relative_to;
+			}
+		}
+
+		// add remaining path
+		while (itr_path != p.end())
+		{
+			result /= *itr_path;
+			++itr_path;
+		}
+
+		return result;
 	}
 
-	// add remaining path
-	while (itr_path != p.end())
+	std::vector<int> CommonDivisorList(const int N)
 	{
-		result /= *itr_path;
-		++itr_path;
+		std::vector<int> list;
+
+		const int sq = sqrt(N);
+		for (int i = 1; i <= sq; i++)
+		{
+			if (N % i == 0)
+				list.push_back(i);
+		}
+
+		const int sqs = list.size();
+		for (int i = 0; i < sqs; i++)
+			list.push_back(N / list[i]);
+
+		std::sort(list.begin(), list.end());
+
+		return list;
 	}
-
-	return result;
-}
-
-std::vector<int> CommonDivisorList(const int N)
-{
-	std::vector<int> list;
-
-	const int sq = sqrt(N);
-	for (int i = 1; i <= sq; i++)
-	{
-		if (N % i == 0)
-			list.push_back(i);
-	}
-
-	const int sqs = list.size();
-	for (int i = 0; i < sqs; i++)
-		list.push_back(N / list[i]);
-
-	std::sort(list.begin(), list.end());
-
-	return list;
 }
 
 
@@ -675,7 +688,7 @@ void DialogEvent::ProcessWaifu2x()
 	}
 
 	Waifu2x w;
-	ret = w.init(__argc, __argv, mode, noise_level, ScaleRatio, ScaleWidth, ScaleHeight, model_dir, process, output_quality, output_depth, use_tta, crop_size, batch_size);
+	ret = w.init(__argc, __argv, mode, noise_level, ScaleRatio, ScaleWidth, ScaleHeight, model_dir, process, output_quality, output_depth, use_tta, crop_size, batch_size, gpu_no);
 	if (ret != Waifu2x::eWaifu2xError_OK)
 		SendMessage(dh, WM_ON_WAIFU2X_ERROR, (WPARAM)&ret, 0);
 	else
@@ -924,6 +937,8 @@ void DialogEvent::SaveIni(const bool isSyncMember)
 
 	WritePrivateProfileString(TEXT("Setting"), TEXT("LastUseTTA"), to_tstring(use_tta ? 1 : 0).c_str(), getTString(SettingFilePath).c_str());
 
+	WritePrivateProfileString(TEXT("Setting"), TEXT("LastDeviceNo"), to_tstring(gpu_no).c_str(), getTString(SettingFilePath).c_str());
+
 	if (output_quality)
 		WritePrivateProfileString(TEXT("Setting"), TEXT("LastOutputQuality"), boost::lexical_cast<tstring>(*output_quality).c_str(), getTString(SettingFilePath).c_str());
 	else
@@ -1130,7 +1145,7 @@ UINT_PTR DialogEvent::OFNHookProcOut(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARA
 
 DialogEvent::DialogEvent() : dh(nullptr), mode("noise_scale"), noise_level(1), scale_ratio(2.0), scale_width(0), scale_height(0), model_dir(TEXT("models/anime_style_art_rgb")),
 process("gpu"), outputExt(TEXT(".png")), inputFileExt(TEXT("png:jpg:jpeg:tif:tiff:bmp:tga")),
-use_tta(false), output_depth(8), crop_size(128), batch_size(1), isLastError(false), scaleType(eScaleTypeEnd),
+use_tta(false), output_depth(8), crop_size(128), batch_size(1), gpu_no(0), isLastError(false), scaleType(eScaleTypeEnd),
 TimeLeftThread(-1), TimeLeftGetTimeThread(0), isCommandLineStart(false), tAutoMode(TEXT("none")),
 isArgStartAuto(true), isArgStartSuccessFinish(true), isOutputNoOverwrite(false), isNotSaveParam(false)
 {}
@@ -1650,6 +1665,8 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 
 		use_tta = GetPrivateProfileInt(TEXT("Setting"), TEXT("LastUseTTA"), 0, getTString(SettingFilePath).c_str()) != 0;
 
+		gpu_no = GetPrivateProfileInt(TEXT("Setting"), TEXT("LastDeviceNo"), 0, getTString(SettingFilePath).c_str());
+
 		output_quality.reset();
 		const int num = GetPrivateProfileInt(TEXT("Setting"), TEXT("LastOutputQuality"), -100, getTString(SettingFilePath).c_str());
 		if (num != -100)
@@ -1920,6 +1937,10 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 				L"input batch size", false,
 				1, L"int", cmd);
 
+			TCLAP::ValueArg<int> cmdGPUNoFile(L"", L"gpu",
+				L"gpu device no", false,
+				0, L"int", cmd);
+
 			std::vector<int> cmdBoolConstraintV;
 			cmdBoolConstraintV.push_back(0);
 			cmdBoolConstraintV.push_back(1);
@@ -2130,6 +2151,13 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 				if (cmdBatchSizeFile.isSet())
 				{
 					batch_size = cmdBatchSizeFile.getValue();
+
+					isSetParam = true;
+				}
+
+				if (cmdGPUNoFile.isSet())
+				{
+					gpu_no = cmdGPUNoFile.getValue();
 
 					isSetParam = true;
 				}
@@ -2844,6 +2872,7 @@ void DialogEvent::AppSetting(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 		bool isOutputNoOverwrite;
 		tstring tInputDirFix;
 		tstring tOutputDirFix;
+		int gpu_no;
 
 	private:
 		void AppSettingDialogEvent::SetWindowTextLang()
@@ -2871,6 +2900,8 @@ void DialogEvent::AppSetting(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 			SET_WINDOW_TEXT(IDC_STATIC_OUTPUT_DIR_FIX);
 
 			SET_WINDOW_TEXT(IDC_CHECK_OUTPUT_NO_OVERWIRITE);
+
+			SET_WINDOW_TEXT(IDC_STATIC_USE_GPU_NO);
 
 #undef SET_WINDOW_TEXT
 		}
@@ -2926,6 +2957,8 @@ void DialogEvent::AppSetting(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 
 			SetWindowText(GetDlgItem(hWnd, IDC_EDIT_INPUT_DIR_FIX), tInputDirFix.c_str());
 			SetWindowText(GetDlgItem(hWnd, IDC_EDIT_OUTPUT_DIR_FIX), tOutputDirFix.c_str());
+
+			SetWindowText(GetDlgItem(hWnd, IDC_EDIT_USE_GPU_NO), to_tstring(gpu_no).c_str());
 		}
 
 		void Close(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
@@ -2935,6 +2968,8 @@ void DialogEvent::AppSetting(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 
 		void sync()
 		{
+			TCHAR *ptr = nullptr;
+
 			if (SendMessage(GetDlgItem(dh, IDC_RADIO_AUTO_START_ONE), BM_GETCHECK, 0, 0))
 				tAutoMode = TEXT("one");
 			else if (SendMessage(GetDlgItem(dh, IDC_RADIO_AUTO_START_MULTI), BM_GETCHECK, 0, 0))
@@ -2960,6 +2995,12 @@ void DialogEvent::AppSetting(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 			GetWindowText(GetDlgItem(dh, IDC_EDIT_OUTPUT_DIR_FIX), buf, _countof(buf));
 			buf[_countof(buf) - 1] = TEXT('\0');
 			tOutputDirFix = buf;
+
+			GetWindowText(GetDlgItem(dh, IDC_EDIT_USE_GPU_NO), buf, _countof(buf));
+			buf[_countof(buf) - 1] = TEXT('\0');
+			const auto devno = _tcstol(buf, &ptr, 10);
+			if ((!ptr || *ptr == TEXT('\0')) && devno >= 0)
+				gpu_no = devno;
 		}
 
 		void AppSettingDialogEvent::OK(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
@@ -2983,6 +3024,7 @@ void DialogEvent::AppSetting(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 	cAppSettingDialogEvent.isOutputNoOverwrite = isOutputNoOverwrite;
 	cAppSettingDialogEvent.tInputDirFix = tInputDirFix;
 	cAppSettingDialogEvent.tOutputDirFix = tOutputDirFix;
+	cAppSettingDialogEvent.gpu_no = gpu_no;
 
 	CDialog cDialog;
 
@@ -3003,6 +3045,7 @@ void DialogEvent::AppSetting(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 		isOutputNoOverwrite = cAppSettingDialogEvent.isOutputNoOverwrite;
 		tInputDirFix = cAppSettingDialogEvent.tInputDirFix;
 		tOutputDirFix = cAppSettingDialogEvent.tOutputDirFix;
+		gpu_no = cAppSettingDialogEvent.gpu_no;
 
 		if (tOutputDirFix.length() > 0 && boost::filesystem::exists(tOutputDirFix))
 		{

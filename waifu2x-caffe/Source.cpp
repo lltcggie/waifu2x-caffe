@@ -135,6 +135,10 @@ int main(int argc, char** argv)
 		"input batch size", false,
 		1, "int", cmd);
 
+	TCLAP::ValueArg<int> cmdGPUNoFile("", "gpu",
+		"gpu device no", false,
+		0, "int", cmd);
+
 	std::vector<int> cmdTTAConstraintV;
 	cmdTTAConstraintV.push_back(0);
 	cmdTTAConstraintV.push_back(1);
@@ -319,7 +323,7 @@ int main(int argc, char** argv)
 	Waifu2x w;
 	ret = w.init(argc, argv, cmdMode.getValue(), cmdNRLevel.getValue(), ScaleRatio, ScaleWidth, ScaleHeight, cmdModelPath.getValue(), cmdProcess.getValue(),
 		cmdOutputQuality.getValue() == -1 ? boost::optional<int>() : cmdOutputQuality.getValue(), cmdOutputDepth.getValue(), use_tta, cmdCropSizeFile.getValue(),
-		cmdBatchSizeFile.getValue());
+		cmdBatchSizeFile.getValue(), cmdGPUNoFile.getValue());
 	switch (ret)
 	{
 	case Waifu2x::eWaifu2xError_InvalidParameter:
