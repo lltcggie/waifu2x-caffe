@@ -978,7 +978,7 @@ Waifu2x::eWaifu2xError Waifu2x::LoadInfoFromJson(const boost::filesystem::path &
 }
 
 // ネットワークを使って画像を再構築する
-Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<float>> net, cv::Mat &im)
+Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<float>> net, const int reconstructed_scale, cv::Mat &im)
 {
 	const auto Height = im.size().height;
 	const auto Width = im.size().width;
@@ -989,7 +989,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 
 	assert(im.channels() == 1 || im.channels() == 3);
 
-	cv::Mat outim(im.rows * inner_scale, im.cols * inner_scale, im.type());
+	cv::Mat outim(im.rows * reconstructed_scale, im.cols * reconstructed_scale, im.type());
 
 	// float *imptr = (float *)im.data;
 	float *imptr = (float *)outim.data;
@@ -1012,8 +1012,8 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(boost::shared_ptr<caffe::Net<fl
 		const int input_block_plane_size = input_block_size * input_block_size * input_plane;
 		const int output_block_plane_size = output_block_size * output_block_size * input_plane;
 
-		const int output_padding = (inner_padding + outer_padding) * inner_scale - net_offset;
-		const int output_no_padding_block_size = block_size * inner_scale;
+		const int output_padding = (inner_padding + outer_padding) * reconstructed_scale - net_offset;
+		const int output_no_padding_block_size = block_size * reconstructed_scale;
 
 		// 画像は(消費メモリの都合上)block_size*block_sizeに分けて再構築する
 		for (int num = 0; num < BlockNum; num += batch_size)
@@ -1308,8 +1308,10 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 
 		if (mode == "noise" || mode == "noise_scale" || mode == "auto_scale")
 		{
-			const boost::filesystem::path model_path = (mode_dir_path / "srcnn.prototxt").string();
-			const boost::filesystem::path param_path = (mode_dir_path / ("noise" + std::to_string(noise_level) + "_model.json")).string();
+			const std::string base_name = "noise" + std::to_string(noise_level) + "_model";
+
+			const boost::filesystem::path model_path = mode_dir_path / (base_name + ".prototxt");
+			const boost::filesystem::path param_path = mode_dir_path / (base_name + ".json");
 			const boost::filesystem::path info_path = mode_dir_path / "info.json";
 
 			ret = ConstractNet(net_noise, model_path, param_path, info_path, process);
@@ -1319,8 +1321,10 @@ Waifu2x::eWaifu2xError Waifu2x::init(int argc, char** argv, const std::string &M
 
 		if (mode == "scale" || mode == "noise_scale" || mode == "auto_scale")
 		{
-			const boost::filesystem::path model_path = (mode_dir_path / "srcnn.prototxt").string();
-			const boost::filesystem::path param_path = (mode_dir_path / "scale2.0x_model.json").string();
+			const std::string base_name = "scale2.0x_model";
+
+			const boost::filesystem::path model_path = mode_dir_path / (base_name + ".prototxt");
+			const boost::filesystem::path param_path = mode_dir_path / (base_name + ".json");
 			const boost::filesystem::path info_path = mode_dir_path / "info.json";
 
 			ret = ConstractNet(net_scale, model_path, param_path, info_path, process);
@@ -1544,13 +1548,13 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructFloatMat(const bool isReconstructNois
 	Waifu2x::eWaifu2xError ret;
 
 	cv::Mat im(in);
-	cv::Size_<int> image_size = im.size() * inner_scale;
+	cv::Size_<int> image_size = im.size();
 
 	if (isReconstructNoise)
 	{
 		PaddingImage(im, im);
 
-		ret = ReconstructImage(net_noise, im);
+		ret = ReconstructImage(net_noise, 1, im);
 		if (ret != eWaifu2xError_OK)
 			return ret;
 
@@ -1565,6 +1569,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructFloatMat(const bool isReconstructNois
 	if (cancel_func && cancel_func())
 		return eWaifu2xError_Cancel;
 
+	image_size = im.size() * inner_scale;
 	const double ratio = CalcScaleRatio(image_size);
 	const int scale2 = ceil(log(ratio) / log(model_scale));
 
@@ -1585,7 +1590,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructFloatMat(const bool isReconstructNois
 				PaddingImage(im, im);
 			}
 
-			ret = ReconstructImage(net_scale, im);
+			ret = ReconstructImage(net_scale, inner_scale, im);
 			if (ret != eWaifu2xError_OK)
 				return ret;
 
