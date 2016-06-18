@@ -9,7 +9,7 @@ CPUで変換することも出来ますが、CUDA(あるいはcuDNN)を使うと
 
 GUI supports English and Japanese and Simplified Chinese and Traditional Chinese and Korean and Turkish.
 
-ソフトのダウンロードは[こちらのページ](https://github.com/lltcggie/waifu2x-caffe/releases)の「Downloads」の項で出来ます。
+ソフトのダウンロードは[こちらのreleasesページ](https://github.com/lltcggie/waifu2x-caffe/releases)の「Downloads」の項で出来ます。
 
 
  要求環境
