@@ -344,11 +344,12 @@ GUI版ではオプション指定に当てはまらなかった引数は入力�
 ###--no_overwrite <0|1>
      `1`を指定すると、画像の書き込み先に同名のファイルが存在する場合は変換を行いません。
 
-###-y <anime_style_art_rgb|photo|anime_style_art_y>,  --model_type <anime_style_art_rgb|photo|anime_style_art_y>
+###-y <anime_style_art_rgb|photo|anime_style_art_y>,  --model_type <anime_style_art_rgb|photo|upconv_7_anime_style_art_rgb|anime_style_art_y>
      使用するモデルを指定します。
      GUIでの設定項目「モデル」と以下のように対応しています。
       * anime_style_art_rgb : 2次元イラスト(RGBモデル)
       * photo : 写真・アニメ(Photoモデル)
+      * upconv_7_anime_style_art_rgb : 2次元イラスト(UpRGBモデル)
       * anime_style_art_y : 2次元イラスト(Yモデル)
 
 
@@ -372,7 +373,7 @@ GUI版ではオプション指定に当てはまらなかった引数は入力�
      (input_fileが画像ファイルの場合)拡張子(最後の.pngなど)は必ず入力するようにして下さい。
      指定しなかった場合は自動でファイル名を決定し、そのファイルに保存します。
      ファイル名の決定ルールは、
-     `[元の画像ファイル名]``(モード名)``(ノイズ除去レベル(ノイズ除去モードの場合))``(拡大率(拡大モードの場合))``.出力拡張子`
+     `[元の画像ファイル名]``(モデル名)``(モード名)``(ノイズ除去レベル(ノイズ除去モードの場合))``(拡大率(拡大モードの場合))``(出力ビット数(8ビット以外の場合))``.出力拡張子`
      のようになっています。
      保存される場所は、基本的には入力画像と同じディレクトリになります。
 
@@ -381,7 +382,9 @@ GUI版ではオプション指定に当てはまらなかった引数は入力�
      標準では以下のモデルが付属しています。
       * `models/anime_style_art_rgb` : RGBすべてを変換する2次元画像用モデル
       * `models/anime_style_art` : 輝度のみを変換する2次元画像用モデル
-      * `models/ukbench` : 写真用モデル(拡大するモデルのみ付属しています。ノイズ除去は出来ません)
+      * `models/photo : RGBすべてを変換する写真、アニメ画像用モデル
+      * `models/upconv_7_anime_style_art_rgb : anime_style_art_rgbより高速かつ同等以上の画質で変換するモデル
+      * `models/ukbench` : 旧式の写真用モデル(拡大するモデルのみ付属しています。ノイズ除去は出来ません)
      基本的には指定しなくても大丈夫です。デフォルト以外のモデルや自作のモデルを使用する時などに指定して下さい。
 
  分割サイズ
