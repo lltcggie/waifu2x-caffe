@@ -190,6 +190,8 @@ int main(int argc, char** argv)
 	if (outputExt.length() > 0 && outputExt[0] != '.')
 		outputExt = "." + outputExt;
 
+	const std::string ModelName = Waifu2x::GetModelName(cmdModelPath.getValue());
+
 	const bool use_tta = cmdTTALevel.getValue() == 1;
 
 	std::vector<std::pair<std::string, std::string>> file_paths;
@@ -201,11 +203,17 @@ int main(int argc, char** argv)
 		{
 			// 「test」なら「test_noise_scale(Level1)(x2.000000)」みたいな感じにする
 
-			std::string addstr("_" + cmdMode.getValue());
+			std::string addstr("(");
+			addstr += ModelName;
+			addstr += ")";
 
 			const std::string &mode = cmdMode.getValue();
+
+			addstr += "(" + mode + ")";
+
 			if (mode.find("noise") != mode.npos || mode.find("auto_scale") != mode.npos)
 				addstr += "(Level" + std::to_string(cmdNRLevel.getValue()) + ")";
+
 			if (use_tta)
 				addstr += "(tta)";
 			if (mode.find("scale") != mode.npos)
@@ -217,6 +225,9 @@ int main(int argc, char** argv)
 				else
 					addstr += "(height " + std::to_string(*ScaleHeight) + ")";
 			}
+
+			if (cmdOutputDepth.getValue() != 8)
+				addstr += "(" + std::to_string(cmdOutputDepth.getValue()) + "bit)";
 
 			output_path = input_path.branch_path() / (input_path.stem().string() + addstr);
 		}
@@ -305,15 +316,34 @@ int main(int argc, char** argv)
 			outputFileName = cmdInputFile.getValue();
 			const auto tailDot = outputFileName.find_last_of('.');
 			outputFileName.erase(tailDot, outputFileName.length());
-			outputFileName = outputFileName + "(" + cmdMode.getValue() + ")";
-			std::string &mode = cmdMode.getValue();
+
+			std::string addstr("(");
+			addstr += ModelName;
+			addstr += ")";
+
+			const std::string &mode = cmdMode.getValue();
+
+			addstr += "(" + mode + ")";
+
 			if (mode.find("noise") != mode.npos || mode.find("auto_scale") != mode.npos)
-				outputFileName = outputFileName + "(Level" + std::to_string(cmdNRLevel.getValue()) + ")";
+				addstr += "(Level" + std::to_string(cmdNRLevel.getValue()) + ")";
+
 			if (use_tta)
-				outputFileName += "(tta)";
+				addstr += "(tta)";
 			if (mode.find("scale") != mode.npos)
-				outputFileName = outputFileName + "(x" + std::to_string(cmdScaleRatio.getValue()) + ")";
-			outputFileName += outputExt;
+			{
+				if (ScaleRatio)
+					addstr += "(x" + std::to_string(*ScaleRatio) + ")";
+				else if (ScaleWidth)
+					addstr += "(width " + std::to_string(*ScaleWidth) + ")";
+				else
+					addstr += "(height " + std::to_string(*ScaleHeight) + ")";
+			}
+
+			if (cmdOutputDepth.getValue() != 8)
+				addstr += "(" + std::to_string(cmdOutputDepth.getValue()) + "bit)";
+
+			outputFileName += addstr + outputExt;
 		}
 
 		file_paths.emplace_back(cmdInputFile.getValue(), outputFileName);
