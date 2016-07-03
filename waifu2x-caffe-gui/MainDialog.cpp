@@ -2015,8 +2015,8 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 			std::vector<std::wstring> cmdModelTypeConstraintV;
 			cmdModelTypeConstraintV.push_back(L"anime_style_art_rgb");
 			cmdModelTypeConstraintV.push_back(L"photo");
-			cmdModelTypeConstraintV.push_back(L"anime_style_art_y");
 			cmdModelTypeConstraintV.push_back(L"upconv_7_anime_style_art_rgb");
+			cmdModelTypeConstraintV.push_back(L"anime_style_art_y");
 			TCLAP::ValuesConstraint<std::wstring> cmdModelTypeConstraint(cmdModelTypeConstraintV);
 			TCLAP::ValueArg<std::wstring> cmdModelType(L"y", L"model_type", L"model type",
 				false, L"anime_style_art_rgb", &cmdModelTypeConstraint, cmd);
