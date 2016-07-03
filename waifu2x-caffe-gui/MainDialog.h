@@ -9,6 +9,7 @@
 #include <atomic>
 #include <boost/filesystem.hpp>
 #include <boost/optional.hpp>
+#include "../common/waifu2x.h"
 #include "resource.h"
 #include "tstring.h"
 #include "LangStringList.h"
@@ -33,7 +34,8 @@ private:
 	tstring input_str;
 	std::vector<tstring> input_str_multi;
 	tstring output_str;
-	std::string mode;
+	std::string modeStr;
+	Waifu2x::eWaifu2xModelType mode;
 	int noise_level;
 	double scale_ratio;
 	int scale_width;
@@ -85,6 +87,7 @@ private:
 		eModelTypeRGB,
 		eModelTypePhoto,
 		eModelTypeY,
+		eModelTypeUpConvRGB,
 		eModelTypeEnd,
 	};
 

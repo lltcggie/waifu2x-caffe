@@ -17,7 +17,7 @@
 "IDC_RADIO_MODE_SCALE":"Magnify only",
 "IDC_RADIO_MODE_NOISE":"Denoise only",
 "IDC_RADIO_AUTO_SCALE":"Magnify && Auto Denoise",
-"IDC_STATIC_JPEG_NOISE_LEVEL":"JPEG denoise level",
+"IDC_STATIC_JPEG_NOISE_LEVEL":"Denoise level",
 "IDC_RADIONOISE_LEVEL1":"Level 1",
 "IDC_RADIONOISE_LEVEL2":"Level 2",
 "IDC_RADIONOISE_LEVEL3":"Level 3",
@@ -91,5 +91,6 @@
 "MessageCudaOldDeviceError":"Your CUDA device too old.\r\nPlease use Compute Capability 2.0 or more devices",
 "OK":"OK",
 "Cancel":"Cancel",
-"IDC_STATIC_USE_GPU_NO":"Use GPU No"
+"IDC_STATIC_USE_GPU_NO":"Use GPU No",
+"IDC_RADIO_MODEL_UPCONV_RGB":"2-D illust (UpRGB Model)"
 }

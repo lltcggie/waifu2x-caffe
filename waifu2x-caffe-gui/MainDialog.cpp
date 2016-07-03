@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include <codecvt> 
 #include <cblas.h>
 #include <dlgs.h>
 #include <boost/tokenizer.hpp>
@@ -14,6 +15,7 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include "../common/waifu2x.h"
+#include "../common/stImage.h"
 #include "CDialog.h"
 #include "CControl.h"
 //#include <boost/program_options.hpp>
@@ -116,42 +118,50 @@ namespace
 
 tstring DialogEvent::AddName() const
 {
-	tstring addstr;
+	tstring addstr(TEXT("("));
+
+	const std::string ModelName = Waifu2x::GetModelName(model_dir);
+
+#ifdef UNICODE
+	{
+		std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> cv;
+		const std::wstring wModelName = cv.from_bytes(ModelName);
+
+		addstr += wModelName;
+	}
+#else
+	addstr += ModelName;
+#endif
+
+	addstr += TEXT(")");
 
 	addstr += TEXT("(");
-	switch (modelType)
+	switch (mode)
 	{
-	case eModelTypeRGB:
-		addstr += TEXT("RGB");
+	case Waifu2x::eWaifu2xModelTypeNoise:
+		addstr += TEXT("noise");
 		break;
 
-	case eModelTypePhoto:
-		addstr += TEXT("Photo");
+	case Waifu2x::eWaifu2xModelTypeScale:
+		addstr += TEXT("scale");
 		break;
 
-	case eModelTypeY:
-		addstr += TEXT("Y");
+	case Waifu2x::eWaifu2xModelTypeNoiseScale:
+		addstr += TEXT("noise_scale");
+		break;
+
+	case Waifu2x::eWaifu2xModelTypeAutoScale:
+		addstr += TEXT("auto_scale");
 		break;
 	}
 	addstr += TEXT(")");
 
-	addstr += TEXT("(");
-	if (mode == "noise")
-		addstr += TEXT("noise");
-	else if (mode == "scale")
-		addstr += TEXT("scale");
-	else if (mode == "noise_scale")
-		addstr += TEXT("noise_scale");
-	else if (mode == "auto_scale")
-		addstr += TEXT("auto_scale");
-	addstr += TEXT(")");
-
-	if (mode.find("noise") != mode.npos || mode.find("auto_scale") != mode.npos)
+	if (mode == Waifu2x::eWaifu2xModelTypeNoise || mode == Waifu2x::eWaifu2xModelTypeNoiseScale || mode == Waifu2x::eWaifu2xModelTypeAutoScale)
 		addstr += TEXT("(Level") + to_tstring(noise_level) + TEXT(")");
 	if (use_tta)
 		addstr += TEXT("(tta)");
 
-	if (mode.find("scale") != mode.npos)
+	if (mode == Waifu2x::eWaifu2xModelTypeScale || mode == Waifu2x::eWaifu2xModelTypeNoiseScale || mode == Waifu2x::eWaifu2xModelTypeAutoScale)
 	{
 		if (scaleType == eScaleTypeRatio)
 			addstr += TEXT("(x") + to_tstring(scale_ratio) + TEXT(")");
@@ -189,13 +199,25 @@ bool DialogEvent::SyncMember(const bool NotSyncCropSize, const bool silent)
 	}
 
 	if (SendMessage(GetDlgItem(dh, IDC_RADIO_MODE_NOISE), BM_GETCHECK, 0, 0))
-		mode = "noise";
+	{
+		mode = Waifu2x::eWaifu2xModelTypeNoise;
+		modeStr = "noise";
+	}
 	else if (SendMessage(GetDlgItem(dh, IDC_RADIO_MODE_SCALE), BM_GETCHECK, 0, 0))
-		mode = "scale";
+	{
+		mode = Waifu2x::eWaifu2xModelTypeScale;
+		modeStr = "scale";
+	}
 	else if (SendMessage(GetDlgItem(dh, IDC_RADIO_MODE_NOISE_SCALE), BM_GETCHECK, 0, 0))
-		mode = "noise_scale";
+	{
+		mode = Waifu2x::eWaifu2xModelTypeNoiseScale;
+		modeStr = "noise_scale";
+	}
 	else
-		mode = "auto_scale";
+	{
+		mode = Waifu2x::eWaifu2xModelTypeAutoScale;
+		modeStr = "auto_scale";
+	}
 
 	if (SendMessage(GetDlgItem(dh, IDC_RADIONOISE_LEVEL1), BM_GETCHECK, 0, 0))
 		noise_level = 1;
@@ -274,24 +296,37 @@ bool DialogEvent::SyncMember(const bool NotSyncCropSize, const bool silent)
 			scale_height = l;
 	}
 
-	if (SendMessage(GetDlgItem(dh, IDC_RADIO_MODEL_RGB), BM_GETCHECK, 0, 0))
 	{
+		const int cur = SendMessage(GetDlgItem(dh, IDC_COMBO_MODEL), CB_GETCURSEL, 0, 0);
+		switch (cur)
+		{
+		case 0:
 		model_dir = TEXT("models/anime_style_art_rgb");
 		modelType = eModelTypeRGB;
-	}
-	else if (SendMessage(GetDlgItem(dh, IDC_RADIO_MODEL_Y), BM_GETCHECK, 0, 0))
-	{
+			break;
+
+		case 1:
+			model_dir = TEXT("models/photo");
+			modelType = eModelTypePhoto;
+			break;
+
+		case 2:
+			model_dir = TEXT("models/upconv_7_anime_style_art_rgb");
+			modelType = eModelTypeUpConvRGB;
+			break;
+
+		case 3:
 		model_dir = TEXT("models/anime_style_art");
 		modelType = eModelTypeY;
+			break;
+
+		default:
+			break;
 	}
-	else
-	{
-		model_dir = TEXT("models/photo");
-		modelType = eModelTypePhoto;
 	}
 
 	{
-		const auto &OutputExtentionList = Waifu2x::OutputExtentionList;
+		const auto &OutputExtentionList = stImage::OutputExtentionList;
 
 		const int cur = SendMessage(GetDlgItem(dh, IDC_COMBO_OUT_EXT), CB_GETCURSEL, 0, 0);
 		if (cur < 0 || cur >= OutputExtentionList.size())
@@ -383,8 +418,9 @@ void DialogEvent::SetCropSizeList(const boost::filesystem::path & input_path)
 	int gcd = 1;
 	if (boost::filesystem::exists(input_path) && !boost::filesystem::is_directory(input_path))
 	{
-		auto mat = Waifu2x::LoadMat(input_path.string());
-		if (mat.empty())
+		cv::Mat mat;
+		const auto ret = stImage::LoadMat(mat, input_path.string());
+		if (ret != Waifu2x::eWaifu2xError_OK)
 			return;
 
 		auto size = mat.size();
@@ -670,25 +706,8 @@ void DialogEvent::ProcessWaifu2x()
 
 	Waifu2x::eWaifu2xError ret;
 
-	boost::optional<double> ScaleRatio;
-	boost::optional<int> ScaleWidth;
-	boost::optional<int> ScaleHeight;
-
-	switch (scaleType)
-	{
-	case eScaleTypeRatio:
-		ScaleRatio = scale_ratio;
-		break;
-	case eScaleTypeWidth:
-		ScaleWidth = scale_width;
-		break;
-	default:
-		ScaleHeight = scale_height;
-		break;
-	}
-
 	Waifu2x w;
-	ret = w.init(__argc, __argv, mode, noise_level, ScaleRatio, ScaleWidth, ScaleHeight, model_dir, process, output_quality, output_depth, use_tta, crop_size, batch_size, gpu_no);
+	ret = w.Init(mode, noise_level, model_dir, process, gpu_no);
 	if (ret != Waifu2x::eWaifu2xError_OK)
 		SendMessage(dh, WM_ON_WAIFU2X_ERROR, (WPARAM)&ret, 0);
 	else
@@ -699,6 +718,21 @@ void DialogEvent::ProcessWaifu2x()
 		int num = 0;
 
 		ProgessFunc(maxFile, 0);
+
+		boost::optional<double> ScaleRatio;
+		boost::optional<int> ScaleWidth, ScaleHeight;
+		switch (scaleType)
+		{
+		case eScaleTypeRatio:
+			ScaleRatio = scale_ratio;
+			break;
+		case eScaleTypeWidth:
+			ScaleWidth = scale_width;
+			break;
+		default:
+			ScaleHeight = scale_height;
+			break;
+		}
 
 		DWORD startTime = 0;
 
@@ -719,10 +753,10 @@ void DialogEvent::ProcessWaifu2x()
 				continue;
 			}
 
-			ret = w.waifu2x(p.first, p.second, [this]()
+			ret = w.waifu2x(p.first, p.second, ScaleRatio, ScaleWidth, ScaleHeight, [this]()
 			{
 				return cancelFlag;
-			});
+			}, crop_size, crop_size, output_quality, output_depth, use_tta, batch_size);
 
 			num++;
 			ProgessFunc(maxFile, num);
@@ -894,14 +928,24 @@ void DialogEvent::SaveIni(const bool isSyncMember)
 	else
 		tScaleHeight = TEXT("");
 
-	if (mode == ("noise"))
+	switch (mode)
+	{
+	case Waifu2x::eWaifu2xModelTypeNoise:
 		tmode = TEXT("noise");
-	else if (mode == ("scale"))
+		break;
+
+	case Waifu2x::eWaifu2xModelTypeScale:
 		tmode = TEXT("scale");
-	else if (mode == ("auto_scale"))
-		tmode = TEXT("auto_scale");
-	else // noise_scale
+		break;
+
+	case Waifu2x::eWaifu2xModelTypeNoiseScale:
 		tmode = TEXT("noise_scale");
+		break;
+
+	case Waifu2x::eWaifu2xModelTypeAutoScale:
+		tmode = TEXT("auto_scale");
+		break;
+	}
 
 	if (process == "gpu")
 		tprcess = TEXT("gpu");
@@ -1143,7 +1187,7 @@ UINT_PTR DialogEvent::OFNHookProcOut(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARA
 	return 0L;
 }
 
-DialogEvent::DialogEvent() : dh(nullptr), mode("noise_scale"), noise_level(1), scale_ratio(2.0), scale_width(0), scale_height(0), model_dir(TEXT("models/anime_style_art_rgb")),
+DialogEvent::DialogEvent() : dh(nullptr), mode(Waifu2x::eWaifu2xModelTypeNoiseScale), modeStr("noise_scale"), noise_level(1), scale_ratio(2.0), scale_width(0), scale_height(0), model_dir(TEXT("models/anime_style_art_rgb")),
 process("gpu"), outputExt(TEXT(".png")), inputFileExt(TEXT("png:jpg:jpeg:tif:tiff:bmp:tga")),
 use_tta(false), output_depth(8), crop_size(128), batch_size(1), gpu_no(0), isLastError(false), scaleType(eScaleTypeEnd),
 TimeLeftThread(-1), TimeLeftGetTimeThread(0), isCommandLineStart(false), tAutoMode(TEXT("none")),
@@ -1398,9 +1442,6 @@ void DialogEvent::SetWindowTextLang()
 	SET_WINDOW_TEXT(IDC_RADIO_SCALE_WIDTH);
 	SET_WINDOW_TEXT(IDC_RADIO_SCALE_HEIGHT);
 	SET_WINDOW_TEXT(IDC_STATIC_MODEL);
-	SET_WINDOW_TEXT(IDC_RADIO_MODEL_RGB);
-	SET_WINDOW_TEXT(IDC_RADIO_MODEL_PHOTO);
-	SET_WINDOW_TEXT(IDC_RADIO_MODEL_Y);
 	SET_WINDOW_TEXT(IDC_CHECK_TTA);
 	SET_WINDOW_TEXT(IDC_STATIC_PROCESS_SPEED_SETTING);
 	SET_WINDOW_TEXT(IDC_STATIC_CROP_SIZE);
@@ -1416,6 +1457,21 @@ void DialogEvent::SetWindowTextLang()
 	SET_WINDOW_TEXT(IDC_BUTTON_CLEAR_OUTPUT_DIR);
 
 #undef SET_WINDOW_TEXT
+
+	const int cur = SendMessage(GetDlgItem(dh, IDC_COMBO_MODEL), CB_GETCURSEL, 0, 0);
+
+	HWND hwndCombo = GetDlgItem(dh, IDC_COMBO_MODEL);
+	while (SendMessage(hwndCombo, CB_GETCOUNT, 0, 0) != 0)
+	{
+		SendMessage(hwndCombo, CB_DELETESTRING, 0, 0);
+	}
+
+	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_RGB").c_str());
+	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_PHOTO").c_str());
+	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_UPCONV_RGB").c_str());
+	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_Y").c_str());
+
+	SendMessage(GetDlgItem(dh, IDC_COMBO_MODEL), CB_SETCURSEL, cur, 0);
 }
 
 void DialogEvent::SetDepthAndQuality(const bool SetDefaultQuality)
@@ -1427,7 +1483,7 @@ void DialogEvent::SetDepthAndQuality(const bool SetDefaultQuality)
 	if (cur < 0)
 		return;
 
-	const auto &OutputExtentionList = Waifu2x::OutputExtentionList;
+	const auto &OutputExtentionList = stImage::OutputExtentionList;
 	if (cur >= OutputExtentionList.size())
 		return;
 
@@ -1569,7 +1625,7 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 	{
 		HWND houtext = GetDlgItem(dh, IDC_COMBO_OUT_EXT);
 
-		const auto &OutputExtentionList = Waifu2x::OutputExtentionList;
+		const auto &OutputExtentionList = stImage::OutputExtentionList;
 		for (const auto &elm : OutputExtentionList)
 		{
 			SendMessageW(houtext, CB_ADDSTRING, 0, (LPARAM)elm.ext.c_str());
@@ -1797,24 +1853,18 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL3), BM_SETCHECK, BST_CHECKED, 0);
 	}
 
+
+	int index = 0;
 	if (modelType == eModelTypeRGB)
-	{
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_RGB), BM_SETCHECK, BST_CHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_PHOTO), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_Y), BM_SETCHECK, BST_UNCHECKED, 0);
-	}
+		index = 0;
 	else if (modelType == eModelTypePhoto)
-	{
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_RGB), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_PHOTO), BM_SETCHECK, BST_CHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_Y), BM_SETCHECK, BST_UNCHECKED, 0);
-	}
+		index = 1;
+	else if (modelType == eModelTypeUpConvRGB)
+		index = 2;
 	else
-	{
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_RGB), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_PHOTO), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_Y), BM_SETCHECK, BST_CHECKED, 0);
-	}
+		index = 3;
+
+	SendMessage(GetDlgItem(dh, IDC_COMBO_MODEL), CB_SETCURSEL, index, 0);
 
 	if (use_tta)
 		SendMessage(GetDlgItem(hWnd, IDC_CHECK_TTA), BM_SETCHECK, BST_CHECKED, 0);
@@ -1839,7 +1889,7 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 	HWND houtext = GetDlgItem(dh, IDC_COMBO_OUT_EXT);
 
 	size_t defaultIndex = 0;
-	const auto &OutputExtentionList = Waifu2x::OutputExtentionList;
+	const auto &OutputExtentionList = stImage::OutputExtentionList;
 	for (size_t i = 0; i < OutputExtentionList.size(); i++)
 	{
 		const auto &elm = OutputExtentionList[i];
@@ -1966,6 +2016,7 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 			cmdModelTypeConstraintV.push_back(L"anime_style_art_rgb");
 			cmdModelTypeConstraintV.push_back(L"photo");
 			cmdModelTypeConstraintV.push_back(L"anime_style_art_y");
+			cmdModelTypeConstraintV.push_back(L"upconv_7_anime_style_art_rgb");
 			TCLAP::ValuesConstraint<std::wstring> cmdModelTypeConstraint(cmdModelTypeConstraintV);
 			TCLAP::ValueArg<std::wstring> cmdModelType(L"y", L"model_type", L"model type",
 				false, L"anime_style_art_rgb", &cmdModelTypeConstraint, cmd);
@@ -2185,24 +2236,17 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 
 				if (cmdModelType.isSet())
 				{
+					int index = 0;
 					if (cmdModelType.getValue() == L"anime_style_art_rgb")
-					{
-						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_RGB), BM_SETCHECK, BST_CHECKED, 0);
-						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_PHOTO), BM_SETCHECK, BST_UNCHECKED, 0);
-						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_Y), BM_SETCHECK, BST_UNCHECKED, 0);
-					}
+						index = 0;
 					else if (cmdModelType.getValue() == L"photo")
-					{
-						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_RGB), BM_SETCHECK, BST_UNCHECKED, 0);
-						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_PHOTO), BM_SETCHECK, BST_CHECKED, 0);
-						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_Y), BM_SETCHECK, BST_UNCHECKED, 0);
-					}
+						index = 1;
+					else if (cmdModelType.getValue() == L"anime_style_art_y")
+						index = 2;
 					else
-					{
-						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_RGB), BM_SETCHECK, BST_UNCHECKED, 0);
-						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_PHOTO), BM_SETCHECK, BST_UNCHECKED, 0);
-						SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODEL_Y), BM_SETCHECK, BST_CHECKED, 0);
-					}
+						index = 3;
+
+					SendMessage(GetDlgItem(dh, IDC_COMBO_MODEL), CB_SETCURSEL, index, 0);
 
 					isSetParam = true;
 				}

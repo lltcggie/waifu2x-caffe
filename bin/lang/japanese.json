@@ -17,7 +17,7 @@
 "IDC_RADIO_MODE_SCALE":"拡大",
 "IDC_RADIO_MODE_NOISE":"ノイズ除去",
 "IDC_RADIO_AUTO_SCALE":"ノイズ除去(自動判別)と拡大",
-"IDC_STATIC_JPEG_NOISE_LEVEL":"JPEGノイズ除去レベル",
+"IDC_STATIC_JPEG_NOISE_LEVEL":"ノイズ除去レベル",
 "IDC_RADIONOISE_LEVEL1":"レベル1",
 "IDC_RADIONOISE_LEVEL2":"レベル2",
 "IDC_RADIONOISE_LEVEL3":"レベル3",
@@ -28,7 +28,7 @@
 "IDC_STATIC_MODEL":"モデル",
 "IDC_RADIO_MODEL_RGB":"2次元イラスト (RGBモデル)",
 "IDC_RADIO_MODEL_PHOTO":"写真・アニメ (Photoモデル)",
-"IDC_RADIO_MODEL_Y":"2次元イラスト2 (Yモデル)",
+"IDC_RADIO_MODEL_Y":"2次元イラスト (Yモデル)",
 "IDC_CHECK_TTA":"TTAモードを使う",
 "IDC_STATIC_PROCESS_SPEED_SETTING":"処理速度設定",
 "IDC_STATIC_PROCESSOR":"使用プロセッサー",
@@ -91,5 +91,6 @@
 "MessageCudaOldDeviceError":"CUDAデバイスが古いです。\r\nCompute Capability 2.0以上のデバイスを使用してください",
 "OK":"OK",
 "Cancel":"キャンセル",
-"IDC_STATIC_USE_GPU_NO":"使用GPU No"
+"IDC_STATIC_USE_GPU_NO":"使用GPU No",
+"IDC_RADIO_MODEL_UPCONV_RGB":"2次元イラスト (UpRGBモデル)"
 }
