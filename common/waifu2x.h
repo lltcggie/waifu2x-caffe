@@ -30,10 +30,10 @@ class Waifu2x
 public:
 	enum eWaifu2xModelType
 	{
-		eWaifu2xModelTypeNoise,
-		eWaifu2xModelTypeScale,
-		eWaifu2xModelTypeNoiseScale,
-		eWaifu2xModelTypeAutoScale,
+		eWaifu2xModelTypeNoise = 0,
+		eWaifu2xModelTypeScale = 1,
+		eWaifu2xModelTypeNoiseScale = 2,
+		eWaifu2xModelTypeAutoScale = 3,
 	};
 
 	enum eWaifu2xError

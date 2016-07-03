@@ -52,7 +52,7 @@ boost::filesystem::path relativePath(const boost::filesystem::path &path, const 
 
 int main(int argc, char** argv)
 {
-	Waifu2x::init_liblary();
+	Waifu2x::init_liblary(argc, argv);
 
 	// CaffeÇÃÉGÉâÅ[Ç≈Ç»Ç¢ÉçÉOÇï€ë∂ÇµÇ»Ç¢ÇÊÇ§Ç…Ç∑ÇÈ
 	google::SetLogDestination(google::INFO, "");
@@ -319,11 +319,19 @@ int main(int argc, char** argv)
 		file_paths.emplace_back(cmdInputFile.getValue(), outputFileName);
 	}
 
+	Waifu2x::eWaifu2xModelType mode;
+	if (cmdMode.getValue() == "noise")
+		mode = Waifu2x::eWaifu2xModelTypeNoise;
+	else if (cmdMode.getValue() == "scale")
+		mode = Waifu2x::eWaifu2xModelTypeScale;
+	else if (cmdMode.getValue() == "noise_scale")
+		mode = Waifu2x::eWaifu2xModelTypeNoiseScale;
+	else if (cmdMode.getValue() == "auto_scale")
+		mode = Waifu2x::eWaifu2xModelTypeAutoScale;
+
 	Waifu2x::eWaifu2xError ret;
 	Waifu2x w;
-	ret = w.init(argc, argv, cmdMode.getValue(), cmdNRLevel.getValue(), ScaleRatio, ScaleWidth, ScaleHeight, cmdModelPath.getValue(), cmdProcess.getValue(),
-		cmdOutputQuality.getValue() == -1 ? boost::optional<int>() : cmdOutputQuality.getValue(), cmdOutputDepth.getValue(), use_tta, cmdCropSizeFile.getValue(),
-		cmdBatchSizeFile.getValue(), cmdGPUNoFile.getValue());
+	ret = w.Init(mode, cmdNRLevel.getValue(), cmdModelPath.getValue(), cmdProcess.getValue(), cmdGPUNoFile.getValue());
 	switch (ret)
 	{
 	case Waifu2x::eWaifu2xError_InvalidParameter:
@@ -343,7 +351,9 @@ int main(int argc, char** argv)
 	bool isError = false;
 	for (const auto &p : file_paths)
 	{
-		const Waifu2x::eWaifu2xError ret = w.waifu2x(p.first, p.second);
+		const Waifu2x::eWaifu2xError ret = w.waifu2x(p.first, p.second, ScaleRatio, ScaleWidth, ScaleHeight, nullptr,
+			cmdCropSizeFile.getValue(), cmdCropSizeFile.getValue(),
+			cmdOutputQuality.getValue() == -1 ? boost::optional<int>() : cmdOutputQuality.getValue(), cmdOutputDepth.getValue(), use_tta, cmdBatchSizeFile.getValue());
 		if (ret != Waifu2x::eWaifu2xError_OK)
 		{
 			switch (ret)

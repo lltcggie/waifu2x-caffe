@@ -8,9 +8,18 @@ void* Waifu2xInit(const char *mode, const int noise_level, const char *model_dir
 {
 	Waifu2x *obj = new Waifu2x();
 
-	char *argv[] = { "" };
+	Waifu2x::eWaifu2xModelType mt;
+	if (strcmp("noise", mode) == 0)
+		mt = Waifu2x::eWaifu2xModelTypeNoise;
+	else if (strcmp("scale", mode) == 0)
+		mt = Waifu2x::eWaifu2xModelTypeScale;
+	else if (strcmp("noise_scale", mode) == 0)
+		mt = Waifu2x::eWaifu2xModelTypeNoiseScale;
+	else if (strcmp("auto_scale", mode) == 0)
+		mt = Waifu2x::eWaifu2xModelTypeAutoScale;
 
-	if (obj->init(1, argv, mode, noise_level, 2.0, boost::optional<int>(), boost::optional<int>(), model_dir, process, boost::optional<int>(), output_depth, use_tta, crop_size, batch_size) != Waifu2x::eWaifu2xError_OK)
+	// if (obj->Init(1, argv, mode, noise_level, 2.0, boost::optional<int>(), boost::optional<int>(), model_dir, process, boost::optional<int>(), output_depth, use_tta, crop_size, batch_size) != Waifu2x::eWaifu2xError_OK)
+	if (obj->Init(mt, noise_level, model_dir, process) != Waifu2x::eWaifu2xError_OK)
 	{
 		delete obj;
 		return nullptr;

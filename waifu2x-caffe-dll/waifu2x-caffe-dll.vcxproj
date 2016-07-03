@@ -44,14 +44,14 @@
     <IncludePath>D:\caffe-build\install\include;D:\caffe-build\install\include\boost-1_59;$(CUDA_PATH_V7_5)\include;D:\opencv310\build_vc\install\include;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(IncludePath)</IncludePath>
     <LibraryPath>D:\opencv310\build_vc\install\x64\vc12\lib;D:\caffe-build\install\lib;$(CUDA_PATH_V7_5)\lib\$(PlatformName);D:\program\boost_1_59_0\stage\x64\lib;$(LibraryPath)</LibraryPath>
     <TargetName>waifu2x-caffed</TargetName>
-    <OutDir>$(SolutionDir)bin</OutDir>
+    <OutDir>$(SolutionDir)bin\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>D:\caffe-build\install\include;D:\caffe-build\install\include\boost-1_59;$(CUDA_PATH_V7_5)\include;D:\opencv310\build_vc\install\include;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(IncludePath)</IncludePath>
     <LibraryPath>D:\opencv310\build_vc\install\x64\vc12\lib;D:\caffe-build\install\lib;$(CUDA_PATH_V7_5)\lib\$(PlatformName);D:\program\boost_1_59_0\stage\x64\lib;$(LibraryPath)</LibraryPath>
     <TargetName>waifu2x-caffe</TargetName>
-    <OutDir>$(SolutionDir)bin</OutDir>
+    <OutDir>$(SolutionDir)bin\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -90,10 +90,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\common\cNet.cpp" />
+    <ClCompile Include="..\common\stImage.cpp" />
     <ClCompile Include="..\common\waifu2x.cpp" />
     <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\common\cNet.h" />
+    <ClInclude Include="..\common\stImage.h" />
     <ClInclude Include="..\common\waifu2x.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
