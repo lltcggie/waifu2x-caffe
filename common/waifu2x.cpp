@@ -257,7 +257,7 @@ Waifu2x::~Waifu2x()
 	Destroy();
 }
 
-Waifu2x::eWaifu2xError Waifu2x::Init(const std::string &mode, const int noise_level,
+Waifu2x::eWaifu2xError Waifu2x::Init(const eWaifu2xModelType mode, const int noise_level,
 	const boost::filesystem::path &model_dir, const std::string &process)
 {
 	Waifu2x::eWaifu2xError ret;
@@ -303,28 +303,47 @@ Waifu2x::eWaifu2xError Waifu2x::Init(const std::string &mode, const int noise_le
 		mInputPlane = 0;
 		mMaxNetOffset = 0;
 
-		// TODO: ノイズ除去と拡大を同時に行うネットワークへの対処を考える
-
 		const boost::filesystem::path info_path = GetInfoPath(mode_dir_path);
 
-		if (mode == "noise" || mode == "noise_scale" || mode == "auto_scale")
+		stInfo info;
+		ret = cNet::GetInfo(info_path, info);
+		if (ret != Waifu2x::eWaifu2xError_OK)
+			return ret;
+
+		mHasNoiseScale = info.has_noise_scale;
+		mInputPlane = info.channels;
+
+		if (mode == eWaifu2xModelTypeNoise || mode == eWaifu2xModelTypeNoiseScale || mode == eWaifu2xModelTypeAutoScale)
 		{
-			const std::string base_name = "noise" + std::to_string(noise_level) + "_model";
+			std::string base_name;
+
+			mNoiseNet.reset(new cNet);
+
+			eWaifu2xModelType Mode = mode;
+			if (info.has_noise_scale) // ノイズ除去と拡大を同時に行う
+			{
+				// ノイズ除去拡大ネットの構築はeWaifu2xModelTypeNoiseScaleを指定する必要がある
+				Mode = eWaifu2xModelTypeNoiseScale;
+				base_name = "noise" + std::to_string(noise_level) + "_scale2.0x_model";
+			}
+			else // ノイズ除去だけ
+			{
+				Mode = eWaifu2xModelTypeNoise;
+				base_name = "noise" + std::to_string(noise_level) + "_model";
+			}
 
 			const boost::filesystem::path model_path = mode_dir_path / (base_name + ".prototxt");
 			const boost::filesystem::path param_path = mode_dir_path / (base_name + ".json");
 
-			mNoiseNet.reset(new cNet);
-
-			ret = mNoiseNet->ConstractNet(model_path, param_path, info_path, mProcess);
+			ret = mNoiseNet->ConstractNet(Mode, model_path, param_path, info, mProcess);
 			if (ret != Waifu2x::eWaifu2xError_OK)
 				return ret;
 
-			mInputPlane = mNoiseNet->GetInputPlane();
 			mMaxNetOffset = mNoiseNet->GetNetOffset();
 		}
 
-		if (mode == "scale" || mode == "noise_scale" || mode == "auto_scale")
+		// noise_scaleを持っている場合はαチャンネルの拡大のためにmScaleNetも構築する必要がある
+		if (info.has_noise_scale || mode == eWaifu2xModelTypeScale || mode == eWaifu2xModelTypeNoiseScale || mode == eWaifu2xModelTypeAutoScale)
 		{
 			const std::string base_name = "scale2.0x_model";
 
@@ -333,13 +352,12 @@ Waifu2x::eWaifu2xError Waifu2x::Init(const std::string &mode, const int noise_le
 
 			mScaleNet.reset(new cNet);
 
-			ret = mScaleNet->ConstractNet(model_path, param_path, info_path, mProcess);
+			ret = mScaleNet->ConstractNet(eWaifu2xModelTypeScale, model_path, param_path, info, mProcess);
 			if (ret != Waifu2x::eWaifu2xError_OK)
 				return ret;
 
 			assert(mInputPlane == 0 || mInputPlane == mScaleNet->GetInputPlane());
 
-			mInputPlane = mScaleNet->GetInputPlane();
 			mMaxNetOffset = std::max(mScaleNet->GetNetOffset(), mMaxNetOffset);
 		}
 		else
@@ -399,15 +417,19 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const boost::filesystem::path &input_fil
 
 	image.Preprocess(mInputPlane, mMaxNetOffset);
 
-	const bool isReconstructNoise = mMode == "noise" || mMode == "noise_scale" || (mMode == "auto_scale" && image.RequestDenoise());
-	const bool isReconstructScale = mMode == "scale" || mMode == "noise_scale" || mMode == "auto_scale";
+	const bool isReconstructNoise = mMode == eWaifu2xModelTypeNoise || mMode == eWaifu2xModelTypeNoiseScale || (mMode == eWaifu2xModelTypeAutoScale && image.RequestDenoise());
+	const bool isReconstructScale = mMode == eWaifu2xModelTypeScale || mMode == eWaifu2xModelTypeNoiseScale || mMode == eWaifu2xModelTypeAutoScale;
+
+	double Factor = factor;
+	if (!isReconstructScale)
+		Factor = 1.0;
 
 	cv::Mat reconstruct_image;
-	ret = ReconstructImage(factor, crop_w, crop_h, use_tta, batch_size, isReconstructNoise, isReconstructScale, cancel_func, image);
+	ret = ReconstructImage(Factor, crop_w, crop_h, use_tta, batch_size, isReconstructNoise, isReconstructScale, cancel_func, image);
 	if (ret != Waifu2x::eWaifu2xError_OK)
 		return ret;
 
-	image.Postprocess(mInputPlane, factor, output_depth);
+	image.Postprocess(mInputPlane, Factor, output_depth);
 
 	ret = image.Save(output_file, output_quality);
 	if (ret != Waifu2x::eWaifu2xError_OK)
@@ -424,6 +446,7 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const double factor, const void* source,
 
 	if (!mIsInited)
 		return Waifu2x::eWaifu2xError_NotInitialized;
+
 	stImage image;
 	ret = image.Load(source, width, height, in_channel, in_stride);
 	if (ret != Waifu2x::eWaifu2xError_OK)
@@ -431,15 +454,19 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const double factor, const void* source,
 
 	image.Preprocess(mInputPlane, mMaxNetOffset);
 
-	const bool isReconstructNoise = mMode == "noise" || mMode == "noise_scale";
-	const bool isReconstructScale = mMode == "scale" || mMode == "noise_scale" || mMode == "auto_scale";
+	const bool isReconstructNoise = mMode == eWaifu2xModelTypeNoise || mMode == eWaifu2xModelTypeNoiseScale;
+	const bool isReconstructScale = mMode == eWaifu2xModelTypeScale || mMode == eWaifu2xModelTypeNoiseScale || mMode == eWaifu2xModelTypeAutoScale;
+
+	double Factor = factor;
+	if (!isReconstructScale)
+		Factor = 1.0;
 
 	cv::Mat reconstruct_image;
-	ret = ReconstructImage(factor, crop_w, crop_h, use_tta, batch_size, isReconstructNoise, isReconstructScale, nullptr, image);
+	ret = ReconstructImage(Factor, crop_w, crop_h, use_tta, batch_size, isReconstructNoise, isReconstructScale, nullptr, image);
 	if (ret != Waifu2x::eWaifu2xError_OK)
 		return ret;
 
-	image.Postprocess(mInputPlane, factor, 8);
+	image.Postprocess(mInputPlane, Factor, 8);
 
 	cv::Mat out_image = image.GetEndImage();
 	image.Clear();
@@ -460,29 +487,39 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(const double factor, const int 
 {
 	Waifu2x::eWaifu2xError ret;
 
-	// TODO: ノイズ除去と拡大を同時に行うネットワークへの対処を考える
+	double Factor = factor;
 
 	if (isReconstructNoise)
 	{
-		cv::Mat im;
-		cv::Size_<int> size;
-		image.GetScalePaddingedRGB(im, size, mNoiseNet->GetNetOffset(), OuterPadding, crop_w, crop_h, 1);
+		if (!mHasNoiseScale) // ノイズ除去だけ
+		{
+			cv::Mat im;
+			cv::Size_<int> size;
+			image.GetScalePaddingedRGB(im, size, mNoiseNet->GetNetOffset(), OuterPadding, crop_w, crop_h, 1);
 
-		ret = ProcessNet(mNoiseNet, crop_w, crop_h, use_tta, batch_size, im);
-		if (ret != Waifu2x::eWaifu2xError_OK)
-			return ret;
+			ret = ProcessNet(mNoiseNet, crop_w, crop_h, use_tta, batch_size, im);
+			if (ret != Waifu2x::eWaifu2xError_OK)
+				return ret;
 
-		image.SetReconstructedRGB(im, size, 1);
+			image.SetReconstructedRGB(im, size, 1);
+		}
+		else // ノイズ除去と拡大
+		{
+			ret = ReconstructNoiseScale(crop_w, crop_h, use_tta, batch_size, cancel_func, image);
+			if (ret != Waifu2x::eWaifu2xError_OK)
+				return ret;
+
+			Factor /= mNoiseNet->GetInnerScale();
+		}
 	}
 
 	if (cancel_func && cancel_func())
 		return Waifu2x::eWaifu2xError_Cancel;
 
-	const int scaleNum = ceil(log(factor) / log(ScaleBase));
+	const int scaleNum = ceil(log(Factor) / log(ScaleBase));
 
 	if (isReconstructScale)
 	{
-		bool isError = false;
 		for (int i = 0; i < scaleNum; i++)
 		{
 			ret = ReconstructScale(crop_w, crop_h, use_tta, batch_size, cancel_func, image);
@@ -524,6 +561,40 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructScale(const int crop_w, const int cro
 
 	return Waifu2x::eWaifu2xError_OK;
 }
+
+Waifu2x::eWaifu2xError Waifu2x::ReconstructNoiseScale(const int crop_w, const int crop_h, const bool use_tta, const int batch_size,
+	const Waifu2x::waifu2xCancelFunc cancel_func, stImage &image)
+{
+	Waifu2x::eWaifu2xError ret;
+
+	if (image.HasAlpha())
+	{
+		// αチャンネルにはノイズ除去を行わない
+
+		cv::Mat im;
+		cv::Size_<int> size;
+		image.GetScalePaddingedA(im, size, mScaleNet->GetNetOffset(), OuterPadding, crop_w, crop_h, mScaleNet->GetScale() / mScaleNet->GetInnerScale());
+
+		ret = ReconstructByNet(mScaleNet, crop_w, crop_h, use_tta, batch_size, cancel_func, im);
+		if (ret != Waifu2x::eWaifu2xError_OK)
+			return ret;
+
+		image.SetReconstructedA(im, size, mScaleNet->GetInnerScale());
+	}
+
+	cv::Mat im;
+	cv::Size_<int> size;
+	image.GetScalePaddingedRGB(im, size, mNoiseNet->GetNetOffset(), OuterPadding, crop_w, crop_h, mNoiseNet->GetScale() / mNoiseNet->GetInnerScale());
+
+	ret = ReconstructByNet(mNoiseNet, crop_w, crop_h, use_tta, batch_size, cancel_func, im);
+	if (ret != Waifu2x::eWaifu2xError_OK)
+		return ret;
+
+	image.SetReconstructedRGB(im, size, mNoiseNet->GetInnerScale());
+
+	return Waifu2x::eWaifu2xError_OK;
+}
+
 
 Waifu2x::eWaifu2xError Waifu2x::ReconstructByNet(std::shared_ptr<cNet> net, const int crop_w, const int crop_h, const bool use_tta, const int batch_size,
 	const Waifu2x::waifu2xCancelFunc cancel_func, cv::Mat &im)

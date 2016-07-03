@@ -123,22 +123,32 @@ tstring DialogEvent::AddName() const
 	addstr += TEXT(")");
 
 	addstr += TEXT("(");
-	if (mode == "noise")
+	switch (mode)
+	{
+	case Waifu2x::eWaifu2xModelTypeNoise:
 		addstr += TEXT("noise");
-	else if (mode == "scale")
+		break;
+
+	case Waifu2x::eWaifu2xModelTypeScale:
 		addstr += TEXT("scale");
-	else if (mode == "noise_scale")
+		break;
+
+	case Waifu2x::eWaifu2xModelTypeNoiseScale:
 		addstr += TEXT("noise_scale");
-	else if (mode == "auto_scale")
+		break;
+
+	case Waifu2x::eWaifu2xModelTypeAutoScale:
 		addstr += TEXT("auto_scale");
+		break;
+	}
 	addstr += TEXT(")");
 
-	if (mode.find("noise") != mode.npos || mode.find("auto_scale") != mode.npos)
+	if (mode == Waifu2x::eWaifu2xModelTypeNoise || mode == Waifu2x::eWaifu2xModelTypeNoiseScale || mode == Waifu2x::eWaifu2xModelTypeAutoScale)
 		addstr += TEXT("(Level") + to_tstring(noise_level) + TEXT(")");
 	if (use_tta)
 		addstr += TEXT("(tta)");
 
-	if (mode.find("scale") != mode.npos)
+	if (mode == Waifu2x::eWaifu2xModelTypeScale || mode == Waifu2x::eWaifu2xModelTypeNoiseScale || mode == Waifu2x::eWaifu2xModelTypeAutoScale)
 	{
 		if (scaleType == eScaleTypeRatio)
 			addstr += TEXT("(x") + to_tstring(scale_ratio) + TEXT(")");
@@ -176,13 +186,25 @@ bool DialogEvent::SyncMember(const bool NotSyncCropSize, const bool silent)
 	}
 
 	if (SendMessage(GetDlgItem(dh, IDC_RADIO_MODE_NOISE), BM_GETCHECK, 0, 0))
-		mode = "noise";
+	{
+		mode = Waifu2x::eWaifu2xModelTypeNoise;
+		modeStr = "noise";
+	}
 	else if (SendMessage(GetDlgItem(dh, IDC_RADIO_MODE_SCALE), BM_GETCHECK, 0, 0))
-		mode = "scale";
+	{
+		mode = Waifu2x::eWaifu2xModelTypeScale;
+		modeStr = "scale";
+	}
 	else if (SendMessage(GetDlgItem(dh, IDC_RADIO_MODE_NOISE_SCALE), BM_GETCHECK, 0, 0))
-		mode = "noise_scale";
+	{
+		mode = Waifu2x::eWaifu2xModelTypeNoiseScale;
+		modeStr = "noise_scale";
+	}
 	else
-		mode = "auto_scale";
+	{
+		mode = Waifu2x::eWaifu2xModelTypeAutoScale;
+		modeStr = "auto_scale";
+	}
 
 	if (SendMessage(GetDlgItem(dh, IDC_RADIONOISE_LEVEL1), BM_GETCHECK, 0, 0))
 		noise_level = 1;
@@ -895,14 +917,24 @@ void DialogEvent::SaveIni(const bool isSyncMember)
 	else
 		tScaleHeight = TEXT("");
 
-	if (mode == ("noise"))
+	switch (mode)
+	{
+	case Waifu2x::eWaifu2xModelTypeNoise:
 		tmode = TEXT("noise");
-	else if (mode == ("scale"))
+		break;
+
+	case Waifu2x::eWaifu2xModelTypeScale:
 		tmode = TEXT("scale");
-	else if (mode == ("auto_scale"))
-		tmode = TEXT("auto_scale");
-	else // noise_scale
+		break;
+
+	case Waifu2x::eWaifu2xModelTypeNoiseScale:
 		tmode = TEXT("noise_scale");
+		break;
+
+	case Waifu2x::eWaifu2xModelTypeAutoScale:
+		tmode = TEXT("auto_scale");
+		break;
+	}
 
 	if (process == "gpu")
 		tprcess = TEXT("gpu");
@@ -1142,7 +1174,7 @@ UINT_PTR DialogEvent::OFNHookProcOut(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARA
 	return 0L;
 }
 
-DialogEvent::DialogEvent() : dh(nullptr), mode("noise_scale"), noise_level(1), scale_ratio(2.0), scale_width(0), scale_height(0), model_dir(TEXT("models/anime_style_art_rgb")),
+DialogEvent::DialogEvent() : dh(nullptr), mode(Waifu2x::eWaifu2xModelTypeNoiseScale), modeStr("noise_scale"), noise_level(1), scale_ratio(2.0), scale_width(0), scale_height(0), model_dir(TEXT("models/anime_style_art_rgb")),
 process("gpu"), outputExt(TEXT(".png")), inputFileExt(TEXT("png:jpg:jpeg:tif:tiff:bmp:tga")),
 use_tta(false), output_depth(8), crop_size(128), batch_size(1), isLastError(false), scaleType(eScaleTypeEnd),
 TimeLeftThread(-1), TimeLeftGetTimeThread(0), isCommandLineStart(false), tAutoMode(TEXT("none")),
@@ -1423,8 +1455,8 @@ void DialogEvent::SetWindowTextLang()
 
 	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_RGB").c_str());
 	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_PHOTO").c_str());
-	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_Y").c_str());
 	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_UPCONV_RGB").c_str());
+	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_Y").c_str());
 
 	SendMessage(GetDlgItem(dh, IDC_COMBO_MODEL), CB_SETCURSEL, cur, 0);
 }

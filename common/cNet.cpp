@@ -128,21 +128,146 @@ static Waifu2x::eWaifu2xError readProtoBinary(const boost::filesystem::path &pat
 	return Waifu2x::eWaifu2xError_OK;
 }
 
-cNet::cNet() : mModelScale(0), mInnerScale(0), mNetOffset(0), mInputPlane(0)
+namespace
+{
+	Waifu2x::eWaifu2xError ReadJson(const boost::filesystem::path &info_path, rapidjson::Document &d, std::vector<char> &jsonBuf)
+	{
+		try
+		{
+			boost::iostreams::stream<boost::iostreams::file_descriptor_source> is;
+
+			try
+			{
+				is.open(info_path, std::ios_base::in | std::ios_base::binary);
+			}
+			catch (...)
+			{
+				return Waifu2x::eWaifu2xError_FailedOpenModelFile;
+			}
+
+			if (!is)
+				return Waifu2x::eWaifu2xError_FailedOpenModelFile;
+
+			const size_t size = is.seekg(0, std::ios::end).tellg();
+			is.seekg(0, std::ios::beg);
+
+			jsonBuf.resize(size + 1);
+			is.read(jsonBuf.data(), jsonBuf.size());
+
+			jsonBuf[jsonBuf.size() - 1] = '\0';
+
+			d.Parse(jsonBuf.data());
+		}
+		catch (...)
+		{
+			return Waifu2x::eWaifu2xError_FailedParseModelFile;
+		}
+
+		return Waifu2x::eWaifu2xError_OK;
+	}
+};
+
+
+cNet::cNet() : mModelScale(0), mInnerScale(0), mNetOffset(0), mInputPlane(0), mHasNoiseScaleModel(false)
 {}
 
 cNet::~cNet()
 {}
 
+Waifu2x::eWaifu2xError cNet::GetInfo(const boost::filesystem::path & info_path, stInfo &info)
+{
+	rapidjson::Document d;
+	std::vector<char> jsonBuf;
+
+	try
+	{
+		Waifu2x::eWaifu2xError ret;
+
+		ret = ReadJson(info_path, d, jsonBuf);
+		if (ret != Waifu2x::eWaifu2xError_OK)
+			return ret;
+
+		const auto name = d["name"].GetString();
+		const auto arch_name = d["arch_name"].GetString();
+		const bool has_noise_scale = d.HasMember("has_noise_scale") && d["has_noise_scale"].GetBool() ? true : false;
+		const int channels = d["channels"].GetInt();
+
+		info.name = name;
+		info.arch_name = arch_name;
+		info.has_noise_scale = has_noise_scale;
+		info.channels = channels;
+
+		if (d.HasMember("offset"))
+		{
+			const int offset = d["offset"].GetInt();
+
+			info.noise.offset = offset;
+			info.scale.offset = offset;
+			info.noise_scale.offset = offset;
+		}
+
+		if (d.HasMember("scale_factor"))
+		{
+			const int scale_factor = d["scale_factor"].GetInt();
+
+			info.noise.scale_factor = scale_factor;
+			info.scale.scale_factor = scale_factor;
+			info.noise_scale.scale_factor = scale_factor;
+		}
+
+		if (d.HasMember("offset_noise"))
+		{
+			const int offset = d["offset_noise"].GetInt();
+			info.noise.offset = offset;
+		}
+
+		if (d.HasMember("scale_factor_noise"))
+		{
+			const int scale_factor = d["scale_factor_noise"].GetInt();
+			info.noise.scale_factor = scale_factor;
+		}
+
+		if (d.HasMember("offset_scale"))
+		{
+			const int offset = d["offset_scale"].GetInt();
+			info.scale.offset = offset;
+		}
+
+		if (d.HasMember("scale_factor_scale"))
+		{
+			const int scale_factor = d["scale_factor_scale"].GetInt();
+			info.scale.scale_factor = scale_factor;
+		}
+
+		if (d.HasMember("offset_noise_scale"))
+		{
+			const int offset = d["offset_noise_scale"].GetInt();
+			info.noise_scale.offset = offset;
+		}
+
+		if (d.HasMember("scale_factor_noise_scale"))
+		{
+			const int scale_factor = d["scale_factor_noise_scale"].GetInt();
+			info.noise_scale.scale_factor = scale_factor;
+		}
+	}
+	catch (...)
+	{
+		return Waifu2x::eWaifu2xError_FailedParseModelFile;
+	}
+
+	return Waifu2x::eWaifu2xError_OK;
+}
+
 // モデルファイルからネットワークを構築
 // processでcudnnが指定されなかった場合はcuDNNが呼び出されないように変更する
-Waifu2x::eWaifu2xError cNet::ConstractNet(const boost::filesystem::path &model_path, const boost::filesystem::path &param_path, const boost::filesystem::path &info_path, const std::string &process)
+Waifu2x::eWaifu2xError cNet::ConstractNet(const Waifu2x::eWaifu2xModelType mode, const boost::filesystem::path &model_path, const boost::filesystem::path &param_path, const stInfo &info, const std::string &process)
 {
 	Waifu2x::eWaifu2xError ret;
 
-	ret = LoadInfoFromJson(info_path);
-	if (ret != Waifu2x::eWaifu2xError_OK)
-		return ret;
+	mMode = mode;
+
+	LoadParamFromInfo(mode, info);
 
 	boost::filesystem::path modelbin_path = model_path;
 	modelbin_path += ".protobin";
@@ -184,75 +309,35 @@ Waifu2x::eWaifu2xError cNet::ConstractNet(const boost::filesystem::path &model_p
 	return Waifu2x::eWaifu2xError_OK;
 }
 
-namespace
+void cNet::LoadParamFromInfo(const Waifu2x::eWaifu2xModelType mode, const stInfo &info)
 {
-	Waifu2x::eWaifu2xError ReadJson(const boost::filesystem::path &info_path, rapidjson::Document &d, std::vector<char> &jsonBuf)
+	mModelScale = 2; // TODO: 動的に設定するようにする
+
+	stInfo::stParam param;
+
+	switch (mode)
 	{
-		try
-		{
-			boost::iostreams::stream<boost::iostreams::file_descriptor_source> is;
+	case Waifu2x::eWaifu2xModelTypeNoise:
+		param = info.noise;
+		break;
 
-			try
-			{
-				is.open(info_path, std::ios_base::in | std::ios_base::binary);
-			}
-			catch (...)
-			{
-				return Waifu2x::eWaifu2xError_FailedOpenModelFile;
-			}
+	case Waifu2x::eWaifu2xModelTypeScale:
+		param = info.scale;
+		break;
 
-			if (!is)
-				return Waifu2x::eWaifu2xError_FailedOpenModelFile;
+	case Waifu2x::eWaifu2xModelTypeNoiseScale:
+		param = info.noise_scale;
+		break;
 
-			const size_t size = is.seekg(0, std::ios::end).tellg();
-			is.seekg(0, std::ios::beg);
-
-			jsonBuf.resize(size + 1);
-			is.read(jsonBuf.data(), jsonBuf.size());
-
-			jsonBuf[jsonBuf.size() - 1] = '\0';
-
-			d.Parse(jsonBuf.data());
-		}
-		catch (...)
-		{
-			return Waifu2x::eWaifu2xError_FailedParseModelFile;
-		}
-
-		return Waifu2x::eWaifu2xError_OK;
-	}
-};
-
-Waifu2x::eWaifu2xError cNet::LoadInfoFromJson(const boost::filesystem::path &info_path)
-{
-	rapidjson::Document d;
-	std::vector<char> jsonBuf;
-
-	try
-	{
-		Waifu2x::eWaifu2xError ret;
-
-		ret = ReadJson(info_path, d, jsonBuf);
-		if (ret != Waifu2x::eWaifu2xError_OK)
-			return ret;
-
-		const bool resize = d.HasMember("resize") && d["resize"].GetBool() ? true : false;
-		const auto name = d["name"].GetString();
-		const int channels = d["channels"].GetInt();
-		const int net_offset = d["offset"].GetInt();
-		const int inner_scale = d["scale_factor"].GetInt();
-
-		mModelScale = 2; // TODO: 動的に設定するようにする
-		mInnerScale = inner_scale;
-		mNetOffset = net_offset;
-		mInputPlane = channels;
-	}
-	catch (...)
-	{
-		return Waifu2x::eWaifu2xError_FailedParseModelFile;
+	case Waifu2x::eWaifu2xModelTypeAutoScale:
+		param = info.noise_scale;
+		break;
 	}
 
-	return Waifu2x::eWaifu2xError_OK;
+	mInnerScale = param.scale_factor;
+	mNetOffset = param.offset;
+	mInputPlane = info.channels;
+	mHasNoiseScaleModel = info.has_noise_scale;
 }
 
 Waifu2x::eWaifu2xError cNet::SetParameter(caffe::NetParameter &param, const std::string &process) const
@@ -732,26 +817,12 @@ Waifu2x::eWaifu2xError cNet::ReconstructImage(const bool UseTTA, const int crop_
 
 std::string cNet::GetModelName(const boost::filesystem::path &info_path)
 {
-	rapidjson::Document d;
-	std::vector<char> jsonBuf;
-	std::string str;
+	Waifu2x::eWaifu2xError ret;
 
-	try
-	{
-		Waifu2x::eWaifu2xError ret;
+	stInfo info;
+	ret = GetInfo(info_path, info);
+	if (ret != Waifu2x::eWaifu2xError_OK)
+		return std::string();
 
-		ret = ReadJson(info_path, d, jsonBuf);
-		if (ret != Waifu2x::eWaifu2xError_OK)
-			return str;
-
-		const auto name = d["name"].GetString();
-
-		str = name;
-	}
-	catch (...)
-	{
-	}
-
-	return str;
+	return info.name;
 }
-

@@ -28,6 +28,14 @@ class stImage;
 class Waifu2x
 {
 public:
+	enum eWaifu2xModelType
+	{
+		eWaifu2xModelTypeNoise,
+		eWaifu2xModelTypeScale,
+		eWaifu2xModelTypeNoiseScale,
+		eWaifu2xModelTypeAutoScale,
+	};
+
 	enum eWaifu2xError
 	{
 		eWaifu2xError_OK = 0,
@@ -68,7 +76,7 @@ public:
 private:
 	bool mIsInited;
 
-	std::string mMode;
+	eWaifu2xModelType mMode;
 	int mNoiseLevel;
 	std::string mProcess;
 
@@ -79,6 +87,7 @@ private:
 
 	int mInputPlane; // ネットへの入力チャンネル数
 	int mMaxNetOffset; // ネットに入力するとどれくらい削れるか
+	bool mHasNoiseScale;
 
 	float *mInputBlock;
 	size_t mInputBlockSize;
@@ -93,6 +102,8 @@ private:
 	Waifu2x::eWaifu2xError ReconstructImage(const double factor, const int crop_w, const int crop_h, const bool use_tta, const int batch_size, 
 		const bool isReconstructNoise, const bool isReconstructScale, const Waifu2x::waifu2xCancelFunc cancel_func, stImage &image);
 	Waifu2x::eWaifu2xError ReconstructScale(const int crop_w, const int crop_h, const bool use_tta, const int batch_size,
+		const Waifu2x::waifu2xCancelFunc cancel_func, stImage &image);
+	Waifu2x::eWaifu2xError ReconstructNoiseScale(const int crop_w, const int crop_h, const bool use_tta, const int batch_size,
 		const Waifu2x::waifu2xCancelFunc cancel_func, stImage &image);
 	Waifu2x::eWaifu2xError ReconstructByNet(std::shared_ptr<cNet> net, const int crop_w, const int crop_h, const bool use_tta, const int batch_size,
 		const Waifu2x::waifu2xCancelFunc cancel_func, cv::Mat &im);
@@ -112,7 +123,7 @@ public:
 
 	// mode: noise or scale or noise_scale or auto_scale
 	// process: cpu or gpu or cudnn
-	eWaifu2xError Init(const std::string &mode, const int noise_level,
+	eWaifu2xError Init(const eWaifu2xModelType mode, const int noise_level,
 		const boost::filesystem::path &model_dir, const std::string &process);
 
 	eWaifu2xError waifu2x(const boost::filesystem::path &input_file, const boost::filesystem::path &output_file,

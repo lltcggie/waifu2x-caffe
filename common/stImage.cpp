@@ -633,14 +633,14 @@ void stImage::ShrinkImage(const double scale)
 	const double shrinkRatio = scale >= 1.0 ? scale / std::pow(scaleBase, scaleNum) : scale;
 
 	const cv::Size_<int> ns(mOrgSize.width * scale, mOrgSize.height * scale);
-	//if (mEndImage.size().width != ns.width || mEndImage.size().height != ns.height)
-	//{
-	//	int argo = cv::INTER_CUBIC;
-	//	if (scale < 0.5)
-	//		argo = cv::INTER_AREA;
+	if (mEndImage.size().width != ns.width || mEndImage.size().height != ns.height)
+	{
+		int argo = cv::INTER_CUBIC;
+		if (scale < 0.5)
+			argo = cv::INTER_AREA;
 
-	//	cv::resize(mEndImage, mEndImage, ns, 0.0, 0.0, argo);
-	//}
+		cv::resize(mEndImage, mEndImage, ns, 0.0, 0.0, argo);
+	}
 }
 
 cv::Mat stImage::DeconvertFromFloat(const cv::Mat &im, const int depth)
