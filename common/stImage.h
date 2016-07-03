@@ -89,6 +89,9 @@ public:
 	// sourceはPostprocess()が終わるまで存在している必要がある
 	Waifu2x::eWaifu2xError Load(const void* source, const int width, const int height, const int channel, const int stride);
 
+	double GetScaleFromWidth(const int width) const;
+	double GetScaleFromHeight(const int width) const;
+
 	bool RequestDenoise() const;
 
 	// 前処理

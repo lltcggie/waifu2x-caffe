@@ -382,6 +382,16 @@ Waifu2x::eWaifu2xError stImage::Load(const void* source, const int width, const 
 	return Waifu2x::eWaifu2xError_OK;
 }
 
+double stImage::GetScaleFromWidth(const int width) const
+{
+	return (double)width / (double)mOrgSize.width;
+}
+
+double stImage::GetScaleFromHeight(const int height) const
+{
+	return (double)height / (double)mOrgSize.height;
+}
+
 bool stImage::RequestDenoise() const
 {
 	return mIsRequestDenoise;

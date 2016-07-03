@@ -96,6 +96,9 @@ private:
 	static boost::filesystem::path GetModeDirPath(const boost::filesystem::path &model_dir);
 	static boost::filesystem::path GetInfoPath(const boost::filesystem::path &model_dir);
 
+	static double CalcScaleRatio(const boost::optional<double> scale_ratio, const boost::optional<int> scale_width, const boost::optional<int> scale_height,
+		const stImage &image);
+
 	Waifu2x::eWaifu2xError ReconstructImage(const double factor, const int crop_w, const int crop_h, const bool use_tta, const int batch_size, 
 		const bool isReconstructNoise, const bool isReconstructScale, const Waifu2x::waifu2xCancelFunc cancel_func, stImage &image);
 	Waifu2x::eWaifu2xError ReconstructScale(const int crop_w, const int crop_h, const bool use_tta, const int batch_size,
@@ -105,8 +108,6 @@ private:
 	Waifu2x::eWaifu2xError ReconstructByNet(std::shared_ptr<cNet> net, const int crop_w, const int crop_h, const bool use_tta, const int batch_size,
 		const Waifu2x::waifu2xCancelFunc cancel_func, cv::Mat &im);
 	Waifu2x::eWaifu2xError ProcessNet(std::shared_ptr<cNet> net, const int crop_w, const int crop_h, const bool use_tta, const int batch_size, cv::Mat &im);
-
-	// double CalcScaleRatio(const cv::Size_<int> &size) const;
 
 public:
 	Waifu2x();
@@ -124,7 +125,8 @@ public:
 		const boost::filesystem::path &model_dir, const std::string &process);
 
 	eWaifu2xError waifu2x(const boost::filesystem::path &input_file, const boost::filesystem::path &output_file,
-		const double factor, const waifu2xCancelFunc cancel_func = nullptr, const int crop_w = 128, const int crop_h = 128,
+		const boost::optional<double> scale_ratio, const boost::optional<int> scale_width, const boost::optional<int> scale_height,
+		const waifu2xCancelFunc cancel_func = nullptr, const int crop_w = 128, const int crop_h = 128,
 		const boost::optional<int> output_quality = boost::optional<int>(), const int output_depth = 8, const bool use_tta = false,
 		const int batch_size = 1);
 

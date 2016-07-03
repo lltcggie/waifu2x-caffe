@@ -706,6 +706,21 @@ void DialogEvent::ProcessWaifu2x()
 
 		ProgessFunc(maxFile, 0);
 
+		boost::optional<double> ScaleRatio;
+		boost::optional<int> ScaleWidth, ScaleHeight;
+		switch (scaleType)
+		{
+		case eScaleTypeRatio:
+			ScaleRatio = scale_ratio;
+			break;
+		case eScaleTypeWidth:
+			ScaleWidth = scale_width;
+			break;
+		default:
+			ScaleHeight = scale_height;
+			break;
+		}
+
 		DWORD startTime = 0;
 
 		int64_t processeNum = 0;
@@ -725,24 +740,7 @@ void DialogEvent::ProcessWaifu2x()
 				continue;
 			}
 
-			double factor;
-
-			//switch (scaleType)
-			//{
-			//case eScaleTypeRatio:
-			//	ScaleRatio = scale_ratio;
-			//	break;
-			//case eScaleTypeWidth:
-			//	ScaleWidth = scale_width;
-			//	break;
-			//default:
-			//	ScaleHeight = scale_height;
-			//	break;
-			//}
-
-			factor = scale_ratio;
-
-			ret = w.waifu2x(p.first, p.second, factor, [this]()
+			ret = w.waifu2x(p.first, p.second, ScaleRatio, ScaleWidth, ScaleHeight, [this]()
 			{
 				return cancelFlag;
 			}, crop_size, crop_size, output_quality, output_depth, use_tta, batch_size);

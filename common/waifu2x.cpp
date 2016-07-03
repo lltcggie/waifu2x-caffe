@@ -401,7 +401,8 @@ boost::filesystem::path Waifu2x::GetInfoPath(const boost::filesystem::path &mode
 }
 
 Waifu2x::eWaifu2xError Waifu2x::waifu2x(const boost::filesystem::path &input_file, const boost::filesystem::path &output_file,
-	const double factor, const waifu2xCancelFunc cancel_func, const int crop_w, const int crop_h,
+	const boost::optional<double> scale_ratio, const boost::optional<int> scale_width, const boost::optional<int> scale_height, 
+	const waifu2xCancelFunc cancel_func, const int crop_w, const int crop_h,
 	const boost::optional<int> output_quality, const int output_depth, const bool use_tta,
 	const int batch_size)
 {
@@ -420,7 +421,8 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const boost::filesystem::path &input_fil
 	const bool isReconstructNoise = mMode == eWaifu2xModelTypeNoise || mMode == eWaifu2xModelTypeNoiseScale || (mMode == eWaifu2xModelTypeAutoScale && image.RequestDenoise());
 	const bool isReconstructScale = mMode == eWaifu2xModelTypeScale || mMode == eWaifu2xModelTypeNoiseScale || mMode == eWaifu2xModelTypeAutoScale;
 
-	double Factor = factor;
+	double Factor = CalcScaleRatio(scale_ratio, scale_width, scale_height, image);
+
 	if (!isReconstructScale)
 		Factor = 1.0;
 
@@ -480,6 +482,21 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const double factor, const void* source,
 	}
 
 	return Waifu2x::eWaifu2xError_OK;
+}
+
+double Waifu2x::CalcScaleRatio(const boost::optional<double> scale_ratio, const boost::optional<int> scale_width, const boost::optional<int> scale_height,
+	const stImage &image)
+{
+	if (scale_ratio)
+		return *scale_ratio;
+
+	if (scale_width)
+		return image.GetScaleFromWidth(*scale_width);
+
+	if(scale_height)
+		return image.GetScaleFromWidth(*scale_height);
+
+	return 1.0;
 }
 
 Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(const double factor, const int crop_w, const int crop_h, const bool use_tta, const int batch_size,
@@ -690,17 +707,6 @@ Waifu2x::eWaifu2xError Waifu2x::ProcessNet(std::shared_ptr<cNet> net, const int 
 
 	return Waifu2x::eWaifu2xError_OK;
 }
-
-//double Waifu2x::CalcScaleRatio(const cv::Size_<int> &size) const
-//{
-//	if (scale_ratio)
-//		return *scale_ratio;
-//
-//	if (scale_width)
-//		return (double)*scale_width / (double)size.width;
-//
-//	return (double)*scale_height / (double)size.height;
-//}
 
 void Waifu2x::Destroy()
 {
