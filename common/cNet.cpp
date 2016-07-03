@@ -738,26 +738,18 @@ Waifu2x::eWaifu2xError cNet::ReconstructImage(const bool UseTTA, const int crop_
 
 				const float *fptr = outputBlockBuf + (output_block_plane_size * n);
 
+				const auto Line = outim.step1();
+
 				// 結果を出力画像にコピー
 				if (outim.channels() == 1)
 				{
 					for (int i = 0; i < output_crop_block_height; i++)
-						memcpy(imptr + (h + i) * InputLine + w, fptr + (i + output_crop_h) * output_block_width + output_crop_w, output_crop_block_width * sizeof(float));
+						memcpy(imptr + (h + i) * Line + w, fptr + (i + output_crop_h) * output_block_width + output_crop_w, output_crop_block_width * sizeof(float));
 				}
 				else
 				{
-					const auto LinePixel = outim.step1() / outim.channels();
+					const auto LinePixel = Line / outim.channels();
 					const auto Channel = outim.channels();
-
-					//for (int i = 0; i < output_no_padding_block_height; i++)
-					//{
-					//	for (int j = 0; j < output_no_padding_block_width; j++)
-					//	{
-					//		for (int ch = 0; ch < Channel; ch++)
-					//			imptr[((h + i) * LinePixel + (w + j)) * Channel + ch]
-					//			= fptr[(ch * output_block_height + i + output_crop_h) * output_block_width + j + output_padding];
-					//	}
-					//}
 
 					for (int i = 0; i < output_crop_block_height; i++)
 					{
