@@ -1,1 +1,1 @@
-{"name":"UP","arch_name":"upconv_7","channels":3,"resize":true,"scale_factor":2,"offset":12}
+{"name":"UpRGB","arch_name":"upconv_7","channels":3,"resize":true,"scale_factor":2,"offset":12}
