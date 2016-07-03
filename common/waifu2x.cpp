@@ -636,7 +636,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructByNet(std::shared_ptr<cNet> net, cons
 		cv::Mat reconstruct_image;
 		for (int i = 0; i < 8; i++)
 		{
-			cv::Mat in(im);
+			cv::Mat in(im.clone());
 
 			const int rotateNum = i % 4;
 			RotateClockwise90N(in, rotateNum);
@@ -644,7 +644,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructByNet(std::shared_ptr<cNet> net, cons
 			if (i >= 4)
 				cv::flip(in, in, 1); // êÇíºé≤îΩì]
 
-			ret = ProcessNet(net, crop_w, crop_h, use_tta, batch_size, im);
+			ret = ProcessNet(net, crop_w, crop_h, use_tta, batch_size, in);
 			if (ret != Waifu2x::eWaifu2xError_OK)
 				return ret;
 
@@ -660,6 +660,8 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructByNet(std::shared_ptr<cNet> net, cons
 		}
 
 		reconstruct_image /= 8.0;
+
+		im = reconstruct_image;
 	}
 
 	return Waifu2x::eWaifu2xError_OK;
