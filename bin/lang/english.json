@@ -91,5 +91,5 @@
 "MessageCudaOldDeviceError":"Your CUDA device too old.\r\nPlease use Compute Capability 2.0 or more devices",
 "OK":"OK",
 "Cancel":"Cancel",
-"IDC_RADIO_MODEL_UPCONV_RGB":"2-D illust (UpConvRGB Model)"
+"IDC_RADIO_MODEL_UPCONV_RGB":"2-D illust (UpRGB Model)"
 }

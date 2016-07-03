@@ -91,5 +91,5 @@
 "MessageCudaOldDeviceError":"CUDAデバイスが古いです。\r\nCompute Capability 2.0以上のデバイスを使用してください",
 "OK":"OK",
 "Cancel":"キャンセル",
-"IDC_RADIO_MODEL_UPCONV_RGB":"2次元イラスト (UpConvRGBモデル)"
+"IDC_RADIO_MODEL_UPCONV_RGB":"2次元イラスト (UpRGBモデル)"
 }
