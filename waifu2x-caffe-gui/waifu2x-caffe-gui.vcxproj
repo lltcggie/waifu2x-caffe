@@ -95,6 +95,8 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\common\cNet.cpp" />
+    <ClCompile Include="..\common\stImage.cpp" />
     <ClCompile Include="..\common\waifu2x.cpp" />
     <ClCompile Include="CControl.cpp" />
     <ClCompile Include="CDialog.cpp" />
@@ -103,6 +105,8 @@
     <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\common\cNet.h" />
+    <ClInclude Include="..\common\stImage.h" />
     <ClInclude Include="..\common\waifu2x.h" />
     <ClInclude Include="CControl.h" />
     <ClInclude Include="CDialog.h" />

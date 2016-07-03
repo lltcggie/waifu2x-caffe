@@ -13,7 +13,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	LPSTR     lpCmdLine,
 	int       nCmdShow)
 {
-	Waifu2x::init_liblary();
+	Waifu2x::init_liblary(__argc, __argv);
 
 	// 管理者権限で起動してもファイルのドロップを受け付けるようにする
 	ChangeWindowMessageFilter(WM_DROPFILES, MSGFLT_ADD);

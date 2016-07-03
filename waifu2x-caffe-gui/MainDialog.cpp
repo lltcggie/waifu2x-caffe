@@ -14,6 +14,7 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include "../common/waifu2x.h"
+#include "../common/stImage.h"
 #include "CDialog.h"
 #include "CControl.h"
 //#include <boost/program_options.hpp>
@@ -295,7 +296,7 @@ bool DialogEvent::SyncMember(const bool NotSyncCropSize, const bool silent)
 	}
 
 	{
-		const auto &OutputExtentionList = Waifu2x::OutputExtentionList;
+		const auto &OutputExtentionList = stImage::OutputExtentionList;
 
 		const int cur = SendMessage(GetDlgItem(dh, IDC_COMBO_OUT_EXT), CB_GETCURSEL, 0, 0);
 		if (cur < 0 || cur >= OutputExtentionList.size())
@@ -387,8 +388,9 @@ void DialogEvent::SetCropSizeList(const boost::filesystem::path & input_path)
 	int gcd = 1;
 	if (boost::filesystem::exists(input_path) && !boost::filesystem::is_directory(input_path))
 	{
-		auto mat = Waifu2x::LoadMat(input_path.string());
-		if (mat.empty())
+		cv::Mat mat;
+		const auto ret = stImage::LoadMat(mat, input_path.string());
+		if (ret != Waifu2x::eWaifu2xError_OK)
 			return;
 
 		auto size = mat.size();
@@ -674,25 +676,8 @@ void DialogEvent::ProcessWaifu2x()
 
 	Waifu2x::eWaifu2xError ret;
 
-	boost::optional<double> ScaleRatio;
-	boost::optional<int> ScaleWidth;
-	boost::optional<int> ScaleHeight;
-
-	switch (scaleType)
-	{
-	case eScaleTypeRatio:
-		ScaleRatio = scale_ratio;
-		break;
-	case eScaleTypeWidth:
-		ScaleWidth = scale_width;
-		break;
-	default:
-		ScaleHeight = scale_height;
-		break;
-	}
-
 	Waifu2x w;
-	ret = w.init(__argc, __argv, mode, noise_level, ScaleRatio, ScaleWidth, ScaleHeight, model_dir, process, output_quality, output_depth, use_tta, crop_size, batch_size);
+	ret = w.Init(mode, noise_level, model_dir, process);
 	if (ret != Waifu2x::eWaifu2xError_OK)
 		SendMessage(dh, WM_ON_WAIFU2X_ERROR, (WPARAM)&ret, 0);
 	else
@@ -723,10 +708,27 @@ void DialogEvent::ProcessWaifu2x()
 				continue;
 			}
 
-			ret = w.waifu2x(p.first, p.second, [this]()
+			double factor;
+
+			//switch (scaleType)
+			//{
+			//case eScaleTypeRatio:
+			//	ScaleRatio = scale_ratio;
+			//	break;
+			//case eScaleTypeWidth:
+			//	ScaleWidth = scale_width;
+			//	break;
+			//default:
+			//	ScaleHeight = scale_height;
+			//	break;
+			//}
+
+			factor = scale_ratio;
+
+			ret = w.waifu2x(p.first, p.second, factor, [this]()
 			{
 				return cancelFlag;
-			});
+			}, crop_size, crop_size, output_quality, output_depth, use_tta, batch_size);
 
 			num++;
 			ProgessFunc(maxFile, num);
@@ -1441,7 +1443,7 @@ void DialogEvent::SetDepthAndQuality(const bool SetDefaultQuality)
 	if (cur < 0)
 		return;
 
-	const auto &OutputExtentionList = Waifu2x::OutputExtentionList;
+	const auto &OutputExtentionList = stImage::OutputExtentionList;
 	if (cur >= OutputExtentionList.size())
 		return;
 
@@ -1583,7 +1585,7 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 	{
 		HWND houtext = GetDlgItem(dh, IDC_COMBO_OUT_EXT);
 
-		const auto &OutputExtentionList = Waifu2x::OutputExtentionList;
+		const auto &OutputExtentionList = stImage::OutputExtentionList;
 		for (const auto &elm : OutputExtentionList)
 		{
 			SendMessageW(houtext, CB_ADDSTRING, 0, (LPARAM)elm.ext.c_str());
@@ -1845,7 +1847,7 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 	HWND houtext = GetDlgItem(dh, IDC_COMBO_OUT_EXT);
 
 	size_t defaultIndex = 0;
-	const auto &OutputExtentionList = Waifu2x::OutputExtentionList;
+	const auto &OutputExtentionList = stImage::OutputExtentionList;
 	for (size_t i = 0; i < OutputExtentionList.size(); i++)
 	{
 		const auto &elm = OutputExtentionList[i];
