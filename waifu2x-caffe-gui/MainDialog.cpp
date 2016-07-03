@@ -1774,35 +1774,6 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 	if (!((eModelType)0 <= modelType && modelType < eModelTypeEnd))
 		modelType = eModelTypeRGB;
 
-	if (tmode == TEXT("noise"))
-	{
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE), BM_SETCHECK, BST_CHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
-	}
-	else if (tmode == TEXT("scale"))
-	{
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_SCALE), BM_SETCHECK, BST_CHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
-	}
-	else if (tmode == TEXT("auto_scale"))
-	{
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_SCALE), BM_SETCHECK, BST_CHECKED, 0);
-	}
-	else // noise_scale
-	{
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE_SCALE), BM_SETCHECK, BST_CHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
-	}
-
 	if (tScaleMode == TEXT("Ratio"))
 	{
 		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_RATIO), BM_SETCHECK, BST_CHECKED, 0);
@@ -1853,6 +1824,45 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL3), BM_SETCHECK, BST_CHECKED, 0);
 	}
 
+	if (tmode == TEXT("noise"))
+	{
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE), BM_SETCHECK, BST_CHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+
+		EnableWindow(GetDlgItem(dh, IDC_RADIO_SCALE_RATIO), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_RADIO_SCALE_WIDTH), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_RADIO_SCALE_HEIGHT), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
+	}
+	else if (tmode == TEXT("scale"))
+	{
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_SCALE), BM_SETCHECK, BST_CHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+
+		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL1), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL2), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL3), FALSE);
+	}
+	else if (tmode == TEXT("auto_scale"))
+	{
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_SCALE), BM_SETCHECK, BST_CHECKED, 0);
+	}
+	else // noise_scale
+	{
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE_SCALE), BM_SETCHECK, BST_CHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+	}
 
 	int index = 0;
 	if (modelType == eModelTypeRGB)
