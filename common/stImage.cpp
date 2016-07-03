@@ -414,6 +414,7 @@ void stImage::ConvertToNetFormat(const int input_plane, const int alpha_offset)
 
 				AlphaMakeBorder(planes, mTmpImageA, alpha_offset); // 透明なピクセルと不透明なピクセルの境界部分の色を広げる
 
+				// CreateBrightnessImage()でBGRからYに変換するので特にRGBに変えたりはしない
 				cv::merge(planes, mTmpImageRGB);
 			}
 
@@ -589,6 +590,17 @@ void stImage::DeconvertFromNetFormat(const int input_plane)
 
 			cv::cvtColor(converted_image, mEndImage, BGRToConvertInverseMode);
 			converted_image.release();
+
+			if (!mTmpImageA.empty()) // Aもあるので合体
+			{
+				std::vector<cv::Mat> planes;
+				cv::split(mEndImage, planes);
+
+				planes.push_back(mTmpImageA);
+				mTmpImageA.release();
+
+				cv::merge(planes, mEndImage);
+			}
 		}
 	}
 	else // RGBモデル
