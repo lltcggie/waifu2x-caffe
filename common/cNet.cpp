@@ -577,7 +577,7 @@ int cNet::GetInputMemorySize(const int crop_w, const int crop_h, const int outer
 
 	const int input_block_plane_size = input_block_width * input_block_height * mInputPlane;
 
-	return input_block_plane_size * sizeof(float);
+	return input_block_plane_size * batch_size * sizeof(float);
 	
 }
 
@@ -592,7 +592,7 @@ int cNet::GetOutputMemorySize(const int crop_w, const int crop_h, const int oute
 
 	const int output_block_plane_size = output_block_width * output_block_height * mInputPlane;
 
-	return output_block_plane_size * sizeof(float);
+	return output_block_plane_size * batch_size * sizeof(float);
 }
 
 // ネットワークを使って画像を再構築する
