@@ -596,7 +596,7 @@ int cNet::GetOutputMemorySize(const int crop_w, const int crop_h, const int oute
 }
 
 // ネットワークを使って画像を再構築する
-Waifu2x::eWaifu2xError cNet::ReconstructImage(const bool UseTTA, const int crop_w, const int crop_h, const int outer_padding, const int batch_size, float *inputBlockBuf, float *outputBlockBuf, const cv::Mat &inMat, cv::Mat &outMat)
+Waifu2x::eWaifu2xError cNet::ReconstructImage(const bool UseTTA, const int crop_w, const int crop_h, const int outer_padding, const int batch_size, float *outputBlockBuf, const cv::Mat &inMat, cv::Mat &outMat)
 {
 	const auto InputHeight = inMat.size().height;
 	const auto InputWidth = inMat.size().width;
@@ -672,7 +672,7 @@ Waifu2x::eWaifu2xError cNet::ReconstructImage(const bool UseTTA, const int crop_
 
 				// 画像を直列に変換
 				{
-					float *fptr = inputBlockBuf + (input_block_plane_size * n);
+					float *fptr = input_blob->mutable_cpu_data() + (input_block_plane_size * n);
 					const float *uptr = (const float *)someimg.data;
 
 					const auto Line = someimg.step1();
@@ -711,9 +711,6 @@ Waifu2x::eWaifu2xError cNet::ReconstructImage(const bool UseTTA, const int crop_
 			}
 
 			assert(input_blob->count() == input_block_plane_size * processNum);
-
-			// ネットワークに画像を入力
-			input_blob->set_cpu_data(inputBlockBuf);
 
 			// 計算
 			auto out = mNet->Forward();

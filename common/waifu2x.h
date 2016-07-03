@@ -89,9 +89,6 @@ private:
 	int mMaxNetOffset; // ƒlƒbƒg‚É“ü—Í‚·‚é‚Æ‚Ç‚ê‚­‚ç‚¢í‚ê‚é‚©
 	bool mHasNoiseScale;
 
-	float *mInputBlock;
-	size_t mInputBlockSize;
-
 	float *mOutputBlock;
 	size_t mOutputBlockSize;
 

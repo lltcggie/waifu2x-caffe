@@ -249,7 +249,7 @@ void Waifu2x::quit_liblary()
 {}
 
 
-Waifu2x::Waifu2x() : mIsInited(false), mNoiseLevel(0), mIsCuda(false), mInputBlock(nullptr), mInputBlockSize(0), mOutputBlock(nullptr), mOutputBlockSize(0)
+Waifu2x::Waifu2x() : mIsInited(false), mNoiseLevel(0), mIsCuda(false), mOutputBlock(nullptr), mOutputBlockSize(0)
 {}
 
 Waifu2x::~Waifu2x()
@@ -669,19 +669,6 @@ Waifu2x::eWaifu2xError Waifu2x::ProcessNet(std::shared_ptr<cNet> net, const int 
 {
 	Waifu2x::eWaifu2xError ret;
 
-	const auto InputMemorySize = net->GetInputMemorySize(crop_w, crop_h, OuterPadding, batch_size);
-	if (InputMemorySize > mInputBlockSize)
-	{
-		if (mIsCuda)
-			CUDA_HOST_SAFE_FREE(mInputBlock);
-		else
-			SAFE_DELETE_WAIFU2X(mInputBlock);
-
-		CUDA_CHECK_WAIFU2X(cudaHostAlloc(&mInputBlock, InputMemorySize, cudaHostAllocWriteCombined));
-
-		mInputBlockSize = InputMemorySize;
-	}
-
 	const auto OutputMemorySize = net->GetOutputMemorySize(crop_w, crop_h, OuterPadding, batch_size);
 	if (OutputMemorySize > mOutputBlockSize)
 	{
@@ -692,10 +679,10 @@ Waifu2x::eWaifu2xError Waifu2x::ProcessNet(std::shared_ptr<cNet> net, const int 
 
 		CUDA_CHECK_WAIFU2X(cudaHostAlloc(&mOutputBlock, OutputMemorySize, cudaHostAllocDefault));
 
-		mInputBlockSize = OutputMemorySize;
+		mOutputBlockSize = OutputMemorySize;
 	}
 
-	ret = net->ReconstructImage(use_tta, crop_w, crop_h, OuterPadding, batch_size, mInputBlock, mOutputBlock, im, im);
+	ret = net->ReconstructImage(use_tta, crop_w, crop_h, OuterPadding, batch_size, mOutputBlock, im, im);
 	if (ret != Waifu2x::eWaifu2xError_OK)
 		return ret;
 
@@ -720,12 +707,10 @@ void Waifu2x::Destroy()
 
 	if (mIsCuda)
 	{
-		CUDA_HOST_SAFE_FREE(mInputBlock);
 		CUDA_HOST_SAFE_FREE(mOutputBlock);
 	}
 	else
 	{
-		SAFE_DELETE_WAIFU2X(mInputBlock);
 		SAFE_DELETE_WAIFU2X(mOutputBlock);
 	}
 
