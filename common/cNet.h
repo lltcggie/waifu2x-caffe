@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include "waifu2x.h"
 
 
@@ -34,4 +35,6 @@ public:
 	int GetOutputMemorySize(const int crop_w, const int crop_h, const int outer_padding, const int batch_size) const;
 
 	Waifu2x::eWaifu2xError ReconstructImage(const bool UseTTA, const int crop_w, const int crop_h, const int outer_padding, const int batch_size, float *inputBlockBuf, float *outputBlockBuf, const cv::Mat &inMat, cv::Mat &outMat);
+
+	static std::string GetModelName(const boost::filesystem::path &info_path);
 };

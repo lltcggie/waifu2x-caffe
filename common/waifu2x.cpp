@@ -285,19 +285,7 @@ Waifu2x::eWaifu2xError Waifu2x::Init(const std::string &mode, const int noise_le
 
 		const auto cuDNNCheckEndTime = std::chrono::system_clock::now();
 
-		boost::filesystem::path mode_dir_path(model_dir);
-		if (!mode_dir_path.is_absolute()) // model_dirが相対パスなら絶対パスに直す
-		{
-			// まずはカレントディレクトリ下にあるか探す
-			mode_dir_path = boost::filesystem::absolute(model_dir);
-			if (!boost::filesystem::exists(mode_dir_path) && !ExeDir.empty()) // 無かったらargv[0]から実行ファイルのあるフォルダを推定し、そのフォルダ下にあるか探す
-			{
-				boost::filesystem::path a0(ExeDir);
-				if (a0.is_absolute())
-					mode_dir_path = a0.branch_path() / model_dir;
-			}
-		}
-
+		const boost::filesystem::path mode_dir_path(GetModeDirPath(model_dir));
 		if (!boost::filesystem::exists(mode_dir_path))
 			return Waifu2x::eWaifu2xError_FailedOpenModelFile;
 
@@ -317,13 +305,14 @@ Waifu2x::eWaifu2xError Waifu2x::Init(const std::string &mode, const int noise_le
 
 		// TODO: ノイズ除去と拡大を同時に行うネットワークへの対処を考える
 
+		const boost::filesystem::path info_path = GetInfoPath(mode_dir_path);
+
 		if (mode == "noise" || mode == "noise_scale" || mode == "auto_scale")
 		{
 			const std::string base_name = "noise" + std::to_string(noise_level) + "_model";
 
 			const boost::filesystem::path model_path = mode_dir_path / (base_name + ".prototxt");
 			const boost::filesystem::path param_path = mode_dir_path / (base_name + ".json");
-			const boost::filesystem::path info_path = mode_dir_path / "info.json";
 
 			mNoiseNet.reset(new cNet);
 
@@ -341,7 +330,6 @@ Waifu2x::eWaifu2xError Waifu2x::Init(const std::string &mode, const int noise_le
 
 			const boost::filesystem::path model_path = mode_dir_path / (base_name + ".prototxt");
 			const boost::filesystem::path param_path = mode_dir_path / (base_name + ".json");
-			const boost::filesystem::path info_path = mode_dir_path / "info.json";
 
 			mScaleNet.reset(new cNet);
 
@@ -367,6 +355,31 @@ Waifu2x::eWaifu2xError Waifu2x::Init(const std::string &mode, const int noise_le
 	}
 
 	return Waifu2x::eWaifu2xError_OK;
+}
+
+boost::filesystem::path Waifu2x::GetModeDirPath(const boost::filesystem::path &model_dir)
+{
+	boost::filesystem::path mode_dir_path(model_dir);
+	if (!mode_dir_path.is_absolute()) // model_dirが相対パスなら絶対パスに直す
+	{
+		// まずはカレントディレクトリ下にあるか探す
+		mode_dir_path = boost::filesystem::absolute(model_dir);
+		if (!boost::filesystem::exists(mode_dir_path) && !ExeDir.empty()) // 無かったらargv[0]から実行ファイルのあるフォルダを推定し、そのフォルダ下にあるか探す
+		{
+			boost::filesystem::path a0(ExeDir);
+			if (a0.is_absolute())
+				mode_dir_path = a0.branch_path() / model_dir;
+		}
+	}
+
+	return mode_dir_path;
+}
+
+boost::filesystem::path Waifu2x::GetInfoPath(const boost::filesystem::path &mode_dir_path)
+{
+	const boost::filesystem::path info_path = mode_dir_path / "info.json";
+
+	return info_path;
 }
 
 Waifu2x::eWaifu2xError Waifu2x::waifu2x(const boost::filesystem::path &input_file, const boost::filesystem::path &output_file,
@@ -651,4 +664,15 @@ void Waifu2x::Destroy()
 const std::string& Waifu2x::used_process() const
 {
 	return mProcess;
+}
+
+std::string Waifu2x::GetModelName(const boost::filesystem::path & model_dir)
+{
+	const boost::filesystem::path mode_dir_path(GetModeDirPath(model_dir));
+	if (!boost::filesystem::exists(mode_dir_path))
+		return std::string();
+
+	const boost::filesystem::path info_path = mode_dir_path / "info.json";
+
+	return cNet::GetModelName(info_path);
 }

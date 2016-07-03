@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include <codecvt> 
 #include <cblas.h>
 #include <dlgs.h>
 #include <boost/tokenizer.hpp>
@@ -104,27 +105,21 @@ std::vector<int> CommonDivisorList(const int N)
 
 tstring DialogEvent::AddName() const
 {
-	tstring addstr;
+	tstring addstr(TEXT("("));
 
-	addstr += TEXT("(");
-	switch (modelType)
+	const std::string ModelName = Waifu2x::GetModelName(model_dir);
+
+#ifdef UNICODE
 	{
-	case eModelTypeRGB:
-		addstr += TEXT("RGB");
-		break;
+		std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> cv;
+		const std::wstring wModelName = cv.from_bytes(ModelName);
 
-	case eModelTypePhoto:
-		addstr += TEXT("Photo");
-		break;
-
-	case eModelTypeY:
-		addstr += TEXT("Y");
-		break;
-
-	case eModelTypeUpConvRGB:
-		addstr += TEXT("UpConvRGB");
-		break;
+		addstr += wModelName;
 	}
+#else
+	addstr += ModelName;
+#endif
+
 	addstr += TEXT(")");
 
 	addstr += TEXT("(");
@@ -276,18 +271,18 @@ bool DialogEvent::SyncMember(const bool NotSyncCropSize, const bool silent)
 			break;
 
 		case 1:
-			model_dir = TEXT("models/anime_style_art");
-			modelType = eModelTypeY;
-			break;
-
-		case 2:
 			model_dir = TEXT("models/photo");
 			modelType = eModelTypePhoto;
 			break;
 
-		case 3:
+		case 2:
 			model_dir = TEXT("models/upconv_7_anime_style_art_rgb");
 			modelType = eModelTypeUpConvRGB;
+			break;
+
+		case 3:
+			model_dir = TEXT("models/anime_style_art");
+			modelType = eModelTypeY;
 			break;
 
 		default:
@@ -1817,7 +1812,7 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 		index = 0;
 	else if (modelType == eModelTypePhoto)
 		index = 1;
-	else if (modelType == eModelTypeY)
+	else if (modelType == eModelTypeUpConvRGB)
 		index = 2;
 	else
 		index = 3;

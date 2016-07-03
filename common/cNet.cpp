@@ -184,6 +184,45 @@ Waifu2x::eWaifu2xError cNet::ConstractNet(const boost::filesystem::path &model_p
 	return Waifu2x::eWaifu2xError_OK;
 }
 
+namespace
+{
+	Waifu2x::eWaifu2xError ReadJson(const boost::filesystem::path &info_path, rapidjson::Document &d, std::vector<char> &jsonBuf)
+	{
+		try
+		{
+			boost::iostreams::stream<boost::iostreams::file_descriptor_source> is;
+
+			try
+			{
+				is.open(info_path, std::ios_base::in | std::ios_base::binary);
+			}
+			catch (...)
+			{
+				return Waifu2x::eWaifu2xError_FailedOpenModelFile;
+			}
+
+			if (!is)
+				return Waifu2x::eWaifu2xError_FailedOpenModelFile;
+
+			const size_t size = is.seekg(0, std::ios::end).tellg();
+			is.seekg(0, std::ios::beg);
+
+			jsonBuf.resize(size + 1);
+			is.read(jsonBuf.data(), jsonBuf.size());
+
+			jsonBuf[jsonBuf.size() - 1] = '\0';
+
+			d.Parse(jsonBuf.data());
+		}
+		catch (...)
+		{
+			return Waifu2x::eWaifu2xError_FailedParseModelFile;
+		}
+
+		return Waifu2x::eWaifu2xError_OK;
+	}
+};
+
 Waifu2x::eWaifu2xError cNet::LoadInfoFromJson(const boost::filesystem::path &info_path)
 {
 	rapidjson::Document d;
@@ -191,29 +230,11 @@ Waifu2x::eWaifu2xError cNet::LoadInfoFromJson(const boost::filesystem::path &inf
 
 	try
 	{
-		boost::iostreams::stream<boost::iostreams::file_descriptor_source> is;
+		Waifu2x::eWaifu2xError ret;
 
-		try
-		{
-			is.open(info_path, std::ios_base::in | std::ios_base::binary);
-		}
-		catch (...)
-		{
-			return Waifu2x::eWaifu2xError_FailedOpenModelFile;
-		}
-
-		if (!is)
-			return Waifu2x::eWaifu2xError_FailedOpenModelFile;
-
-		const size_t size = is.seekg(0, std::ios::end).tellg();
-		is.seekg(0, std::ios::beg);
-
-		jsonBuf.resize(size + 1);
-		is.read(jsonBuf.data(), jsonBuf.size());
-
-		jsonBuf[jsonBuf.size() - 1] = '\0';
-
-		d.Parse(jsonBuf.data());
+		ret = ReadJson(info_path, d, jsonBuf);
+		if (ret != Waifu2x::eWaifu2xError_OK)
+			return ret;
 
 		const bool resize = d.HasMember("resize") && d["resize"].GetBool() ? true : false;
 		const auto name = d["name"].GetString();
@@ -708,3 +729,29 @@ Waifu2x::eWaifu2xError cNet::ReconstructImage(const bool UseTTA, const int crop_
 
 	return Waifu2x::eWaifu2xError_OK;
 }
+
+std::string cNet::GetModelName(const boost::filesystem::path &info_path)
+{
+	rapidjson::Document d;
+	std::vector<char> jsonBuf;
+	std::string str;
+
+	try
+	{
+		Waifu2x::eWaifu2xError ret;
+
+		ret = ReadJson(info_path, d, jsonBuf);
+		if (ret != Waifu2x::eWaifu2xError_OK)
+			return str;
+
+		const auto name = d["name"].GetString();
+
+		str = name;
+	}
+	catch (...)
+	{
+	}
+
+	return str;
+}
+

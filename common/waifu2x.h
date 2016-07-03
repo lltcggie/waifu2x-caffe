@@ -87,7 +87,8 @@ private:
 	size_t mOutputBlockSize;
 
 private:
-	eWaifu2xError ReconstructImage(boost::shared_ptr<caffe::Net<float>> net, const int reconstructed_scale, cv::Mat &im);
+	static boost::filesystem::path GetModeDirPath(const boost::filesystem::path &model_dir);
+	static boost::filesystem::path GetInfoPath(const boost::filesystem::path &model_dir);
 
 	Waifu2x::eWaifu2xError ReconstructImage(const double factor, const int crop_w, const int crop_h, const bool use_tta, const int batch_size, 
 		const bool isReconstructNoise, const bool isReconstructScale, const Waifu2x::waifu2xCancelFunc cancel_func, stImage &image);
@@ -131,4 +132,6 @@ public:
 	void Destroy();
 
 	const std::string& used_process() const;
+
+	static std::string GetModelName(const boost::filesystem::path &model_dir);
 };
