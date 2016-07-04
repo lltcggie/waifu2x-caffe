@@ -327,7 +327,7 @@ bool DialogEvent::SyncMember(const bool NotSyncCropSize, const bool silent)
 
 		default:
 			break;
-	}
+		}
 	}
 
 	{
