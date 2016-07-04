@@ -131,6 +131,14 @@ int main(int argc, char** argv)
 		"input image split size", false,
 		128, "int", cmd);
 
+	TCLAP::ValueArg<int> cmdCropWidth("", "crop_w",
+		"input image split size(width)", false,
+		128, "int", cmd);
+
+	TCLAP::ValueArg<int> cmdCropHeight("", "crop_h",
+		"input image split size(height)", false,
+		128, "int", cmd);
+
 	TCLAP::ValueArg<int> cmdBatchSizeFile("b", "batch_size",
 		"input batch size", false,
 		1, "int", cmd);
@@ -176,6 +184,15 @@ int main(int argc, char** argv)
 		printf("ƒGƒ‰[: scale_width‚Æscale_height‚Í“¯Žž‚ÉŽw’è‚Å‚«‚Ü‚¹‚ñ\n");
 		return 1;
 	}
+
+	int crop_w = cmdCropSizeFile.getValue();
+	int crop_h = cmdCropSizeFile.getValue();
+
+	if (cmdCropWidth.isSet())
+		crop_w = cmdCropWidth.getValue();
+
+	if (cmdCropHeight.isSet())
+		crop_h = cmdCropHeight.getValue();
 
 	if (cmdScaleWidth.getValue() > 0)
 		ScaleWidth = cmdScaleWidth.getValue();
@@ -382,7 +399,7 @@ int main(int argc, char** argv)
 	for (const auto &p : file_paths)
 	{
 		const Waifu2x::eWaifu2xError ret = w.waifu2x(p.first, p.second, ScaleRatio, ScaleWidth, ScaleHeight, nullptr,
-			cmdCropSizeFile.getValue(), cmdCropSizeFile.getValue(),
+			crop_w, crop_h,
 			cmdOutputQuality.getValue() == -1 ? boost::optional<int>() : cmdOutputQuality.getValue(), cmdOutputDepth.getValue(), use_tta, cmdBatchSizeFile.getValue());
 		if (ret != Waifu2x::eWaifu2xError_OK)
 		{
