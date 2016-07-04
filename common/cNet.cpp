@@ -349,9 +349,6 @@ Waifu2x::eWaifu2xError cNet::SetParameter(caffe::NetParameter &param, const std:
 		auto mid = input_layer->mutable_input_param()->mutable_shape();
 		if (mid->size() != 1 || mid->Mutable(0)->dim_size() != 4)
 			return Waifu2x::eWaifu2xError_FailedParseModelFile;
-		mid->Mutable(0)->set_dim(0, 1);
-		mid->Mutable(0)->set_dim(2, 142);
-		mid->Mutable(0)->set_dim(3, 142);
 	}
 
 	for (int i = 0; i < param.layer_size(); i++)
