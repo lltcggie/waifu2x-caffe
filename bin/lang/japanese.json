@@ -92,5 +92,6 @@
 "OK":"OK",
 "Cancel":"キャンセル",
 "IDC_STATIC_USE_GPU_NO":"使用GPU No",
-"IDC_RADIO_MODEL_UPCONV_RGB":"2次元イラスト (UpRGBモデル)"
+"IDC_RADIO_MODEL_UPCONV_RGB":"2次元イラスト (UpRGBモデル)",
+"IDC_RADIO_MODEL_UPCONV_PHOTO":"写真・アニメ (UpPhotoモデル)"
 }

@@ -88,6 +88,7 @@ private:
 		eModelTypePhoto,
 		eModelTypeY,
 		eModelTypeUpConvRGB,
+		eModelTypeUpConvPhoto,
 		eModelTypeEnd,
 	};
 
