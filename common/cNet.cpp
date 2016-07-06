@@ -362,6 +362,13 @@ Waifu2x::eWaifu2xError cNet::SetParameter(caffe::NetParameter &param, const std:
 			else
 				layer_param->mutable_convolution_param()->set_engine(caffe::ConvolutionParameter_Engine_CAFFE);
 		}
+		else if (type == "Deconvolution")
+		{
+			if (process == "cudnn")
+				layer_param->mutable_convolution_param()->set_engine(caffe::ConvolutionParameter_Engine_CUDNN);
+			else
+				layer_param->mutable_convolution_param()->set_engine(caffe::ConvolutionParameter_Engine_CAFFE);
+		}
 		else if (type == "ReLU")
 		{
 			if (process == "cudnn")
