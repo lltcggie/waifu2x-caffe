@@ -9,10 +9,12 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 #include <chrono>
+#include <unordered_map>
 #include <cuda_runtime.h>
 
 #include <boost/iostreams/stream.hpp>
 #include <boost/iostreams/device/file_descriptor.hpp>
+#include <msgpack.hpp>
 
 #include <fcntl.h>
 #include <zlib.h>
@@ -178,6 +180,229 @@ namespace
 	};
 }
 
+class CcuDNNAlgorithmElement
+{
+private:
+	typedef std::unordered_map<uint64_t, uint8_t> AlgoMap;
+
+	AlgoMap mAlgo;
+	bool mIsModefy;
+
+	uint8_t kernel_w;
+	uint8_t kernel_h;
+	uint8_t pad_w;
+	uint8_t pad_h;
+	uint8_t stride_w;
+	uint8_t stride_h;
+	uint16_t batch_size;
+
+private:
+	static uint64_t InfoToKey(uint16_t num_input, uint16_t num_output, uint16_t width, uint16_t height)
+	{
+		return (uint64_t)num_input << 8 * 3 | (uint64_t)num_output << 8 * 2 | (uint64_t)width << 8 * 1 | (uint64_t)height << 8 * 0;
+	}
+
+public:
+	CcuDNNAlgorithmElement() : mIsModefy(false)
+	{}
+	~CcuDNNAlgorithmElement()
+	{}
+
+	void SetLayerData(uint8_t kernel_w, uint8_t kernel_h, uint8_t pad_w, uint8_t pad_h, uint8_t stride_w, uint8_t stride_h, uint16_t batch_size)
+	{
+		this->kernel_w = kernel_w;
+		this->kernel_h = kernel_h;
+		this->pad_w = pad_w;
+		this->pad_h = pad_h;
+		this->stride_w = stride_w;
+		this->stride_h = stride_h;
+		this->batch_size = batch_size;
+	}
+
+	void GetLayerData(uint8_t &kernel_w, uint8_t &kernel_h, uint8_t &pad_w, uint8_t &pad_h, uint8_t &stride_w, uint8_t &stride_h, uint16_t &batch_size)
+	{
+		kernel_w = this->kernel_w;
+		kernel_h = this->kernel_h;
+		pad_w = this->pad_w;
+		pad_h = this->pad_h;
+		stride_w = this->stride_w;
+		stride_h = this->stride_h;
+		batch_size = this->batch_size;
+	}
+
+	int GetAlgorithm(uint16_t num_input, uint16_t num_output, uint16_t width, uint16_t height) const
+	{
+		const uint64_t key = InfoToKey(num_input, num_output, width, height);
+		const auto it = mAlgo.find(key);
+		if (it != mAlgo.end())
+			return it->second;
+
+		return -1;
+	}
+
+	void SetAlgorithm(uint8_t algo, uint16_t num_input, uint16_t num_output, uint16_t width, uint16_t height)
+	{
+		const uint64_t key = InfoToKey(num_input, num_output, width, height);
+		auto it = mAlgo.find(key);
+		if (it == mAlgo.end() || it->second != algo)
+			mIsModefy = true;
+
+		mAlgo[key] = algo;
+	}
+
+	bool IsModefy() const
+	{
+		return mIsModefy;
+	}
+
+	void Saved()
+	{
+		mIsModefy = false;
+	}
+
+	MSGPACK_DEFINE(mAlgo, kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h, batch_size);
+};
+
+class CcuDNNAlgorithm
+{
+private:
+	typedef std::unordered_map<uint64_t, CcuDNNAlgorithmElement> AlgoEmlMap;
+
+	AlgoEmlMap mAlgoEmlMap;
+	std::string mDataPath;
+
+private:
+	static uint64_t InfoToKey(uint8_t kernel_w, uint8_t kernel_h, uint8_t pad_w, uint8_t pad_h, uint8_t stride_w, uint8_t stride_h, uint16_t batch_size)
+	{
+		return
+			(uint64_t)kernel_w << 8 * 7 | (uint64_t)kernel_h << 8 * 6 |
+			(uint64_t)pad_w << 8 * 5 | (uint64_t)pad_h << 8 * 4 |
+			(uint64_t)stride_w << 8 * 3 | (uint64_t)stride_h << 8 * 2 |
+			(uint64_t)batch_size;
+	}
+
+	std::string GetDataPath(uint8_t kernel_w, uint8_t kernel_h, uint8_t pad_w, uint8_t pad_h, uint8_t stride_w, uint8_t stride_h, uint16_t batch_size) const
+	{
+		std::string SavePath = mDataPath;
+		SavePath +=
+			std::to_string(kernel_w) + "x" + std::to_string(kernel_h) + " " +
+			std::to_string(pad_w) + "x" + std::to_string(pad_w) + " " +
+			std::to_string(stride_w) + "x" + std::to_string(stride_w) + " " +
+			std::to_string(batch_size);
+		SavePath += ".dat";
+
+		return SavePath;
+	}
+
+	bool Load(uint8_t kernel_w, uint8_t kernel_h, uint8_t pad_w, uint8_t pad_h, uint8_t stride_w, uint8_t stride_h, uint16_t batch_size)
+	{
+		const std::string SavePath = GetDataPath(kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h, batch_size);
+
+		std::vector<char> sbuf;
+
+		FILE *fp = fopen(SavePath.c_str(), "rb");
+		if (!fp)
+			return false;
+
+		fseek(fp, 0, SEEK_END);
+		const auto size = ftell(fp);
+		fseek(fp, 0, SEEK_SET);
+
+		sbuf.resize(size);
+
+		if (fread(sbuf.data(), 1, sbuf.size(), fp) != sbuf.size())
+		{
+			fclose(fp);
+			return false;
+		}
+
+		fclose(fp);
+
+		CcuDNNAlgorithmElement elm;
+		msgpack::unpack(sbuf.data(), sbuf.size()).get().convert(elm);
+		sbuf.clear();
+
+		const uint64_t key = InfoToKey(kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h, batch_size);
+		mAlgoEmlMap[key] = std::move(elm);
+
+		return true;
+	}
+
+public:
+	CcuDNNAlgorithm()
+	{}
+
+	~CcuDNNAlgorithm()
+	{
+		Save();
+	}
+
+	int GetAlgorithm(uint16_t num_input, uint16_t num_output, uint16_t batch_size,
+		uint16_t width, uint16_t height, uint16_t kernel_w, uint16_t kernel_h, uint16_t pad_w, uint16_t pad_h, uint16_t stride_w, uint16_t stride_h)
+	{
+		const uint64_t key = InfoToKey(kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h, batch_size);
+		const auto it = mAlgoEmlMap.find(key);
+		if (it != mAlgoEmlMap.end())
+		{
+			const auto &elm = it->second;
+			return elm.GetAlgorithm(num_input, num_output, width, height);
+		}
+
+		if (Load(kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h, batch_size))
+			return mAlgoEmlMap[key].GetAlgorithm(num_input, num_output, width, height);
+
+		return -1;
+	}
+
+	void SetAlgorithm(int algo, uint16_t num_input, uint16_t num_output, uint16_t batch_size,
+		uint16_t width, uint16_t height, uint16_t kernel_w, uint16_t kernel_h, uint16_t pad_w, uint16_t pad_h, uint16_t stride_w, uint16_t stride_h)
+	{
+		if (algo < 0 || algo > 255)
+			return;
+
+		const uint64_t key = InfoToKey(kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h, batch_size);
+		auto &eml = mAlgoEmlMap[key];
+		eml.SetAlgorithm(algo, num_input, num_output, width, height);
+		eml.SetLayerData(kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h, batch_size);
+	}
+
+	void Save()
+	{
+		for (auto &p : mAlgoEmlMap)
+		{
+			auto &eml = p.second;
+			if (eml.IsModefy())
+			{
+				msgpack::sbuffer sbuf;
+				msgpack::pack(sbuf, eml);
+
+				uint8_t kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h;
+				uint16_t batch_size;
+				eml.GetLayerData(kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h, batch_size);
+
+				const std::string SavePath = GetDataPath(kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h, batch_size);
+				FILE *fp = fopen(SavePath.c_str(), "wb");
+				if (fp)
+				{
+					fwrite(sbuf.data(), 1, sbuf.size(), fp);
+					fclose(fp);
+
+					eml.Saved();
+				}
+			}
+		}
+	}
+
+	void SetDataPath(std::string path)
+	{
+		mDataPath = path;
+	}
+};
+
+CcuDNNAlgorithm g_ConvCcuDNNAlgorithm;
+CcuDNNAlgorithm g_DeconvCcuDNNAlgorithm;
+
+
 // CUDAが使えるかチェック
 Waifu2x::eWaifu2xCudaError Waifu2x::can_use_CUDA()
 {
@@ -281,7 +506,10 @@ void Waifu2x::init_liblary(int argc, char** argv)
 }
 
 void Waifu2x::quit_liblary()
-{}
+{
+	g_ConvCcuDNNAlgorithm.Save();
+	g_DeconvCcuDNNAlgorithm.Save();
+}
 
 
 Waifu2x::Waifu2x() : mIsInited(false), mNoiseLevel(0), mIsCuda(false), mOutputBlock(nullptr), mOutputBlockSize(0), mGPUNo(0)
@@ -321,6 +549,46 @@ Waifu2x::eWaifu2xError Waifu2x::Init(const eWaifu2xModelType mode, const int noi
 
 		const auto cuDNNCheckEndTime = std::chrono::system_clock::now();
 
+		boost::filesystem::path exe_dir_path(ExeDir);
+		if (exe_dir_path.is_absolute())
+			exe_dir_path = exe_dir_path.branch_path();
+
+		if (Process == "cudnn" && boost::filesystem::exists(exe_dir_path))
+		{
+			const boost::filesystem::path cudnn_data_dir_path(exe_dir_path / "cudnn_data");
+
+			bool isOK = false;
+			if (boost::filesystem::exists(cudnn_data_dir_path))
+				isOK = true;
+
+			if (!isOK)
+			{
+				boost::system::error_code error;
+				const bool result = boost::filesystem::create_directory(cudnn_data_dir_path, error);
+				if (result && !error)
+					isOK = true;
+			}
+
+			if(isOK)
+			{
+				cudaDeviceProp prop;
+				if (cudaGetDeviceProperties(&prop, mGPUNo) == cudaSuccess)
+				{
+					std::string conv_filename(prop.name);
+					conv_filename += " conv ";
+
+					std::string deconv_filename(prop.name);
+					deconv_filename += " deconv ";
+
+					const boost::filesystem::path conv_data_path = cudnn_data_dir_path / conv_filename;
+					const boost::filesystem::path deconv_data_path = cudnn_data_dir_path / deconv_filename;
+
+					g_ConvCcuDNNAlgorithm.SetDataPath(conv_data_path.string());
+					g_DeconvCcuDNNAlgorithm.SetDataPath(deconv_data_path.string());
+				}
+			}
+		}
+
 		const boost::filesystem::path mode_dir_path(GetModeDirPath(model_dir));
 		if (!boost::filesystem::exists(mode_dir_path))
 			return Waifu2x::eWaifu2xError_FailedOpenModelFile;
@@ -337,6 +605,9 @@ Waifu2x::eWaifu2xError Waifu2x::Init(const eWaifu2xModelType mode, const int noi
 			caffe::Caffe::set_mode(caffe::Caffe::GPU);
 			mIsCuda = true;
 		}
+
+		caffe::Caffe::SetGetcuDNNAlgorithmFunc(GetcuDNNAlgorithm);
+		caffe::Caffe::SetSetcuDNNAlgorithmFunc(SetcuDNNAlgorithm);
 
 		mInputPlane = 0;
 		mMaxNetOffset = 0;
@@ -535,6 +806,27 @@ double Waifu2x::CalcScaleRatio(const boost::optional<double> scale_ratio, const 
 		return image.GetScaleFromWidth(*scale_height);
 
 	return 1.0;
+}
+
+int Waifu2x::GetcuDNNAlgorithm(const char * layer_name, int num_input, int num_output, int batch_size,
+	int width, int height, int kernel_w, int kernel_h, int pad_w, int pad_h, int stride_w, int stride_h)
+{
+	// ExeDir;
+	if (strcmp(layer_name, "Deconvolution") == 0)
+		return g_ConvCcuDNNAlgorithm.GetAlgorithm(num_input, num_output, batch_size, width, height, kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h);
+	else if (strcmp(layer_name, "Convolution") == 0)
+		return g_DeconvCcuDNNAlgorithm.GetAlgorithm(num_input, num_output, batch_size, width, height, kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h);
+
+	return -1;
+}
+
+void Waifu2x::SetcuDNNAlgorithm(int algo, const char * layer_name, int num_input, int num_output, int batch_size,
+	int width, int height, int kernel_w, int kernel_h, int pad_w, int pad_h, int stride_w, int stride_h)
+{
+	if (strcmp(layer_name, "Deconvolution") == 0)
+		return g_ConvCcuDNNAlgorithm.SetAlgorithm(algo, num_input, num_output, batch_size, width, height, kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h);
+	else if (strcmp(layer_name, "Convolution") == 0)
+		return g_DeconvCcuDNNAlgorithm.SetAlgorithm(algo, num_input, num_output, batch_size, width, height, kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h);
 }
 
 Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(const double factor, const int crop_w, const int crop_h, const bool use_tta, const int batch_size,
