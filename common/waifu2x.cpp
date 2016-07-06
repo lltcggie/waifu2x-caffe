@@ -561,42 +561,62 @@ Waifu2x::eWaifu2xError Waifu2x::Init(const eWaifu2xModelType mode, const int noi
 
 		const auto cuDNNCheckEndTime = std::chrono::system_clock::now();
 
-		boost::filesystem::path exe_dir_path(ExeDir);
-		if (exe_dir_path.is_absolute())
-			exe_dir_path = exe_dir_path.branch_path();
-
-		if (Process == "cudnn" && boost::filesystem::exists(exe_dir_path))
+		if (Process == "cudnn")
 		{
-			const boost::filesystem::path cudnn_data_dir_path(exe_dir_path / "cudnn_data");
+			// exeのディレクトリにcuDNNのアルゴリズムデータ保存
+			boost::filesystem::path cudnn_data_base_dir_path(ExeDir);
+			if (cudnn_data_base_dir_path.is_relative())
+				cudnn_data_base_dir_path = boost::filesystem::system_complete(cudnn_data_base_dir_path);
 
-			bool isOK = false;
-			if (boost::filesystem::exists(cudnn_data_dir_path))
-				isOK = true;
+			if (!boost::filesystem::is_directory(cudnn_data_base_dir_path))
+				cudnn_data_base_dir_path = cudnn_data_base_dir_path.branch_path();
 
-			if (!isOK)
+			if (!boost::filesystem::exists(cudnn_data_base_dir_path))
 			{
-				boost::system::error_code error;
-				const bool result = boost::filesystem::create_directory(cudnn_data_dir_path, error);
-				if (result && !error)
-					isOK = true;
+				// exeのディレクトリが取得できなければカレントディレクトリに保存
+
+				cudnn_data_base_dir_path = boost::filesystem::current_path();
+
+				if (cudnn_data_base_dir_path.is_relative())
+					cudnn_data_base_dir_path = boost::filesystem::system_complete(cudnn_data_base_dir_path);
+
+				if (!boost::filesystem::exists(cudnn_data_base_dir_path))
+					cudnn_data_base_dir_path = "./";
 			}
 
-			if(isOK)
+			if (boost::filesystem::exists(cudnn_data_base_dir_path))
 			{
-				cudaDeviceProp prop;
-				if (cudaGetDeviceProperties(&prop, mGPUNo) == cudaSuccess)
+				const boost::filesystem::path cudnn_data_dir_path(cudnn_data_base_dir_path / "cudnn_data");
+
+				bool isOK = false;
+				if (boost::filesystem::exists(cudnn_data_dir_path))
+					isOK = true;
+
+				if (!isOK)
 				{
-					std::string conv_filename(prop.name);
-					conv_filename += " conv ";
+					boost::system::error_code error;
+					const bool result = boost::filesystem::create_directory(cudnn_data_dir_path, error);
+					if (result && !error)
+						isOK = true;
+				}
 
-					std::string deconv_filename(prop.name);
-					deconv_filename += " deconv ";
+				if (isOK)
+				{
+					cudaDeviceProp prop;
+					if (cudaGetDeviceProperties(&prop, mGPUNo) == cudaSuccess)
+					{
+						std::string conv_filename(prop.name);
+						conv_filename += " conv ";
 
-					const boost::filesystem::path conv_data_path = cudnn_data_dir_path / conv_filename;
-					const boost::filesystem::path deconv_data_path = cudnn_data_dir_path / deconv_filename;
+						std::string deconv_filename(prop.name);
+						deconv_filename += " deconv ";
 
-					g_ConvCcuDNNAlgorithm.SetDataPath(conv_data_path.string());
-					g_DeconvCcuDNNAlgorithm.SetDataPath(deconv_data_path.string());
+						const boost::filesystem::path conv_data_path = cudnn_data_dir_path / conv_filename;
+						const boost::filesystem::path deconv_data_path = cudnn_data_dir_path / deconv_filename;
+
+						g_ConvCcuDNNAlgorithm.SetDataPath(conv_data_path.string());
+						g_DeconvCcuDNNAlgorithm.SetDataPath(deconv_data_path.string());
+					}
 				}
 			}
 		}
