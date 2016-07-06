@@ -908,7 +908,7 @@ void DialogEvent::Waifu2xTime()
 void DialogEvent::SaveIni(const bool isSyncMember)
 {
 	if (isSyncMember)
-		SyncMember(true);
+		SyncMember(true, true);
 
 	if (isNotSaveParam)
 		return;
