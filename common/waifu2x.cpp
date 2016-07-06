@@ -732,11 +732,15 @@ Waifu2x::eWaifu2xError Waifu2x::ProcessNet(std::shared_ptr<cNet> net, const int 
 	if (OutputMemorySize > mOutputBlockSize)
 	{
 		if (mIsCuda)
+		{
 			CUDA_HOST_SAFE_FREE(mOutputBlock);
+			CUDA_CHECK_WAIFU2X(cudaHostAlloc(&mOutputBlock, OutputMemorySize, cudaHostAllocDefault));
+		}
 		else
+		{
 			SAFE_DELETE_WAIFU2X(mOutputBlock);
-
-		CUDA_CHECK_WAIFU2X(cudaHostAlloc(&mOutputBlock, OutputMemorySize, cudaHostAllocDefault));
+			mOutputBlock = new float[OutputMemorySize];
+		}
 
 		mOutputBlockSize = OutputMemorySize;
 	}
