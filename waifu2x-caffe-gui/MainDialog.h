@@ -26,7 +26,9 @@
 class DialogEvent
 {
 private:
-	HWND dh;
+	static HWND dh;
+
+	static LangStringList langStringList;
 
 	boost::filesystem::path exeDir;
 	std::vector<int> CropSizeList;
@@ -94,7 +96,6 @@ private:
 
 	eModelType modelType;
 
-	LangStringList langStringList;
 	std::wstring LangName;
 
 	std::atomic<int64_t> TimeLeftThread;
@@ -152,6 +153,8 @@ private:
 		_In_  WPARAM wParam,
 		_In_  LPARAM lParam
 	);
+
+	static void LogFatalFunc();
 
 public:
 	DialogEvent();

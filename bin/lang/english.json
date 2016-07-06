@@ -93,5 +93,6 @@
 "Cancel":"Cancel",
 "IDC_STATIC_USE_GPU_NO":"Use GPU No",
 "IDC_RADIO_MODEL_UPCONV_RGB":"2-D illust (UpRGB Model)",
-"IDC_RADIO_MODEL_UPCONV_PHOTO":"Photo (UpPhoto Model)"
+"IDC_RADIO_MODEL_UPCONV_PHOTO":"Photo (UpPhoto Model)",
+"MessageLogFatalError":"The fatal error has occurred.\r\nThere is a possibility the split size is too large"
 }

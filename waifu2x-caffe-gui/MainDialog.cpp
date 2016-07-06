@@ -20,6 +20,7 @@
 #include "CControl.h"
 //#include <boost/program_options.hpp>
 #include <tclapw/CmdLine.h>
+#include <glog/logging.h>
 
 
 const size_t AR_PATH_MAX(1024);
@@ -36,6 +37,9 @@ const TCHAR * const LangListFileName = TEXT("lang/LangList.txt");
 const TCHAR * const MultiFileStr = TEXT("(Multi File)");
 
 const UINT_PTR nIDEventTimeLeft = 1000;
+
+LangStringList DialogEvent::langStringList;
+HWND DialogEvent::dh;
 
 
 namespace
@@ -1192,7 +1196,7 @@ UINT_PTR DialogEvent::OFNHookProcOut(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARA
 	return 0L;
 }
 
-DialogEvent::DialogEvent() : dh(nullptr), mode(Waifu2x::eWaifu2xModelTypeNoiseScale), modeStr("noise_scale"), noise_level(1), scale_ratio(2.0), scale_width(0), scale_height(0), model_dir(TEXT("models/anime_style_art_rgb")),
+DialogEvent::DialogEvent() : mode(Waifu2x::eWaifu2xModelTypeNoiseScale), modeStr("noise_scale"), noise_level(1), scale_ratio(2.0), scale_width(0), scale_height(0), model_dir(TEXT("models/anime_style_art_rgb")),
 process("gpu"), outputExt(TEXT(".png")), inputFileExt(TEXT("png:jpg:jpeg:tif:tiff:bmp:tga")),
 use_tta(false), output_depth(8), crop_size(128), batch_size(1), gpu_no(0), isLastError(false), scaleType(eScaleTypeEnd),
 TimeLeftThread(-1), TimeLeftGetTimeThread(0), isCommandLineStart(false), tAutoMode(TEXT("none")),
@@ -1625,6 +1629,9 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 
 		SendMessage(hlang, CB_SETCURSEL, defaultListIndex, 0);
 	}
+
+	// 致命的エラーが発生した時にLogFatalFuncを呼び出すようにする
+	google::InstallFailureFunction(LogFatalFunc);
 
 	SetWindowTextLang();
 
@@ -3119,4 +3126,10 @@ void DialogEvent::AppSetting(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 			output_dir = tOutputDirFix;
 		}
 	}
+}
+
+void DialogEvent::LogFatalFunc()
+{
+	MessageBox(dh, langStringList.GetString(L"MessageLogFatalError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
+	abort();
 }
