@@ -318,12 +318,19 @@ private:
 
 		fclose(fp);
 
-		CcuDNNAlgorithmElement elm;
-		msgpack::unpack(sbuf.data(), sbuf.size()).get().convert(elm);
-		sbuf.clear();
+		try
+		{
+			CcuDNNAlgorithmElement elm;
+			msgpack::unpack(sbuf.data(), sbuf.size()).get().convert(elm);
+			sbuf.clear();
 
-		const uint64_t key = InfoToKey(kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h, batch_size);
-		mAlgoEmlMap[key] = std::move(elm);
+			const uint64_t key = InfoToKey(kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h, batch_size);
+			mAlgoEmlMap[key] = std::move(elm);
+		}
+		catch (...)
+		{
+			boost::filesystem::remove(SavePath);
+		}
 
 		return true;
 	}
@@ -373,22 +380,27 @@ public:
 			auto &eml = p.second;
 			if (eml.IsModefy())
 			{
-				msgpack::sbuffer sbuf;
-				msgpack::pack(sbuf, eml);
-
-				uint8_t kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h;
-				uint16_t batch_size;
-				eml.GetLayerData(kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h, batch_size);
-
-				const std::string SavePath = GetDataPath(kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h, batch_size);
-				FILE *fp = fopen(SavePath.c_str(), "wb");
-				if (fp)
+				try
 				{
-					fwrite(sbuf.data(), 1, sbuf.size(), fp);
-					fclose(fp);
+					msgpack::sbuffer sbuf;
+					msgpack::pack(sbuf, eml);
 
-					eml.Saved();
+					uint8_t kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h;
+					uint16_t batch_size;
+					eml.GetLayerData(kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h, batch_size);
+
+					const std::string SavePath = GetDataPath(kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h, batch_size);
+					FILE *fp = fopen(SavePath.c_str(), "wb");
+					if (fp)
+					{
+						fwrite(sbuf.data(), 1, sbuf.size(), fp);
+						fclose(fp);
+
+						eml.Saved();
+					}
 				}
+				catch(...)
+				{}
 			}
 		}
 	}
