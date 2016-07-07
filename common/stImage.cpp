@@ -228,14 +228,29 @@ Waifu2x::eWaifu2xError stImage::LoadMat(cv::Mat &im, const boost::filesystem::pa
 		if (!readFile(input_file, img_data))
 			return Waifu2x::eWaifu2xError_FailedOpenInputFile;
 
-		cv::Mat im(img_data.size(), 1, CV_8U, img_data.data());
-		original_image = cv::imdecode(im, cv::IMREAD_UNCHANGED);
+		const boost::filesystem::path ipext(input_file.extension());
+		if (!boost::iequals(ipext.string(), ".bmp")) // 特定のファイル形式の場合OpenCVで読むとバグることがあるのでSTBIを優先させる
+		{
+			cv::Mat im(img_data.size(), 1, CV_8U, img_data.data());
+			original_image = cv::imdecode(im, cv::IMREAD_UNCHANGED);
 
-		if (original_image.empty())
+			if (original_image.empty())
+			{
+				const Waifu2x::eWaifu2xError ret = LoadMatBySTBI(original_image, img_data);
+				if (ret != Waifu2x::eWaifu2xError_OK)
+					return ret;
+			}
+		}
+		else
 		{
 			const Waifu2x::eWaifu2xError ret = LoadMatBySTBI(original_image, img_data);
 			if (ret != Waifu2x::eWaifu2xError_OK)
-				return ret;
+			{
+				cv::Mat im(img_data.size(), 1, CV_8U, img_data.data());
+				original_image = cv::imdecode(im, cv::IMREAD_UNCHANGED);
+				if (original_image.empty())
+					return ret;
+			}
 		}
 	}
 
