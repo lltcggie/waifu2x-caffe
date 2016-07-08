@@ -380,6 +380,8 @@ Waifu2x::eWaifu2xError stImage::Load(const boost::filesystem::path &input_file)
 
 Waifu2x::eWaifu2xError stImage::Load(const void* source, const int width, const int height, const int channel, const int stride)
 {
+	Clear();
+
 	cv::Mat original_image(cv::Size(width, height), CV_MAKETYPE(CV_8U, channel), (void *)source, stride);
 
 	if (original_image.channels() >= 3) // RGB‚È‚Ì‚ÅBGR‚É‚·‚é
@@ -393,6 +395,10 @@ Waifu2x::eWaifu2xError stImage::Load(const void* source, const int width, const 
 	}
 
 	mOrgFloatImage = original_image;
+	mOrgChannel = original_image.channels();
+	mOrgSize = original_image.size();
+
+	mIsRequestDenoise = false;
 
 	return Waifu2x::eWaifu2xError_OK;
 }
