@@ -835,7 +835,7 @@ double Waifu2x::CalcScaleRatio(const boost::optional<double> scale_ratio, const 
 		return image.GetScaleFromWidth(*scale_width);
 
 	if(scale_height)
-		return image.GetScaleFromWidth(*scale_height);
+		return image.GetScaleFromHeight(*scale_height);
 
 	return 1.0;
 }
