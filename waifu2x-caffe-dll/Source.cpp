@@ -29,6 +29,31 @@ void* Waifu2xInit(const char *mode, const int noise_level, const char *model_dir
 }
 
 __declspec(dllexport)
+void* Waifu2xInitNew(const char *mode, const int noise_level, const char *model_dir, const char *process)
+{
+	Waifu2x *obj = new Waifu2x();
+
+	Waifu2x::eWaifu2xModelType mt;
+	if (strcmp("noise", mode) == 0)
+		mt = Waifu2x::eWaifu2xModelTypeNoise;
+	else if (strcmp("scale", mode) == 0)
+		mt = Waifu2x::eWaifu2xModelTypeScale;
+	else if (strcmp("noise_scale", mode) == 0)
+		mt = Waifu2x::eWaifu2xModelTypeNoiseScale;
+	else if (strcmp("auto_scale", mode) == 0)
+		mt = Waifu2x::eWaifu2xModelTypeAutoScale;
+
+	// if (obj->Init(1, argv, mode, noise_level, 2.0, boost::optional<int>(), boost::optional<int>(), model_dir, process, boost::optional<int>(), output_depth, use_tta, crop_size, batch_size) != Waifu2x::eWaifu2xError_OK)
+	if (obj->Init(mt, noise_level, model_dir, process) != Waifu2x::eWaifu2xError_OK)
+	{
+		delete obj;
+		return nullptr;
+	}
+
+	return obj;
+}
+
+__declspec(dllexport)
 bool Waifu2xProcess(void *waifu2xObj, double factor, const void* source, void* dest, int width, int height, int in_channel, int in_stride, int out_channel, int out_stride)
 {
 	if (!waifu2xObj)
@@ -37,6 +62,18 @@ bool Waifu2xProcess(void *waifu2xObj, double factor, const void* source, void* d
 	Waifu2x *obj = (Waifu2x *)waifu2xObj;
 
 	return obj->waifu2x(factor, source, dest, width, height, in_channel, in_stride, out_channel, out_stride) == Waifu2x::eWaifu2xError_OK;
+}
+
+__declspec(dllexport)
+bool Waifu2xProcessNew(void *waifu2xObj, double factor, const void* source, void* dest, int width, int height, int in_channel, int in_stride, int out_channel, int out_stride,
+	int output_depth = 8, bool use_tta = false, int crop_w = 128, int crop_h = 128, int batch_size = 1)
+{
+	if (!waifu2xObj)
+		return false;
+
+	Waifu2x *obj = (Waifu2x *)waifu2xObj;
+
+	return obj->waifu2x(factor, source, dest, width, height, in_channel, in_stride, out_channel, out_stride, crop_w, crop_h, use_tta, batch_size) == Waifu2x::eWaifu2xError_OK;
 }
 
 __declspec(dllexport)
