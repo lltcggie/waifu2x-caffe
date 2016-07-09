@@ -1080,7 +1080,6 @@ UINT_PTR DialogEvent::OFNHookProcIn(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM
 		{
 		case CDN_SELCHANGE:
 		{
-			TCHAR szPath[AR_PATH_MAX] = TEXT("");
 			HWND hParent = GetParent(hdlg);
 
 			stFindParam param;
@@ -1102,16 +1101,40 @@ UINT_PTR DialogEvent::OFNHookProcIn(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM
 
 				if (results.size() > 1)
 				{
-					TCHAR str[10000] = TEXT("");
+					const size_t addSize = 5000;
+					std::vector<TCHAR> str(10000);
+					str[0] = TEXT('\0');
+
+					size_t nlen = 0;
+					const auto funcC = [&nlen, &str, addSize](const TCHAR c)
+					{
+						while (str.size() <= nlen + 1 + 1)
+							str.resize(str.size() + addSize);
+
+						str.data()[nlen] = c;
+						nlen += 1;
+					};
+
+					const auto funcStr = [&nlen, &str, addSize](const tstring &s)
+					{
+						while (str.size() <= nlen + s.length() + 1)
+							str.resize(str.size() + addSize);
+
+						memcpy(str.data() + nlen, s.c_str(), sizeof(TCHAR) * s.length());
+						nlen += s.length();
+					};
 
 					for (const auto &p : results)
 					{
-						_tcscat_s(str, TEXT("\""));
-						_tcscat_s(str, p.c_str());
-						_tcscat_s(str, TEXT("\" "));
+						funcC(TEXT('\"'));
+						funcStr(p);
+						funcC(TEXT('\"'));
+						funcC(TEXT(' '));
 					}
 
-					CommDlg_OpenSave_SetControlText(hParent, edt1, str);
+					str[nlen] = TEXT('\0');
+
+					CommDlg_OpenSave_SetControlText(hParent, edt1, str.data());
 				}
 				else if(results.size() == 1)
 					CommDlg_OpenSave_SetControlText(hParent, edt1, results[0].c_str());
