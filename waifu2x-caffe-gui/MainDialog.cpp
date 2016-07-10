@@ -422,6 +422,9 @@ bool DialogEvent::SyncMember(const bool NotSyncCropSize, const bool silent)
 
 void DialogEvent::SetCropSizeList(const boost::filesystem::path & input_path)
 {
+	if (isSetInitCrop)
+		return;
+
 	HWND hcrop = GetDlgItem(dh, IDC_COMBO_CROP_SIZE);
 
 	int gcd = 1;
@@ -1223,7 +1226,7 @@ DialogEvent::DialogEvent() : mode(Waifu2x::eWaifu2xModelTypeNoiseScale), modeStr
 process("gpu"), outputExt(TEXT(".png")), inputFileExt(TEXT("png:jpg:jpeg:tif:tiff:bmp:tga")),
 use_tta(false), output_depth(8), crop_size(128), batch_size(1), gpu_no(0), isLastError(false), scaleType(eScaleTypeEnd),
 TimeLeftThread(-1), TimeLeftGetTimeThread(0), isCommandLineStart(false), tAutoMode(TEXT("none")),
-isArgStartAuto(true), isArgStartSuccessFinish(true), isOutputNoOverwrite(false), isNotSaveParam(false)
+isArgStartAuto(true), isArgStartSuccessFinish(true), isOutputNoOverwrite(false), isNotSaveParam(false), isSetInitCrop(false)
 {}
 
 void DialogEvent::Exec(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
@@ -2246,6 +2249,7 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 					SetWindowText(GetDlgItem(dh, IDC_COMBO_CROP_SIZE), to_tstring(cmdCropSizeFile.getValue()).c_str());
 
 					isSetParam = true;
+					isSetInitCrop = true;
 				}
 
 				if (cmdBatchSizeFile.isSet())
@@ -2342,6 +2346,8 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 
 		LocalFree(lplpszArgs);
 	}
+
+	isSetInitCrop = false;
 }
 
 void DialogEvent::Cancel(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)

@@ -113,6 +113,8 @@ private:
 
 	bool isNotSaveParam;
 
+	bool isSetInitCrop;
+
 private:
 	tstring AddName() const;
 
