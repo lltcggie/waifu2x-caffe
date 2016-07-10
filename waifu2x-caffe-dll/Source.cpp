@@ -85,3 +85,9 @@ void Waifu2xDestory(void *waifu2xObj)
 		delete obj;
 	}
 }
+
+__declspec(dllexport)
+void Waifu2xGlobalDestroy()
+{
+	Waifu2x::quit_liblary();
+}

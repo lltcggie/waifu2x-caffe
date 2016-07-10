@@ -125,6 +125,7 @@ public:
 
 	static void init_liblary(int argc, char** argv);
 	static void quit_liblary();
+	static void quit_thread_liblary();
 
 	// mode: noise or scale or noise_scale or auto_scale
 	// process: cpu or gpu or cudnn

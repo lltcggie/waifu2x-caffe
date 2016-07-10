@@ -804,6 +804,8 @@ void DialogEvent::ProcessWaifu2x()
 			}
 		}
 
+		Waifu2x::quit_thread_liblary();
+
 		const auto ProcessEndTime = std::chrono::system_clock::now();
 
 		cuDNNCheckTime = cuDNNCheckEndTime - cuDNNCheckStartTime;

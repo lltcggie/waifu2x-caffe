@@ -522,8 +522,14 @@ void Waifu2x::quit_liblary()
 {
 	g_ConvCcuDNNAlgorithm.Save();
 	g_DeconvCcuDNNAlgorithm.Save();
+
+	caffe::GlobalFinalize();
 }
 
+void Waifu2x::quit_thread_liblary()
+{
+	caffe::ThreadFinalize();
+}
 
 Waifu2x::Waifu2x() : mIsInited(false), mNoiseLevel(0), mIsCuda(false), mOutputBlock(nullptr), mOutputBlockSize(0), mGPUNo(0)
 {}
