@@ -869,7 +869,7 @@ double Waifu2x::CalcScaleRatio(const boost::optional<double> scale_ratio, const 
 int Waifu2x::GetcuDNNAlgorithm(const char * layer_name, int num_input, int num_output, int batch_size,
 	int width, int height, int kernel_w, int kernel_h, int pad_w, int pad_h, int stride_w, int stride_h)
 {
-	// ExeDir;
+	// g_ConvCcuDNNAlgorithmとg_DeconvCcuDNNAlgorithmが逆になってしまっているが、ファイル名にしか影響がないのと互換性がなくなるのでこのまま仕様とする
 	if (strcmp(layer_name, "Deconvolution") == 0)
 		return g_ConvCcuDNNAlgorithm.GetAlgorithm(num_input, num_output, batch_size, width, height, kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h);
 	else if (strcmp(layer_name, "Convolution") == 0)
@@ -881,6 +881,7 @@ int Waifu2x::GetcuDNNAlgorithm(const char * layer_name, int num_input, int num_o
 void Waifu2x::SetcuDNNAlgorithm(int algo, const char * layer_name, int num_input, int num_output, int batch_size,
 	int width, int height, int kernel_w, int kernel_h, int pad_w, int pad_h, int stride_w, int stride_h)
 {
+	// g_ConvCcuDNNAlgorithmとg_DeconvCcuDNNAlgorithmが逆になってしまっているが、ファイル名にしか影響がないのと互換性がなくなるのでこのまま仕様とする
 	if (strcmp(layer_name, "Deconvolution") == 0)
 		return g_ConvCcuDNNAlgorithm.SetAlgorithm(algo, num_input, num_output, batch_size, width, height, kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h);
 	else if (strcmp(layer_name, "Convolution") == 0)
