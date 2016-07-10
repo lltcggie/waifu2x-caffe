@@ -96,7 +96,7 @@ int main(int argc, char** argv)
 	cmdNRLConstraintV.push_back(3);
 	TCLAP::ValuesConstraint<int> cmdNRLConstraint(cmdNRLConstraintV);
 	TCLAP::ValueArg<int> cmdNRLevel("n", "noise_level", "noise reduction level",
-		false, 1, &cmdNRLConstraint, cmd);
+		false, 0, &cmdNRLConstraint, cmd);
 
 	TCLAP::ValueArg<double> cmdScaleRatio("s", "scale_ratio",
 		"custom scale ratio", false, 2.0, "double", cmd);
