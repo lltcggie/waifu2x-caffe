@@ -91,7 +91,7 @@
 "MessageNoOverwrite":"此位置已经包含同名文件: %s",
 "MessageCudaOldDeviceError":"CUDA 组件版本太旧。\r\n请使用 rnCompute Capability 2.0 以上版本。",
 "OK":"确定",
-"Cancel":"取消"
+"Cancel":"取消",
 "IDC_STATIC_USE_GPU_NO":"GPU 相关性",
 "IDC_RADIO_MODEL_UPCONV_RGB":"2D 插图 — UpRGB 模型",
 "IDC_RADIO_MODEL_UPCONV_PHOTO":"照片或动画 — UpPhoto 模型",
