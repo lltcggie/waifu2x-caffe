@@ -2015,6 +2015,7 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 				false, L"noise_scale", &cmdModeConstraint, cmd);
 
 			std::vector<int> cmdNRLConstraintV;
+			cmdNRLConstraintV.push_back(0);
 			cmdNRLConstraintV.push_back(1);
 			cmdNRLConstraintV.push_back(2);
 			cmdNRLConstraintV.push_back(3);

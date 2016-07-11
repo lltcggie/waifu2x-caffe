@@ -91,6 +91,7 @@ int main(int argc, char** argv)
 		false, "noise_scale", &cmdModeConstraint, cmd);
 
 	std::vector<int> cmdNRLConstraintV;
+	cmdNRLConstraintV.push_back(0);
 	cmdNRLConstraintV.push_back(1);
 	cmdNRLConstraintV.push_back(2);
 	cmdNRLConstraintV.push_back(3);
