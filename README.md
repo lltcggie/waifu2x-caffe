@@ -410,9 +410,9 @@ GUI版ではオプション指定に当てはまらなかった引数は入力�
      標準では以下のモデルが付属しています。
       * `models/anime_style_art_rgb` : RGBすべてを変換する2次元画像用モデル
       * `models/anime_style_art` : 輝度のみを変換する2次元画像用モデル
-      * `models/photo : RGBすべてを変換する写真、アニメ画像用モデル
-      * `models/upconv_7_anime_style_art_rgb : anime_style_art_rgbより高速かつ同等以上の画質で変換するモデル
-      * `models/upconv_7_photo : photoより高速かつ同等以上の画質で変換するモデル
+      * `models/photo` : RGBすべてを変換する写真、アニメ画像用モデル
+      * `models/upconv_7_anime_style_art_rgb` : anime_style_art_rgbより高速かつ同等以上の画質で変換するモデル
+      * `models/upconv_7_photo` : photoより高速かつ同等以上の画質で変換するモデル
       * `models/ukbench` : 旧式の写真用モデル(拡大するモデルのみ付属しています。ノイズ除去は出来ません)
      基本的には指定しなくても大丈夫です。デフォルト以外のモデルや自作のモデルを使用する時などに指定して下さい。
 
