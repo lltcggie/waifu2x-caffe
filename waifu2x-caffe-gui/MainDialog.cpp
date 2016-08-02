@@ -307,23 +307,23 @@ bool DialogEvent::SyncMember(const bool NotSyncCropSize, const bool silent)
 		switch (cur)
 		{
 		case 0:
-			model_dir = TEXT("models/anime_style_art_rgb");
-			modelType = eModelTypeRGB;
-			break;
-
-		case 1:
-			model_dir = TEXT("models/photo");
-			modelType = eModelTypePhoto;
-			break;
-
-		case 2:
 			model_dir = TEXT("models/upconv_7_anime_style_art_rgb");
 			modelType = eModelTypeUpConvRGB;
 			break;
 
-		case 3:
+		case 1:
 			model_dir = TEXT("models/upconv_7_photo");
 			modelType = eModelTypeUpConvPhoto;
+			break;
+
+		case 2:
+			model_dir = TEXT("models/anime_style_art_rgb");
+			modelType = eModelTypeRGB;
+			break;
+
+		case 3:
+			model_dir = TEXT("models/photo");
+			modelType = eModelTypePhoto;
 			break;
 
 		case 4:
@@ -1506,10 +1506,10 @@ void DialogEvent::SetWindowTextLang()
 		SendMessage(hwndCombo, CB_DELETESTRING, 0, 0);
 	}
 
-	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_RGB").c_str());
-	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_PHOTO").c_str());
 	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_UPCONV_RGB").c_str());
 	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_UPCONV_PHOTO").c_str());
+	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_RGB").c_str());
+	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_PHOTO").c_str());
 	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_Y").c_str());
 
 	SendMessage(GetDlgItem(dh, IDC_COMBO_MODEL), CB_SETCURSEL, cur, 0);
@@ -1920,16 +1920,18 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 	}
 
 	int index = 0;
-	if (modelType == eModelTypeRGB)
+	if (modelType == eModelTypeUpConvRGB)
 		index = 0;
-	else if (modelType == eModelTypePhoto)
-		index = 1;
-	else if (modelType == eModelTypeUpConvRGB)
-		index = 2;
 	else if (modelType == eModelTypeUpConvPhoto)
+		index = 1;
+	else if (modelType == eModelTypeRGB)
+		index = 2;
+	else if (modelType == eModelTypePhoto)
 		index = 3;
-	else
+	else if (modelType == eModelTypeY)
 		index = 4;
+	else
+		index = 0;
 
 	SendMessage(GetDlgItem(dh, IDC_COMBO_MODEL), CB_SETCURSEL, index, 0);
 
@@ -2081,14 +2083,14 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 				false, 0, &cmdNoOverwriteConstraint, cmd);
 
 			std::vector<std::wstring> cmdModelTypeConstraintV;
-			cmdModelTypeConstraintV.push_back(L"anime_style_art_rgb");
-			cmdModelTypeConstraintV.push_back(L"photo");
 			cmdModelTypeConstraintV.push_back(L"upconv_7_anime_style_art_rgb");
 			cmdModelTypeConstraintV.push_back(L"upconv_7_photo");
+			cmdModelTypeConstraintV.push_back(L"anime_style_art_rgb");
+			cmdModelTypeConstraintV.push_back(L"photo");
 			cmdModelTypeConstraintV.push_back(L"anime_style_art_y");
 			TCLAP::ValuesConstraint<std::wstring> cmdModelTypeConstraint(cmdModelTypeConstraintV);
 			TCLAP::ValueArg<std::wstring> cmdModelType(L"y", L"model_type", L"model type",
-				false, L"anime_style_art_rgb", &cmdModelTypeConstraint, cmd);
+				false, L"upconv_7_anime_style_art_rgb", &cmdModelTypeConstraint, cmd);
 
 			// definition of command line argument : end
 
@@ -2317,18 +2319,18 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 				if (cmdModelType.isSet())
 				{
 					int index = 0;
-					if (cmdModelType.getValue() == L"anime_style_art_rgb")
+					if (cmdModelType.getValue() == L"upconv_7_anime_style_art_rgb")
 						index = 0;
-					else if (cmdModelType.getValue() == L"photo")
-						index = 1;
-					else if (cmdModelType.getValue() == L"upconv_7_anime_style_art_rgb")
-						index = 2;
 					else if (cmdModelType.getValue() == L"upconv_7_photo")
+						index = 1;
+					else if (cmdModelType.getValue() == L"anime_style_art_rgb")
+						index = 2;
+					else if (cmdModelType.getValue() == L"photo")
 						index = 3;
 					else if (cmdModelType.getValue() == L"anime_style_art_y")
 						index = 4;
 					else
-						index = 4;
+						index = 0;
 
 					SendMessage(GetDlgItem(dh, IDC_COMBO_MODEL), CB_SETCURSEL, index, 0);
 

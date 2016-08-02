@@ -110,7 +110,7 @@ int main(int argc, char** argv)
 
 	TCLAP::ValueArg<std::string> cmdModelPath("", "model_dir",
 		"path to custom model directory (don't append last / )", false,
-		"models/anime_style_art_rgb", "string", cmd);
+		"models/upconv_7_anime_style_art_rgb", "string", cmd);
 
 	std::vector<std::string> cmdProcessConstraintV;
 	cmdProcessConstraintV.push_back("cpu");
