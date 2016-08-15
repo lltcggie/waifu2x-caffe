@@ -845,7 +845,7 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const double factor, const void* source,
 		const auto width = out_image.size().width;
 		const auto stride = out_image.step1();
 		for (int i = 0; i < out_image.size().height; i++)
-			memcpy((uint8_t *)dest + out_stride * i, out_image.data + stride * i, stride);
+			memcpy((uint8_t *)dest + out_stride * i, out_image.data + stride * i, out_stride);
 	}
 
 	return Waifu2x::eWaifu2xError_OK;
