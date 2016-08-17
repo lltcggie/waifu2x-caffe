@@ -1,4 +1,4 @@
-﻿{
+{
 "IDC_STATIC_IO_SETTING":"입출력 설정",
 "IDC_STATIC_INPUT_PATH":"입력 경로\r\n(파일 및 폴더)",
 "IDC_BUTTON_INPUT_REF":"찾기",
@@ -28,7 +28,7 @@
 "IDC_RADIO_SCALE_HEIGHT":"변환 후의 세로 너비",
 "IDC_STATIC_MODEL":"모델",
 "IDC_RADIO_MODEL_RGB":"2D 일러스트 (RGB 모델)",
-"IDC_RADIO_MODEL_PHOTO":"사진 && 애니 (Photo모델)",
+"IDC_RADIO_MODEL_PHOTO":"사진 & 애니메이션 (Photo모델)",
 "IDC_RADIO_MODEL_Y":"2D 일러스트 (Y 모델)",
 "IDC_CHECK_TTA":"TTA 모드 사용",
 "IDC_STATIC_PROCESS_SPEED_SETTING":"처리 속도 설정",
@@ -91,5 +91,9 @@
 "MessageNoOverwrite":"출력 경로에 이미 파일이 존재합니다.: %s",
 "MessageCudaOldDeviceError":"CUDA 장치가 오래되었습니다.r\nCompute Capability 2.0 이상 호환되는 장치를 사용해 주세요.",
 "OK":"확인",
-"Cancel":"취소"
+"Cancel":"취소",
+"IDC_STATIC_USE_GPU_NO":"사용할 GPU 번호",
+"IDC_RADIO_MODEL_UPCONV_RGB":"2D 일러스트 (UpRGB 모델)",
+"IDC_RADIO_MODEL_UPCONV_PHOTO":"사진 & 애니메이션 (UpPhoto 모델)",
+"MessageLogFatalError":"치명적인 오류가 발생했습니다.\r\n분할 크기가 너무 크게 설정되어 있을 가능성이 있습니다."
 }
