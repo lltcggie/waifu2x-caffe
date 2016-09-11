@@ -126,6 +126,9 @@
   <ItemGroup>
     <Manifest Include="manifest.manifest" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="W2X.ico" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

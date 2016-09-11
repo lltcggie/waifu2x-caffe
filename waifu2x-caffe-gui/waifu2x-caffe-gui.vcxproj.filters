@@ -97,4 +97,9 @@
       <Filter>リソース ファイル</Filter>
     </Manifest>
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="W2X.ico">
+      <Filter>リソース ファイル</Filter>
+    </Image>
+  </ItemGroup>
 </Project>

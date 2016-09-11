@@ -3048,6 +3048,9 @@ void DialogEvent::AppSetting(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 		{
 			dh = hWnd;
 
+			HICON hIcon = (HICON)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_ICON_W2X), IMAGE_ICON, 16, 16, 0);
+			SendMessage(hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+
 			SetWindowTextLang();
 
 			if (tAutoMode == TEXT("one"))
