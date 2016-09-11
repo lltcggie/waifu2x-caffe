@@ -1050,7 +1050,10 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructByNet(std::shared_ptr<cNet> net, cons
 			if (i >= 4)
 				cv::flip(in, in, 1); // êÇíºé≤îΩì]
 
-			ret = ProcessNet(net, crop_w, crop_h, use_tta, batch_size, in);
+			const int cw = (rotateNum % 2 == 0) ? crop_w : crop_h;
+			const int ch = (rotateNum % 2 == 0) ? crop_h : crop_w;
+
+			ret = ProcessNet(net, cw, ch, use_tta, batch_size, in);
 			if (ret != Waifu2x::eWaifu2xError_OK)
 				return ret;
 
