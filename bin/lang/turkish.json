@@ -1,4 +1,4 @@
-﻿{
+{
 "IDC_STATIC_IO_SETTING":"Girdi/Çıktı Ayarları",
 "IDC_STATIC_INPUT_PATH":"Girdi Yolu\r\n(dosya veya klasör)",
 "IDC_BUTTON_INPUT_REF":"Gözat",
@@ -60,7 +60,7 @@
 "MessageCudaOldVersionError":"Girdi ekran kartı tarafından işlenemiyor.\r\nCUDA sürücüsü eski olabilir. \r\nLütfen CUDA sürücüsünü güncelleyin.",
 "MessageTransSuccess":"Başarıyla dönüştürüldü.",
 "MessageErrorHappen":"Bir hata meydana geldi.",
-"MessageCreateOutDirError":"Çıktı klasörü\r\n�u%s�v\r\nyaratılmakta başarısız olundu.",
+"MessageCreateOutDirError":"Çıktı klasörü\r\n[%s]\r\nyaratılmakta başarısız olundu.",
 "MessageCancelError":"Dönüştürme iptal edildi.",
 "MessageInvalidParameterError":"Geçersiz parametre.",
 "MessageFailedOpenModelFileError":"Model dosya açılamıyor.",
@@ -71,8 +71,8 @@
 "MessageFailedProcessCaffeError":"Ara değerin işlenmesinde bir sorun oluştu.",
 "MessageTitleResult":"Sonuç",
 "MessagecuDNNOK":"cuDNN kullanabilirsiniz.",
-"MessagecuDNNNotFindError":"cuDNN kullanamazsınız,\r\n�u%s�vbulunamadı.",
-"MessagecuDNNOldVersionError":"cuDNN kullanamazsınız,\r\n�u%s�veski bir sürüm. Lütfen  sürüm 2 kullanın.",
+"MessagecuDNNNotFindError":"cuDNN kullanamazsınız,\r\n[%s]bulunamadı.",
+"MessagecuDNNOldVersionError":"cuDNN kullanamazsınız,\r\n[%s]eski bir sürüm. Lütfen  sürüm 2 kullanın.",
 "MessagecuDNNCannotCreateError":"cuDNN kullanamazsınız,\r\nccuDNN başlatılamadı.",
 "MessagecuDNNDefautlError":"cuDNN kullanamazsınız.",
 "MessageExtStr":"Girdi dosya uzantıları(%s)",
