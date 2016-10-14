@@ -14,6 +14,7 @@ private:
 
 	cv::Mat mTmpImageRGB; // RGB(あるいはY)
 	cv::Mat mTmpImageA; // αチャンネル
+	cv::Mat mTmpImageAOneColor; // αチャンネル(単色の場合使われる)
 
 	cv::Mat mEndImage; // 完成した画像
 
@@ -46,6 +47,9 @@ private:
 	static void AlphaCleanImage(cv::Mat &im);
 
 	static Waifu2x::eWaifu2xError WriteMat(const cv::Mat &im, const boost::filesystem::path &output_file, const boost::optional<int> &output_quality);
+
+	// im(1ch)が単色で構成されているか判定
+	static bool IsOneColor(const cv::Mat &im);
 
 	void ConvertToNetFormat(const int input_plane, const int alpha_offset);
 

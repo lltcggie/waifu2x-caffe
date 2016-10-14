@@ -350,6 +350,7 @@ void stImage::Clear()
 	mOrgFloatImage.release();
 	mTmpImageRGB.release();
 	mTmpImageA.release();
+	mTmpImageAOneColor.release();
 	mEndImage.release();
 }
 
@@ -425,6 +426,34 @@ void stImage::Preprocess(const int input_plane, const int net_offset)
 	ConvertToNetFormat(input_plane, net_offset);
 }
 
+bool stImage::IsOneColor(const cv::Mat & im)
+{
+	assert(im.channels() == 1);
+
+	const size_t Line = im.step1();
+	const size_t Width = im.size().width;
+	const size_t Height = im.size().height;
+
+	if (Width == 0 && Height == 0)
+		return true;
+
+	const float *ptr = (const float *)im.data;
+	const float color = ptr[0];
+
+	for (size_t i = 0; i < Height; i++)
+	{
+		for (size_t j = 0; j < Width; j++)
+		{
+			const size_t pos = Line * i + j;
+
+			if (ptr[pos] != color)
+				return false;
+		}
+	}
+
+	return true;
+}
+
 void stImage::ConvertToNetFormat(const int input_plane, const int alpha_offset)
 {
 	if (input_plane == 1) // Yモデル
@@ -470,10 +499,18 @@ void stImage::ConvertToNetFormat(const int input_plane, const int alpha_offset)
 				mTmpImageA = planes[3];
 				planes.resize(3);
 
-				AlphaMakeBorder(planes, mTmpImageA, alpha_offset); // 透明なピクセルと不透明なピクセルの境界部分の色を広げる
+				if (!IsOneColor(mTmpImageA))
+				{
+					AlphaMakeBorder(planes, mTmpImageA, alpha_offset); // 透明なピクセルと不透明なピクセルの境界部分の色を広げる
 
-				// α拡大用にRGBに変換
-				cv::cvtColor(mTmpImageA, mTmpImageA, CV_GRAY2RGB);
+					// α拡大用にRGBに変換
+					cv::cvtColor(mTmpImageA, mTmpImageA, CV_GRAY2RGB);
+				}
+				else
+				{
+					mTmpImageAOneColor = mTmpImageA;
+					mTmpImageA.release();
+				}
 			}
 
 			// BGRからRGBにする
@@ -632,6 +669,21 @@ void stImage::DeconvertFromNetFormat(const int input_plane)
 
 				cv::merge(planes, mEndImage);
 			}
+			else if (!mTmpImageAOneColor.empty()) // 単色版Aを戻す
+			{
+				std::vector<cv::Mat> planes;
+				cv::split(mEndImage, planes);
+
+				cv::Size_<int> zoom_size = planes[0].size();
+
+				// マージ先のサイズに合わせる
+				cv::resize(mTmpImageAOneColor, mTmpImageAOneColor, zoom_size, 0.0, 0.0, cv::INTER_NEAREST);
+
+				planes.push_back(mTmpImageAOneColor);
+				mTmpImageAOneColor.release();
+
+				cv::merge(planes, mEndImage);
+			}
 		}
 	}
 	else // RGBモデル
@@ -656,6 +708,16 @@ void stImage::DeconvertFromNetFormat(const int input_plane)
 
 				planes.push_back(mTmpImageA);
 				mTmpImageA.release();
+			}
+			else if (!mTmpImageAOneColor.empty()) // 単色版Aを戻す
+			{
+				cv::Size_<int> zoom_size = planes[0].size();
+
+				// マージ先のサイズに合わせる
+				cv::resize(mTmpImageAOneColor, mTmpImageAOneColor, zoom_size, 0.0, 0.0, cv::INTER_NEAREST);
+
+				planes.push_back(mTmpImageAOneColor);
+				mTmpImageAOneColor.release();
 			}
 
 			// RGBからBGRにする
