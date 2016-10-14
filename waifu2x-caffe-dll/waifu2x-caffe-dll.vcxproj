@@ -41,15 +41,15 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\caffe-build\install\include;D:\caffe-build\install\include\boost-1_59;$(CUDA_PATH_V7_5)\include;D:\opencv310\build_vc\install\include;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(SolutionDir)msgpack-c\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\opencv310\build_vc\install\x64\vc12\lib;D:\caffe-build\install\lib;$(CUDA_PATH_V7_5)\lib\$(PlatformName);D:\program\boost_1_59_0\stage\x64\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\caffe-build\install\include;D:\caffe-build\install\include\boost-1_59;$(CUDA_PATH_V8_0)\include;D:\opencv310\build_vc\install\include;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(SolutionDir)msgpack-c\include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\opencv310\build_vc\install\x64\vc12\lib;D:\caffe-build\install\lib;$(CUDA_PATH_V8_0)\lib\$(PlatformName);D:\program\boost_1_59_0\stage\x64\lib;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)bin\</OutDir>
     <TargetName>$(ProjectName)d</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>D:\caffe-build\install\include;D:\caffe-build\install\include\boost-1_59;$(CUDA_PATH_V7_5)\include;D:\opencv310\build_vc\install\include;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(SolutionDir)msgpack-c\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\opencv310\build_vc\install\x64\vc12\lib;D:\caffe-build\install\lib;$(CUDA_PATH_V7_5)\lib\$(PlatformName);D:\program\boost_1_59_0\stage\x64\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\caffe-build\install\include;D:\caffe-build\install\include\boost-1_59;$(CUDA_PATH_V8_0)\include;D:\opencv310\build_vc\install\include;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(SolutionDir)msgpack-c\include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\opencv310\build_vc\install\x64\vc12\lib;D:\caffe-build\install\lib;$(CUDA_PATH_V8_0)\lib\$(PlatformName);D:\program\boost_1_59_0\stage\x64\lib;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)bin\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
