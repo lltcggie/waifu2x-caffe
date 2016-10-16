@@ -78,7 +78,7 @@
 "MessageFailedOpenOutputFileError":"Не удалось записать конечный файл %s",
 "MessageFailedProcessCaffeError":"Не удалось произвести интерполяцию",
 "MessageTitleResult":"Результат",
-"MessagecuDNNOK":"Вы не можете использовать cuDNN",
+"MessagecuDNNOK":"Вы можете использовать cuDNN",
 "MessagecuDNNNotFindError":"Вы не можете использовать cuDNN\r\n[%s] не найден",
 "MessagecuDNNOldVersionError":"Вы не можете использовать cuDNN\r\n[%s] старой версии. Пожалуйста используйте v2",
 "MessagecuDNNCannotCreateError":"Вы не можете использовать cuDNN\r\ncНе удалось инициализировать cuDNN",
