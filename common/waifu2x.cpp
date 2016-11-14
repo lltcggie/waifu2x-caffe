@@ -903,7 +903,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(const double factor, const int 
 			cv::Size_<int> size;
 			image.GetScalePaddingedRGB(im, size, mNoiseNet->GetNetOffset(), OuterPadding, crop_w, crop_h, 1);
 
-			ret = ProcessNet(mNoiseNet, crop_w, crop_h, use_tta, batch_size, im);
+			ret = ReconstructByNet(mNoiseNet, crop_w, crop_h, use_tta, batch_size, cancel_func, im);
 			if (ret != Waifu2x::eWaifu2xError_OK)
 				return ret;
 
