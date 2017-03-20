@@ -2129,9 +2129,6 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 			TCLAP::ValueArg<int> cmdScaleHeight(L"h", L"scale_height",
 				L"custom scale height", false, 0, L"double", cmd);
 
-			TCLAP::ValueArg<int> cmdScaleWidthHeight(L"", L"scale_width_height",
-				L"custom scale width and height", false, 0, L"double", cmd);
-
 			std::vector<std::wstring> cmdProcessConstraintV;
 			cmdProcessConstraintV.push_back(L"cpu");
 			cmdProcessConstraintV.push_back(L"gpu");
@@ -2298,7 +2295,27 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 					isSetParam = true;
 				}
 
-				if (cmdScaleWidth.isSet())
+				if (cmdScaleWidth.isSet() && cmdScaleHeight.isSet())
+				{
+					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_RATIO), BM_SETCHECK, BST_UNCHECKED, 0);
+					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH), BM_SETCHECK, BST_UNCHECKED, 0);
+					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_HEIGHT), BM_SETCHECK, BST_UNCHECKED, 0);
+					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH_HEIGHT), BM_SETCHECK, BST_CHECKED, 0);
+
+					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), FALSE);
+					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
+					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
+					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH_HEIGHT), TRUE);
+
+					auto str = to_tstring(cmdScaleWidth.getValue());
+					str += TEXT("x");
+					str += to_tstring(cmdScaleHeight.getValue());
+
+					SetWindowText(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH_HEIGHT), str.c_str());
+
+					isSetParam = true;
+				}
+				else if (cmdScaleWidth.isSet())
 				{
 					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_RATIO), BM_SETCHECK, BST_UNCHECKED, 0);
 					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH), BM_SETCHECK, BST_CHECKED, 0);
@@ -2343,22 +2360,6 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH_HEIGHT), FALSE);
 
 					SetWindowText(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), to_tstring(cmdScaleRatio.getValue()).c_str());
-
-					isSetParam = true;
-				}
-				else if (cmdScaleWidthHeight.isSet())
-				{
-					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_RATIO), BM_SETCHECK, BST_UNCHECKED, 0);
-					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH), BM_SETCHECK, BST_UNCHECKED, 0);
-					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_HEIGHT), BM_SETCHECK, BST_UNCHECKED, 0);
-					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH_HEIGHT), BM_SETCHECK, BST_CHECKED, 0);
-
-					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), FALSE);
-					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
-					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
-					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH_HEIGHT), TRUE);
-
-					SetWindowText(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH_HEIGHT), to_tstring(cmdScaleWidthHeight.getValue()).c_str());
 
 					isSetParam = true;
 				}

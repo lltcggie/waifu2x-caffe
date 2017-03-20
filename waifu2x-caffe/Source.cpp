@@ -108,9 +108,6 @@ int main(int argc, char** argv)
 	TCLAP::ValueArg<double> cmdScaleHeight("h", "scale_height",
 		"custom scale height", false, 0, "double", cmd);
 
-	TCLAP::ValueArg<int> cmdScaleWidthHeight("", "scale_width_height",
-		"custom scale width and height", false, 0, "double", cmd);
-
 	TCLAP::ValueArg<std::string> cmdModelPath("", "model_dir",
 		"path to custom model directory (don't append last / )", false,
 		"models/upconv_7_anime_style_art_rgb", "string", cmd);
