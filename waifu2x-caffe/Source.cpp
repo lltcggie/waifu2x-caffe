@@ -108,6 +108,9 @@ int main(int argc, char** argv)
 	TCLAP::ValueArg<double> cmdScaleHeight("h", "scale_height",
 		"custom scale height", false, 0, "double", cmd);
 
+	TCLAP::ValueArg<int> cmdScaleWidthHeight("", "scale_width_height",
+		"custom scale width and height", false, 0, "double", cmd);
+
 	TCLAP::ValueArg<std::string> cmdModelPath("", "model_dir",
 		"path to custom model directory (don't append last / )", false,
 		"models/upconv_7_anime_style_art_rgb", "string", cmd);
@@ -174,18 +177,6 @@ int main(int argc, char** argv)
 	boost::optional<int> ScaleWidth;
 	boost::optional<int> ScaleHeight;
 
-	int valid_num = 0;
-	if (cmdScaleWidth.getValue() > 0)
-		valid_num++;
-	if (cmdScaleHeight.getValue() > 0)
-		valid_num++;
-
-	if (valid_num > 1)
-	{
-		printf("ƒGƒ‰[: scale_width‚Æscale_height‚Í“¯Žž‚ÉŽw’è‚Å‚«‚Ü‚¹‚ñ\n");
-		return 1;
-	}
-
 	int crop_w = cmdCropSizeFile.getValue();
 	int crop_h = cmdCropSizeFile.getValue();
 
@@ -197,9 +188,10 @@ int main(int argc, char** argv)
 
 	if (cmdScaleWidth.getValue() > 0)
 		ScaleWidth = cmdScaleWidth.getValue();
-	else if (cmdScaleHeight.getValue() > 0)
+	if (cmdScaleHeight.getValue() > 0)
 		ScaleHeight = cmdScaleHeight.getValue();
-	else
+
+	if (cmdScaleWidth.getValue() == 0 && cmdScaleHeight.getValue() == 0)
 		ScaleRatio = cmdScaleRatio.getValue();
 
 	const boost::filesystem::path input_path(boost::filesystem::absolute((cmdInputFile.getValue())));
@@ -238,9 +230,11 @@ int main(int argc, char** argv)
 			{
 				if(ScaleRatio)
 					addstr += "(x" + std::to_string(*ScaleRatio) + ")";
+				else if (ScaleWidth && ScaleHeight)
+					addstr += "(" + std::to_string(*ScaleWidth) + "x" + std::to_string(*ScaleHeight) + ")";
 				else if (ScaleWidth)
 					addstr += "(width " + std::to_string(*ScaleWidth) + ")";
-				else
+				else if (ScaleHeight)
 					addstr += "(height " + std::to_string(*ScaleHeight) + ")";
 			}
 
@@ -352,6 +346,8 @@ int main(int argc, char** argv)
 			{
 				if (ScaleRatio)
 					addstr += "(x" + std::to_string(*ScaleRatio) + ")";
+				else if (ScaleWidth && ScaleHeight)
+					addstr += "(" + std::to_string(*ScaleWidth) + "x" + std::to_string(*ScaleHeight) + ")";
 				else if (ScaleWidth)
 					addstr += "(width " + std::to_string(*ScaleWidth) + ")";
 				else
