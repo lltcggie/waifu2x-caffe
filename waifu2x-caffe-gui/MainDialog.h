@@ -79,6 +79,7 @@ private:
 		eScaleTypeRatio,
 		eScaleTypeWidth,
 		eScaleTypeHeight,
+		eScaleTypeWidthHeight,
 		eScaleTypeEnd,
 	};
 

@@ -779,7 +779,10 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const boost::filesystem::path &input_fil
 	if (ret != Waifu2x::eWaifu2xError_OK)
 		return ret;
 
-	image.Postprocess(mInputPlane, Factor, output_depth);
+	if(!scale_width || !scale_height)
+		image.Postprocess(mInputPlane, Factor, output_depth);
+	else
+		image.Postprocess(mInputPlane, *scale_width, *scale_height, output_depth);
 
 	ret = image.Save(output_file, output_quality);
 	if (ret != Waifu2x::eWaifu2xError_OK)
@@ -856,6 +859,14 @@ double Waifu2x::CalcScaleRatio(const boost::optional<double> scale_ratio, const 
 {
 	if (scale_ratio)
 		return *scale_ratio;
+
+	if (scale_width && scale_height)
+	{
+		const auto d1 = image.GetScaleFromWidth(*scale_width);
+		const auto d2 = image.GetScaleFromWidth(*scale_height);
+
+		return d1 >= d2 ? d1 : d2;
+	}
 
 	if (scale_width)
 		return image.GetScaleFromWidth(*scale_width);

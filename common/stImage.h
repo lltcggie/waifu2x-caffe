@@ -69,6 +69,7 @@ private:
 
 	void DeconvertFromNetFormat(const int input_plane);
 	void ShrinkImage(const double scale);
+	void ShrinkImage(const int width, const int height);
 
 	static int DepthBitToCVDepth(const int depth_bit);
 	static double GetValumeMaxFromCVDepth(const int cv_depth);
@@ -125,6 +126,7 @@ public:
 	void SetReconstructedA(cv::Mat &im, const cv::Size_<int> &size, const int inner_scale);
 
 	void Postprocess(const int input_plane, const double scale, const int depth);
+	void Postprocess(const int input_plane, const int width, const int height, const int depth);
 
 	cv::Mat GetEndImage() const;
 

@@ -26,6 +26,7 @@
 "IDC_RADIO_SCALE_RATIO":"Set rate",
 "IDC_RADIO_SCALE_WIDTH":"Set trans width",
 "IDC_RADIO_SCALE_HEIGHT":"Set trans height",
+"IDC_RADIO_SCALE_WIDTH_HEIGHT":"Set trans width and height",
 "IDC_STATIC_MODEL":"Model",
 "IDC_RADIO_MODEL_RGB":"2-D illust (RGB Model)",
 "IDC_RADIO_MODEL_PHOTO":"Photography, Anime",

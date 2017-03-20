@@ -37,6 +37,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	CControl cControlScaleRatio(IDC_EDIT_SCALE_RATIO);
 	CControl cControlScaleWidth(IDC_EDIT_SCALE_WIDTH);
 	CControl cControlScaleHeight(IDC_EDIT_SCALE_HEIGHT);
+	CControl cControlScaleWidthHeight(IDC_EDIT_SCALE_WIDTH_HEIGHT);
 
 	// 登録する関数がまとめられたクラス
 	// グローバル関数を使えばクラスにまとめる必要はないがこの方法が役立つこともあるはず
@@ -51,6 +52,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	cControlScaleRatio.SetEventCallBack(SetClassCustomFunc(DialogEvent::TextInput, &cDialogEvent), NULL, WM_CHAR);
 	cControlScaleWidth.SetEventCallBack(SetClassCustomFunc(DialogEvent::TextInput, &cDialogEvent), NULL, WM_CHAR);
 	cControlScaleHeight.SetEventCallBack(SetClassCustomFunc(DialogEvent::TextInput, &cDialogEvent), NULL, WM_CHAR);
+	cControlScaleWidthHeight.SetEventCallBack(SetClassCustomFunc(DialogEvent::TextInput, &cDialogEvent), NULL, WM_CHAR);
 
 	// コントロールのサブクラスを登録
 	cDialog.AddControl(&cControlInput);
@@ -58,6 +60,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	cDialog.AddControl(&cControlScaleRatio);
 	cDialog.AddControl(&cControlScaleWidth);
 	cDialog.AddControl(&cControlScaleHeight);
+	cDialog.AddControl(&cControlScaleWidthHeight);
 
 	// 各コントロールのイベントで実行する関数の登録
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::Exec, &cDialogEvent), NULL, IDC_BUTTON_EXEC);
@@ -71,6 +74,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::OnModeChange, &cDialogEvent), NULL, IDC_RADIO_MODE_SCALE);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::OnModeChange, &cDialogEvent), NULL, IDC_RADIO_MODE_NOISE_SCALE);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::OnModeChange, &cDialogEvent), NULL, IDC_RADIO_AUTO_SCALE);
+	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::OnModeChange, &cDialogEvent), NULL, IDC_RADIO_SCALE_WIDTH_HEIGHT);
 
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIONOISE_LEVEL0);
 	cDialog.SetCommandCallBack(SetClassFunc(DialogEvent::UpdateAddString, &cDialogEvent), NULL, IDC_RADIONOISE_LEVEL1);

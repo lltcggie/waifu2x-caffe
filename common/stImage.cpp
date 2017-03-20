@@ -633,6 +633,20 @@ void stImage::Postprocess(const int input_plane, const double scale, const int d
 	AlphaCleanImage(mEndImage);
 }
 
+void stImage::Postprocess(const int input_plane, const int width, const int height, const int depth)
+{
+	DeconvertFromNetFormat(input_plane);
+	ShrinkImage(width, height);
+
+	// 値を0～1にクリッピング
+	cv::threshold(mEndImage, mEndImage, 1.0, 1.0, cv::THRESH_TRUNC);
+	cv::threshold(mEndImage, mEndImage, 0.0, 0.0, cv::THRESH_TOZERO);
+
+	mEndImage = DeconvertFromFloat(mEndImage, depth);
+
+	AlphaCleanImage(mEndImage);
+}
+
 void stImage::DeconvertFromNetFormat(const int input_plane)
 {
 	if (input_plane == 1) // Yモデル
@@ -743,6 +757,19 @@ void stImage::ShrinkImage(const double scale)
 		int argo = cv::INTER_CUBIC;
 		if (scale < 0.5)
 			argo = cv::INTER_AREA;
+
+		cv::resize(mEndImage, mEndImage, ns, 0.0, 0.0, argo);
+	}
+}
+
+void stImage::ShrinkImage(const int width, const int height)
+{
+	// TODO: scale = 1.0 でも悪影響を及ぼさないか調べる
+
+	const cv::Size_<int> ns(width, height);
+	if (mEndImage.size().width != ns.width || mEndImage.size().height != ns.height)
+	{
+		int argo = cv::INTER_CUBIC;
 
 		cv::resize(mEndImage, mEndImage, ns, 0.0, 0.0, argo);
 	}

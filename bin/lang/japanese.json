@@ -26,6 +26,7 @@
 "IDC_RADIO_SCALE_RATIO":"拡大率で指定",
 "IDC_RADIO_SCALE_WIDTH":"変換後の横幅で指定",
 "IDC_RADIO_SCALE_HEIGHT":"変換後の縦幅で指定",
+"IDC_RADIO_SCALE_WIDTH_HEIGHT":"変換後の縦横幅で指定",
 "IDC_STATIC_MODEL":"モデル",
 "IDC_RADIO_MODEL_RGB":"2次元イラスト (RGBモデル)",
 "IDC_RADIO_MODEL_PHOTO":"写真・アニメ (Photoモデル)",
