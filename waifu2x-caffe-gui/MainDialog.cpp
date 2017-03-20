@@ -995,6 +995,7 @@ void DialogEvent::SaveIni(const bool isSyncMember)
 	tstring tScaleRatio;
 	tstring tScaleWidth;
 	tstring tScaleHeight;
+	tstring tScaleWidthHeight;
 	tstring tmode;
 	tstring tScaleMode;
 	tstring tprcess;
@@ -1013,6 +1014,11 @@ void DialogEvent::SaveIni(const bool isSyncMember)
 		tScaleHeight = to_tstring(scale_height);
 	else
 		tScaleHeight = TEXT("");
+
+	if (scale_width > 0 && scale_height > 0)
+		tScaleWidthHeight = to_tstring(scale_width) + TEXT("x") + to_tstring(scale_height);
+	else
+		tScaleWidthHeight = TEXT("");
 
 	switch (mode)
 	{
@@ -1054,6 +1060,8 @@ void DialogEvent::SaveIni(const bool isSyncMember)
 	WritePrivateProfileString(TEXT("Setting"), TEXT("LastScaleWidth"), tScaleWidth.c_str(), getTString(SettingFilePath).c_str());
 
 	WritePrivateProfileString(TEXT("Setting"), TEXT("LastScaleHeight"), tScaleHeight.c_str(), getTString(SettingFilePath).c_str());
+
+	WritePrivateProfileString(TEXT("Setting"), TEXT("LastScaleWidthHeight"), tScaleWidthHeight.c_str(), getTString(SettingFilePath).c_str());
 
 	WritePrivateProfileString(TEXT("Setting"), TEXT("LastOutputExt"), outputExt.c_str(), getTString(SettingFilePath).c_str());
 
@@ -1812,6 +1820,10 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 		GetPrivateProfileString(TEXT("Setting"), TEXT("LastScaleHeight"), TEXT("0"), tmp, _countof(tmp), getTString(SettingFilePath).c_str());
 		tmp[_countof(tmp) - 1] = TEXT('\0');
 		tScaleHeight = tmp;
+
+		GetPrivateProfileString(TEXT("Setting"), TEXT("LastScaleWidthHeight"), TEXT("0"), tmp, _countof(tmp), getTString(SettingFilePath).c_str());
+		tmp[_countof(tmp) - 1] = TEXT('\0');
+		tScaleWidthHeight = tmp;
 
 		GetPrivateProfileString(TEXT("Setting"), TEXT("LastScaleMode"), TEXT("Ratio"), tmp, _countof(tmp), getTString(SettingFilePath).c_str());
 		tmp[_countof(tmp) - 1] = TEXT('\0');
