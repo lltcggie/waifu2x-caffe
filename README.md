@@ -7,7 +7,7 @@
 [Caffe](http://caffe.berkeleyvision.org/)を用いて書き直し、Windows向けにビルドしたソフトです。
 CPUで変換することも出来ますが、CUDA(あるいはcuDNN)を使うとCPUより高速に変換することが出来ます。
 
-GUI supports English and Japanese and Simplified Chinese and Traditional Chinese and Korean and Turkish.
+GUI supports English and Japanese and Simplified Chinese and Traditional Chinese and Korean and Turkish and French.
 
 ソフトのダウンロードは[こちらのreleasesページ](https://github.com/lltcggie/waifu2x-caffe/releases)の「Downloads」の項で出来ます。
 
@@ -485,5 +485,5 @@ ex.
 に、感謝します。
 また、メッセージを英訳してくださった @paul70078 さん、メッセージを中国語(簡体字)に翻訳してくださった @yoonhakcher さん、中国語(簡体字)訳のプルリクエストを下さった @mzhboy さん、
 メッセージを韓国語に翻訳してくださった @kenin0726 さん、韓国語訳の改善を提案してくださった @aruhirin さん、
-メッセージを中国語(繁体字)に翻訳してくださった @lizardon1995 さん、@yoonhakcher さん、トルコ語訳のプルリクエストを下さった @Scharynche さん、
+メッセージを中国語(繁体字)に翻訳してくださった @lizardon1995 さん、@yoonhakcher さん、トルコ語訳のプルリクエストを下さった @Scharynche さん、フランス語訳のプルリクエストを下さった @Serized さん、
 GUI版のアイコンを提供してくださった JYUNYAさん に感謝します。
