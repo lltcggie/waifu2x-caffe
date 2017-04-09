@@ -26,6 +26,7 @@
 "IDC_RADIO_SCALE_RATIO":"Multiplicateur",
 "IDC_RADIO_SCALE_WIDTH":"Définir largeur",
 "IDC_RADIO_SCALE_HEIGHT":"Définir hauteur",
+"IDC_RADIO_SCALE_WIDTH_HEIGHT":"Définir largeur && hauteur",
 "IDC_STATIC_MODEL":"Modèle",
 "IDC_RADIO_MODEL_RGB":"Illustration 2D (modèle RGB)",
 "IDC_RADIO_MODEL_PHOTO":"Photo & animé (modèle Photo)",
