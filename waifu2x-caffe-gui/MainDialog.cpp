@@ -810,7 +810,7 @@ void DialogEvent::ProcessWaifu2x()
 			ScaleWidth = scale_width;
 			break;
 		case eScaleTypeHeight:
-			ScaleWidth = scale_height;
+			ScaleHeight = scale_height;
 			break;
 		default:
 			ScaleWidth = scale_width;
