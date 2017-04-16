@@ -1287,7 +1287,7 @@ UINT_PTR DialogEvent::OFNHookProcOut(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARA
 				szPath[_countof(szPath) - 1] = TEXT('\0');
 
 				boost::filesystem::path p(szPath);
-				if (boost::filesystem::is_empty(szPath) || boost::filesystem::is_directory(szPath))
+				if (boost::filesystem::exists(p) && (boost::filesystem::is_empty(p) || boost::filesystem::is_directory(p)))
 				{
 					const auto filename = getTString(p.filename());
 
