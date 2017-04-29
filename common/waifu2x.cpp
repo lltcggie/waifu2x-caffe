@@ -769,18 +769,18 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const boost::filesystem::path &input_fil
 	const bool isReconstructNoise = mMode == eWaifu2xModelTypeNoise || mMode == eWaifu2xModelTypeNoiseScale || (mMode == eWaifu2xModelTypeAutoScale && image.RequestDenoise());
 	const bool isReconstructScale = mMode == eWaifu2xModelTypeScale || mMode == eWaifu2xModelTypeNoiseScale || mMode == eWaifu2xModelTypeAutoScale;
 
-	double Factor = CalcScaleRatio(scale_ratio, scale_width, scale_height, image);
+	auto factor = CalcScaleRatio(scale_ratio, scale_width, scale_height, image);
 
 	if (!isReconstructScale)
-		Factor = 1.0;
+		factor = Factor(1.0, 1.0);
 
 	cv::Mat reconstruct_image;
-	ret = ReconstructImage(Factor, crop_w, crop_h, use_tta, batch_size, isReconstructNoise, isReconstructScale, cancel_func, image);
+	ret = ReconstructImage(factor, crop_w, crop_h, use_tta, batch_size, isReconstructNoise, isReconstructScale, cancel_func, image);
 	if (ret != Waifu2x::eWaifu2xError_OK)
 		return ret;
 
 	if(!scale_width || !scale_height)
-		image.Postprocess(mInputPlane, Factor, output_depth);
+		image.Postprocess(mInputPlane, factor, output_depth);
 	else
 		image.Postprocess(mInputPlane, *scale_width, *scale_height, output_depth);
 
@@ -822,16 +822,16 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const double factor, const void* source,
 	const bool isReconstructNoise = mMode == eWaifu2xModelTypeNoise || mMode == eWaifu2xModelTypeNoiseScale;
 	const bool isReconstructScale = mMode == eWaifu2xModelTypeScale || mMode == eWaifu2xModelTypeNoiseScale || mMode == eWaifu2xModelTypeAutoScale;
 
-	double Factor = factor;
+	Factor nowFactor = Factor(factor, 1.0);
 	if (!isReconstructScale)
-		Factor = 1.0;
+		nowFactor = Factor(1.0, 1.0);
 
 	cv::Mat reconstruct_image;
-	ret = ReconstructImage(Factor, crop_w, crop_h, use_tta, batch_size, isReconstructNoise, isReconstructScale, nullptr, image);
+	ret = ReconstructImage(nowFactor, crop_w, crop_h, use_tta, batch_size, isReconstructNoise, isReconstructScale, nullptr, image);
 	if (ret != Waifu2x::eWaifu2xError_OK)
 		return ret;
 
-	image.Postprocess(mInputPlane, Factor, 8);
+	image.Postprocess(mInputPlane, nowFactor, 8);
 
 	cv::Mat out_bgr_image = image.GetEndImage();
 	image.Clear();
@@ -854,18 +854,18 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const double factor, const void* source,
 	return Waifu2x::eWaifu2xError_OK;
 }
 
-double Waifu2x::CalcScaleRatio(const boost::optional<double> scale_ratio, const boost::optional<int> scale_width, const boost::optional<int> scale_height,
+Factor Waifu2x::CalcScaleRatio(const boost::optional<double> scale_ratio, const boost::optional<int> scale_width, const boost::optional<int> scale_height,
 	const stImage &image)
 {
 	if (scale_ratio)
-		return *scale_ratio;
+		return Factor(*scale_ratio, 1.0);
 
 	if (scale_width && scale_height)
 	{
 		const auto d1 = image.GetScaleFromWidth(*scale_width);
 		const auto d2 = image.GetScaleFromWidth(*scale_height);
 
-		return d1 >= d2 ? d1 : d2;
+		return d1.toDouble() >= d2.toDouble() ? d1 : d2;
 	}
 
 	if (scale_width)
@@ -874,7 +874,7 @@ double Waifu2x::CalcScaleRatio(const boost::optional<double> scale_ratio, const 
 	if(scale_height)
 		return image.GetScaleFromHeight(*scale_height);
 
-	return 1.0;
+	return Factor(1.0, 1.0);
 }
 
 int Waifu2x::GetcuDNNAlgorithm(const char * layer_name, int num_input, int num_output, int batch_size,
@@ -899,12 +899,12 @@ void Waifu2x::SetcuDNNAlgorithm(int algo, const char * layer_name, int num_input
 		return g_DeconvCcuDNNAlgorithm.SetAlgorithm(algo, num_input, num_output, batch_size, width, height, kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h);
 }
 
-Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(const double factor, const int crop_w, const int crop_h, const bool use_tta, const int batch_size,
+Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(const Factor factor, const int crop_w, const int crop_h, const bool use_tta, const int batch_size,
 	const bool isReconstructNoise, const bool isReconstructScale, const Waifu2x::waifu2xCancelFunc cancel_func, stImage &image)
 {
 	Waifu2x::eWaifu2xError ret;
 
-	double Factor = factor;
+	Factor nowFactor = factor;
 
 	if (isReconstructNoise)
 	{
@@ -926,14 +926,15 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(const double factor, const int 
 			if (ret != Waifu2x::eWaifu2xError_OK)
 				return ret;
 
-			Factor /= mNoiseNet->GetInnerScale();
+			//nowFactor /= mNoiseNet->GetInnerScale();
+			nowFactor = nowFactor.MultiDenominator(mNoiseNet->GetInnerScale());
 		}
 	}
 
 	if (cancel_func && cancel_func())
 		return Waifu2x::eWaifu2xError_Cancel;
 
-	const int scaleNum = ceil(log(Factor) / log(ScaleBase));
+	const int scaleNum = ceil(log(nowFactor.toDouble()) / log(ScaleBase));
 
 	if (isReconstructScale)
 	{
