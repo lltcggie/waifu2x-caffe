@@ -10,8 +10,8 @@
 #include <boost/optional.hpp>
 #include <opencv2/core.hpp>
 
-#define CUDNN_DLL_NAME "cudnn64_5.dll"
-#define CUDNN_REQUIRE_VERION_TEXT "v5.1"
+#define CUDNN_DLL_NAME "cudnn64_6.dll"
+#define CUDNN_REQUIRE_VERION_TEXT "v6"
 
 
 namespace caffe
