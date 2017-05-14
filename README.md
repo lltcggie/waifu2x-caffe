@@ -43,7 +43,7 @@ cuDNNを使わなくてもCUDAで変換出来ますが、cuDNNを使うと以下
 
 このような利点があるcuDNNですが、ライセンスの関係上動作に必要なファイルを配布することが出来ません。  
 なので、cuDNNを使いたい人は[こちらのページ](https://developer.nvidia.com/cuDNN)でWindows向けバイナリ(v5.1 RC以降)をダウンロードし、
-「cudnn64_5.dll」をwaifu2x-caffeのフォルダに入れて下さい。  
+「cudnn64_6.dll」をwaifu2x-caffeのフォルダに入れて下さい。  
 なお、ソフトを起動している最中にdllを入れた場合はソフトを起動しなおしてください。  
 (cuDNNをダウンロードするにはNVIDIA Developerへの登録とCUDA Registered Developersへの登録が必要です。
  CUDA Registered Developersはおそらく(簡単な)審査があるっぽいので登録してもすぐにcuDNNをダウンロード出来るわけではありません。)
