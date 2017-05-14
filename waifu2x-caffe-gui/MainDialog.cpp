@@ -1413,7 +1413,7 @@ void DialogEvent::Timer(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 
 	if (TimeLeft == -1)
 	{
-		SetWindowText(GetDlgItem(dh, IDC_EDIT_LOG), langStringList.GetString(L"MessageTimeLeftUnkown").c_str());
+		SetWindowText(GetDlgItem(dh, IDC_EDIT_LOG), langStringList.GetString(L"MessageTimeLeftUnknown").c_str());
 	}
 	else
 	{
@@ -3179,7 +3179,7 @@ void DialogEvent::AppSetting(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 			SET_WINDOW_TEXT(IDC_STATIC_INPUT_DIR_FIX);
 			SET_WINDOW_TEXT(IDC_STATIC_OUTPUT_DIR_FIX);
 
-			SET_WINDOW_TEXT(IDC_CHECK_OUTPUT_NO_OVERWIRITE);
+			SET_WINDOW_TEXT(IDC_CHECK_OUTPUT_NO_OVERWRITE);
 
 			SET_WINDOW_TEXT(IDC_STATIC_USE_GPU_NO);
 
@@ -3236,7 +3236,7 @@ void DialogEvent::AppSetting(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 				SendMessage(GetDlgItem(hWnd, IDC_CHECK_ARG_START_SUCCESS_FINISH), BM_SETCHECK, BST_CHECKED, 0);
 
 			if (isOutputNoOverwrite)
-				SendMessage(GetDlgItem(hWnd, IDC_CHECK_OUTPUT_NO_OVERWIRITE), BM_SETCHECK, BST_CHECKED, 0);
+				SendMessage(GetDlgItem(hWnd, IDC_CHECK_OUTPUT_NO_OVERWRITE), BM_SETCHECK, BST_CHECKED, 0);
 
 			SetWindowText(GetDlgItem(hWnd, IDC_EDIT_INPUT_DIR_FIX), tInputDirFix.c_str());
 			SetWindowText(GetDlgItem(hWnd, IDC_EDIT_OUTPUT_DIR_FIX), tOutputDirFix.c_str());
@@ -3267,7 +3267,7 @@ void DialogEvent::AppSetting(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 
 			isArgStartAuto = SendMessage(GetDlgItem(dh, IDC_CHECK_ARG_START_AUTO), BM_GETCHECK, 0, 0) == BST_CHECKED;
 			isArgStartSuccessFinish = SendMessage(GetDlgItem(dh, IDC_CHECK_ARG_START_SUCCESS_FINISH), BM_GETCHECK, 0, 0) == BST_CHECKED;
-			isOutputNoOverwrite = SendMessage(GetDlgItem(dh, IDC_CHECK_OUTPUT_NO_OVERWIRITE), BM_GETCHECK, 0, 0) == BST_CHECKED;
+			isOutputNoOverwrite = SendMessage(GetDlgItem(dh, IDC_CHECK_OUTPUT_NO_OVERWRITE), BM_GETCHECK, 0, 0) == BST_CHECKED;
 
 			TCHAR buf[AR_PATH_MAX] = TEXT("");
 

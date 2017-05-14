@@ -78,6 +78,6 @@
 "MessageExtStr":"Girdi dosya uzantıları(%s)",
 "MessageAllFileFolder":"Bütün dosyalar ve klasörler(*.*)",
 "MessageTitleInputDialog":"Lütfen girdi dosyası veya klasörü seçin",
-"MessageTimeLeftUnkown":"Kalan Süre: Bilinmiyor",
+"MessageTimeLeftUnknown":"Kalan Süre: Bilinmiyor",
 "MessageTimeLeft":"Kalan Süre"
 }
