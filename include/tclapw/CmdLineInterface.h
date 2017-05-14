@@ -20,8 +20,8 @@
  *  
  *****************************************************************************/ 
 
-#ifndef TCLAP_COMMANDLINE_INTERFACE_H
-#define TCLAP_COMMANDLINE_INTERFACE_H
+#ifndef TCLAPW_COMMANDLINE_INTERFACE_H
+#define TCLAPW_COMMANDLINE_INTERFACE_H
 
 #include <string>
 #include <vector>
@@ -30,7 +30,7 @@
 #include <algorithm>
 
 
-namespace TCLAP {
+namespace TCLAPW {
      
 class Arg;
 class CmdLineOutput;

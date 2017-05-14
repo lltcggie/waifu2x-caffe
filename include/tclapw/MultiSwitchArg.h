@@ -22,15 +22,15 @@
 *****************************************************************************/
 
 
-#ifndef TCLAP_MULTI_SWITCH_ARG_H
-#define TCLAP_MULTI_SWITCH_ARG_H
+#ifndef TCLAPW_MULTI_SWITCH_ARG_H
+#define TCLAPW_MULTI_SWITCH_ARG_H
 
 #include <string>
 #include <vector>
 
 #include <tclapw/SwitchArg.h>
 
-namespace TCLAP {
+namespace TCLAPW {
 
 /**
 * A multiple switch argument.  If the switch is set on the command line, then
@@ -211,6 +211,6 @@ MultiSwitchArg::reset()
 //END MultiSwitchArg.cpp
 //////////////////////////////////////////////////////////////////////
 
-} //namespace TCLAP
+} //namespace TCLAPW
 
 #endif

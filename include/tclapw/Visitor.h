@@ -20,10 +20,10 @@
  *****************************************************************************/ 
 
 
-#ifndef TCLAP_VISITOR_H
-#define TCLAP_VISITOR_H
+#ifndef TCLAPW_VISITOR_H
+#define TCLAPW_VISITOR_H
 
-namespace TCLAP {
+namespace TCLAPW {
 
 /**
  * A base class that defines the interface for visitors.

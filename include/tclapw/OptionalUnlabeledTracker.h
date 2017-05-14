@@ -21,12 +21,12 @@
  *****************************************************************************/ 
 
 
-#ifndef TCLAP_OPTIONAL_UNLABELED_TRACKER_H
-#define TCLAP_OPTIONAL_UNLABELED_TRACKER_H
+#ifndef TCLAPW_OPTIONAL_UNLABELED_TRACKER_H
+#define TCLAPW_OPTIONAL_UNLABELED_TRACKER_H
 
 #include <string>
 
-namespace TCLAP {
+namespace TCLAPW {
 
 class OptionalUnlabeledTracker
 {
@@ -57,6 +57,6 @@ inline void OptionalUnlabeledTracker::check( bool req, const std::wstring& argNa
 }
 
 
-} // namespace TCLAP
+} // namespace TCLAPW
 
 #endif

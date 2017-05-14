@@ -20,8 +20,8 @@
  *****************************************************************************/ 
 
 
-#ifndef TCLAP_MULTIPLE_UNLABELED_ARGUMENT_H
-#define TCLAP_MULTIPLE_UNLABELED_ARGUMENT_H
+#ifndef TCLAPW_MULTIPLE_UNLABELED_ARGUMENT_H
+#define TCLAPW_MULTIPLE_UNLABELED_ARGUMENT_H
 
 #include <string>
 #include <vector>
@@ -29,7 +29,7 @@
 #include <tclapw/MultiArg.h>
 #include <tclapw/OptionalUnlabeledTracker.h>
 
-namespace TCLAP {
+namespace TCLAPW {
 
 /**
  * Just like a MultiArg, except that the arguments are unlabeled.  Basically,

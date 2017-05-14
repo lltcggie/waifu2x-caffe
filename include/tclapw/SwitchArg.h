@@ -21,15 +21,15 @@
  *****************************************************************************/ 
 
 
-#ifndef TCLAP_SWITCH_ARG_H
-#define TCLAP_SWITCH_ARG_H
+#ifndef TCLAPW_SWITCH_ARG_H
+#define TCLAPW_SWITCH_ARG_H
 
 #include <string>
 #include <vector>
 
 #include <tclapw/Arg.h>
 
-namespace TCLAP {
+namespace TCLAPW {
 
 /**
  * A simple switch argument.  If the switch is set on the command line, then
@@ -261,6 +261,6 @@ inline void SwitchArg::reset()
 //End SwitchArg.cpp
 //////////////////////////////////////////////////////////////////////
 
-} //namespace TCLAP
+} //namespace TCLAPW
 
 #endif

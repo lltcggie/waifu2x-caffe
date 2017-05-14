@@ -23,10 +23,10 @@
 // This is an internal tclapw file, you should probably not have to
 // include this directly
 
-#ifndef TCLAP_ARGTRAITS_H
-#define TCLAP_ARGTRAITS_H
+#ifndef TCLAPW_ARGTRAITS_H
+#define TCLAPW_ARGTRAITS_H
 
-namespace TCLAP {
+namespace TCLAPW {
 
 // We use two empty structs to get compile type specialization
 // function to work

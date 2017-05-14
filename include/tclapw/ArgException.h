@@ -21,13 +21,13 @@
  *****************************************************************************/ 
 
 
-#ifndef TCLAP_ARG_EXCEPTION_H
-#define TCLAP_ARG_EXCEPTION_H
+#ifndef TCLAPW_ARG_EXCEPTION_H
+#define TCLAPW_ARG_EXCEPTION_H
 
 #include <string>
 #include <exception>
 
-namespace TCLAP {
+namespace TCLAPW {
 
 /**
  * A simple class that defines and argument exception.  Should be caught
@@ -197,7 +197,7 @@ private:
 	int _estat;
 };
 
-} // namespace TCLAP
+} // namespace TCLAPW
 
 #endif
 

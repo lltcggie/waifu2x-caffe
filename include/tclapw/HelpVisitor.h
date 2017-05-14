@@ -19,14 +19,14 @@
  *  
  *****************************************************************************/ 
 
-#ifndef TCLAP_HELP_VISITOR_H
-#define TCLAP_HELP_VISITOR_H
+#ifndef TCLAPW_HELP_VISITOR_H
+#define TCLAPW_HELP_VISITOR_H
 
 #include <tclapw/CmdLineInterface.h>
 #include <tclapw/CmdLineOutput.h>
 #include <tclapw/Visitor.h>
 
-namespace TCLAP {
+namespace TCLAPW {
 
 /**
  * A Visitor object that calls the usage method of the given CmdLineOutput

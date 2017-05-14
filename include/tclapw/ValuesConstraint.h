@@ -20,8 +20,8 @@
  *  
  *****************************************************************************/ 
 
-#ifndef TCLAP_VALUESCONSTRAINT_H
-#define TCLAP_VALUESCONSTRAINT_H
+#ifndef TCLAPW_VALUESCONSTRAINT_H
+#define TCLAPW_VALUESCONSTRAINT_H
 
 #include <string>
 #include <vector>
@@ -41,7 +41,7 @@
 #error L"Need a stringstream (sstream or strstream) to compile!"
 #endif
 
-namespace TCLAP {
+namespace TCLAPW {
 
 /**
  * A Constraint that constrains the Arg to only those values specified
@@ -143,6 +143,6 @@ std::wstring ValuesConstraint<T>::description() const
 }
 
 
-} //namespace TCLAP
+} //namespace TCLAPW
 #endif 
 

@@ -20,8 +20,8 @@
  *  
  *****************************************************************************/ 
 
-#ifndef TCLAP_STDCMDLINEOUTPUT_H
-#define TCLAP_STDCMDLINEOUTPUT_H
+#ifndef TCLAPW_STDCMDLINEOUTPUT_H
+#define TCLAPW_STDCMDLINEOUTPUT_H
 
 #include <string>
 #include <vector>
@@ -34,7 +34,7 @@
 #include <tclapw/XorHandler.h>
 #include <tclapw/Arg.h>
 
-namespace TCLAP {
+namespace TCLAPW {
 
 /**
  * A class that isolates any output from the CmdLine object so that it
@@ -294,5 +294,5 @@ inline void StdOutput::spacePrint( std::wostream& os,
 		}
 }
 
-} //namespace TCLAP
+} //namespace TCLAPW
 #endif 

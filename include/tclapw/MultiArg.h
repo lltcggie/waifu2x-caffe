@@ -20,8 +20,8 @@
  *****************************************************************************/
 
 
-#ifndef TCLAP_MULTIPLE_ARGUMENT_H
-#define TCLAP_MULTIPLE_ARGUMENT_H
+#ifndef TCLAPW_MULTIPLE_ARGUMENT_H
+#define TCLAPW_MULTIPLE_ARGUMENT_H
 
 #include <string>
 #include <vector>
@@ -29,7 +29,7 @@
 #include <tclapw/Arg.h>
 #include <tclapw/Constraint.h>
 
-namespace TCLAP {
+namespace TCLAPW {
 /**
  * An argument that allows multiple values of type T to be specified.  Very
  * similar to a ValueArg, except a vector of values will be returned
@@ -428,6 +428,6 @@ void MultiArg<T>::reset()
 	_values.clear();
 }
 
-} // namespace TCLAP
+} // namespace TCLAPW
 
 #endif

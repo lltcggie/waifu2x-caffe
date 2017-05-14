@@ -21,8 +21,8 @@
  *****************************************************************************/ 
 
 
-#ifndef TCLAP_UNLABELED_VALUE_ARGUMENT_H
-#define TCLAP_UNLABELED_VALUE_ARGUMENT_H
+#ifndef TCLAPW_UNLABELED_VALUE_ARGUMENT_H
+#define TCLAPW_UNLABELED_VALUE_ARGUMENT_H
 
 #include <string>
 #include <vector>
@@ -31,7 +31,7 @@
 #include <tclapw/OptionalUnlabeledTracker.h>
 
 
-namespace TCLAP {
+namespace TCLAPW {
 
 /**
  * The basic unlabeled argument that parses a value.

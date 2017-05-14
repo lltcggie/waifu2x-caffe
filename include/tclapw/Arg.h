@@ -22,8 +22,8 @@
  *****************************************************************************/
 
 
-#ifndef TCLAP_ARGUMENT_H
-#define TCLAP_ARGUMENT_H
+#ifndef TCLAPW_ARGUMENT_H
+#define TCLAPW_ARGUMENT_H
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -54,7 +54,7 @@ typedef std::istrstream istringstream;
 #include <tclapw/ArgTraits.h>
 #include <tclapw/StandardTraits.h>
 
-namespace TCLAP {
+namespace TCLAPW {
 
 /**
  * A virtual base class that defines the essential data for all arguments.
@@ -223,31 +223,31 @@ class Arg
 
 		/**
 		 * The wchar_t that indicates the beginning of a flag.  Defaults to L'-', but
-		 * clients can define TCLAP_FLAGSTARTCHAR to override.
+		 * clients can define TCLAPW_FLAGSTARTCHAR to override.
 		 */
-#ifndef TCLAP_FLAGSTARTCHAR
-#define TCLAP_FLAGSTARTCHAR L'-'
+#ifndef TCLAPW_FLAGSTARTCHAR
+#define TCLAPW_FLAGSTARTCHAR L'-'
 #endif
-		static wchar_t flagStartChar() { return TCLAP_FLAGSTARTCHAR; }
+		static wchar_t flagStartChar() { return TCLAPW_FLAGSTARTCHAR; }
 
 		/**
 		 * The sting that indicates the beginning of a flag.  Defaults to L"-", but
-		 * clients can define TCLAP_FLAGSTARTSTRING to override. Should be the same
-		 * as TCLAP_FLAGSTARTCHAR.
+		 * clients can define TCLAPW_FLAGSTARTSTRING to override. Should be the same
+		 * as TCLAPW_FLAGSTARTCHAR.
 		 */
-#ifndef TCLAP_FLAGSTARTSTRING
-#define TCLAP_FLAGSTARTSTRING L"-"
+#ifndef TCLAPW_FLAGSTARTSTRING
+#define TCLAPW_FLAGSTARTSTRING L"-"
 #endif
-		static const std::wstring flagStartString() { return TCLAP_FLAGSTARTSTRING; }
+		static const std::wstring flagStartString() { return TCLAPW_FLAGSTARTSTRING; }
 
 		/**
 		 * The sting that indicates the beginning of a name.  Defaults to L"--", but
-		 *  clients can define TCLAP_NAMESTARTSTRING to override.
+		 *  clients can define TCLAPW_NAMESTARTSTRING to override.
 		 */
-#ifndef TCLAP_NAMESTARTSTRING
-#define TCLAP_NAMESTARTSTRING L"--"
+#ifndef TCLAPW_NAMESTARTSTRING
+#define TCLAPW_NAMESTARTSTRING L"--"
 #endif
-		static const std::wstring nameStartString() { return TCLAP_NAMESTARTSTRING; }
+		static const std::wstring nameStartString() { return TCLAPW_NAMESTARTSTRING; }
 
 		/**
 		 * The name used to identify the ignore rest argument.
@@ -425,7 +425,7 @@ ExtractValue(T &destVal, const std::wstring& strVal, ValueLike vl)
     int valuesRead = 0;
     while ( is.good() ) {
 	if ( is.peek() != EOF )
-#ifdef TCLAP_SETBASE_ZERO
+#ifdef TCLAPW_SETBASE_ZERO
 	    is >> std::setbase(0) >> destVal;
 #else
 	    is >> destVal;
@@ -691,7 +691,7 @@ inline void Arg::reset()
 //END Arg.cpp
 //////////////////////////////////////////////////////////////////////
 
-} //namespace TCLAP
+} //namespace TCLAPW
 
 #endif
 

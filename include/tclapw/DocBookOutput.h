@@ -20,8 +20,8 @@
  *  
  *****************************************************************************/ 
 
-#ifndef TCLAP_DOCBOOKOUTPUT_H
-#define TCLAP_DOCBOOKOUTPUT_H
+#ifndef TCLAPW_DOCBOOKOUTPUT_H
+#define TCLAPW_DOCBOOKOUTPUT_H
 
 #include <string>
 #include <vector>
@@ -34,7 +34,7 @@
 #include <tclapw/XorHandler.h>
 #include <tclapw/Arg.h>
 
-namespace TCLAP {
+namespace TCLAPW {
 
 /**
  * A class that generates DocBook output for usage() method for the 
@@ -295,5 +295,5 @@ inline void DocBookOutput::printLongArg(Arg* a)
 	std::cout << L"</varlistentry>" << std::endl;
 }
 
-} //namespace TCLAP
+} //namespace TCLAPW
 #endif 

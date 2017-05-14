@@ -20,8 +20,8 @@
  *****************************************************************************/ 
 
 
-#ifndef TCLAP_VALUE_ARGUMENT_H
-#define TCLAP_VALUE_ARGUMENT_H
+#ifndef TCLAPW_VALUE_ARGUMENT_H
+#define TCLAPW_VALUE_ARGUMENT_H
 
 #include <string>
 #include <vector>
@@ -29,7 +29,7 @@
 #include <tclapw/Arg.h>
 #include <tclapw/Constraint.h>
 
-namespace TCLAP {
+namespace TCLAPW {
 
 /**
  * The basic labeled argument that parses a value.
@@ -420,6 +420,6 @@ void ValueArg<T>::reset()
 	_value = _default;
 }
 
-} // namespace TCLAP
+} // namespace TCLAPW
 
 #endif

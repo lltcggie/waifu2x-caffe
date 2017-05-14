@@ -20,8 +20,8 @@
  *  
  *****************************************************************************/ 
 
-#ifndef TCLAP_XORHANDLER_H
-#define TCLAP_XORHANDLER_H
+#ifndef TCLAPW_XORHANDLER_H
+#define TCLAPW_XORHANDLER_H
 
 #include <tclapw/Arg.h>
 #include <string>
@@ -29,7 +29,7 @@
 #include <algorithm>
 #include <iostream>
 
-namespace TCLAP {
+namespace TCLAPW {
 
 /**
  * This class handles lists of ArgL's that are to be XOR'd on the command
@@ -161,6 +161,6 @@ inline std::vector< std::vector<Arg*> >& XorHandler::getXorList()
 //END XOR.cpp
 //////////////////////////////////////////////////////////////////////
 
-} //namespace TCLAP
+} //namespace TCLAPW
 
 #endif 

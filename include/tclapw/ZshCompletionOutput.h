@@ -20,8 +20,8 @@
  *  
  *****************************************************************************/ 
 
-#ifndef TCLAP_ZSHCOMPLETIONOUTPUT_H
-#define TCLAP_ZSHCOMPLETIONOUTPUT_H
+#ifndef TCLAPW_ZSHCOMPLETIONOUTPUT_H
+#define TCLAPW_ZSHCOMPLETIONOUTPUT_H
 
 #include <string>
 #include <vector>
@@ -34,7 +34,7 @@
 #include <tclapw/XorHandler.h>
 #include <tclapw/Arg.h>
 
-namespace TCLAP {
+namespace TCLAPW {
 
 /**
  * A class that generates a Zsh completion function as output from the usage()
@@ -319,5 +319,5 @@ inline std::wstring ZshCompletionOutput::getMutexList( CmdLineInterface& _cmd, A
 	return list.str();
 }
 
-} //namespace TCLAP
+} //namespace TCLAPW
 #endif

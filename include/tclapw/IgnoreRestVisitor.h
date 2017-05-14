@@ -20,13 +20,13 @@
  *****************************************************************************/ 
 
 
-#ifndef TCLAP_IGNORE_REST_VISITOR_H
-#define TCLAP_IGNORE_REST_VISITOR_H
+#ifndef TCLAPW_IGNORE_REST_VISITOR_H
+#define TCLAPW_IGNORE_REST_VISITOR_H
 
 #include <tclapw/Visitor.h>
 #include <tclapw/Arg.h>
 
-namespace TCLAP {
+namespace TCLAPW {
 
 /**
  * A Vistor that tells the CmdLine to begin ignoring arguments after

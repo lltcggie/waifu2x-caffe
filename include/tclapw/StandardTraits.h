@@ -23,8 +23,8 @@
 // This is an internal tclapw file, you should probably not have to
 // include this directly
 
-#ifndef TCLAP_STANDARD_TRAITS_H
-#define TCLAP_STANDARD_TRAITS_H
+#ifndef TCLAPW_STANDARD_TRAITS_H
+#define TCLAPW_STANDARD_TRAITS_H
 
 #ifdef HAVE_CONFIG_H
 #include <config.h> // To check for long long
@@ -35,11 +35,11 @@
 // creating ArgTraits twice for unsigned short. Thus...
 #ifdef _MSC_VER
 #ifndef _NATIVE_WCHAR_T_DEFINED
-#define TCLAP_DONT_DECLARE_WCHAR_T_ARGTRAITS
+#define TCLAPW_DONT_DECLARE_WCHAR_T_ARGTRAITS
 #endif
 #endif
 
-namespace TCLAP {
+namespace TCLAPW {
 
 // ======================================================================
 // Integer types
@@ -181,7 +181,7 @@ struct ArgTraits<bool> {
 /**
  * wchar_ts have value-like semantics.
  */
-#ifndef TCLAP_DONT_DECLARE_WCHAR_T_ARGTRAITS
+#ifndef TCLAPW_DONT_DECLARE_WCHAR_T_ARGTRAITS
 template<>
 struct ArgTraits<wchar_t> {
     typedef ValueLike ValueCategory;

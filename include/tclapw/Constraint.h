@@ -19,8 +19,8 @@
  *
  *****************************************************************************/
 
-#ifndef TCLAP_CONSTRAINT_H
-#define TCLAP_CONSTRAINT_H
+#ifndef TCLAPW_CONSTRAINT_H
+#define TCLAPW_CONSTRAINT_H
 
 #include <string>
 #include <vector>
@@ -29,7 +29,7 @@
 #include <iomanip>
 #include <algorithm>
 
-namespace TCLAP {
+namespace TCLAPW {
 
 /**
  * The interface that defines the interaction between the Arg and Constraint.
@@ -64,5 +64,5 @@ class Constraint
 		virtual ~Constraint() { ; }
 };
 
-} //namespace TCLAP
+} //namespace TCLAPW
 #endif

@@ -20,8 +20,8 @@
  *  
  *****************************************************************************/ 
 
-#ifndef TCLAP_CMDLINEOUTPUT_H
-#define TCLAP_CMDLINEOUTPUT_H
+#ifndef TCLAPW_CMDLINEOUTPUT_H
+#define TCLAPW_CMDLINEOUTPUT_H
 
 #include <string>
 #include <vector>
@@ -30,7 +30,7 @@
 #include <iomanip>
 #include <algorithm>
 
-namespace TCLAP {
+namespace TCLAPW {
 
 class CmdLineInterface;
 class ArgException;
@@ -70,5 +70,5 @@ class CmdLineOutput
 
 };
 
-} //namespace TCLAP
+} //namespace TCLAPW
 #endif 

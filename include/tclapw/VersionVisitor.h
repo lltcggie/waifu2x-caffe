@@ -21,14 +21,14 @@
  *****************************************************************************/ 
 
 
-#ifndef TCLAP_VERSION_VISITOR_H
-#define TCLAP_VERSION_VISITOR_H
+#ifndef TCLAPW_VERSION_VISITOR_H
+#define TCLAPW_VERSION_VISITOR_H
 
 #include <tclapw/CmdLineInterface.h>
 #include <tclapw/CmdLineOutput.h>
 #include <tclapw/Visitor.h>
 
-namespace TCLAP {
+namespace TCLAPW {
 
 /**
  * A Vistor that will call the version method of the given CmdLineOutput

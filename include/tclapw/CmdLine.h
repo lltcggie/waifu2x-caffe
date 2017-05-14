@@ -21,8 +21,8 @@
  *
  *****************************************************************************/
 
-#ifndef TCLAP_CMDLINE_H
-#define TCLAP_CMDLINE_H
+#ifndef TCLAPW_CMDLINE_H
+#define TCLAPW_CMDLINE_H
 
 #include <tclapw/SwitchArg.h>
 #include <tclapw/MultiSwitchArg.h>
@@ -48,7 +48,7 @@
 #include <algorithm>
 #include <stdlib.h> // Needed for exit(), which isnL't defined in some envs.
 
-namespace TCLAP {
+namespace TCLAPW {
 
 template<typename T> void DelPtr(T ptr)
 {
@@ -629,5 +629,5 @@ inline void CmdLine::reset()
 
 
 
-} //namespace TCLAP
+} //namespace TCLAPW
 #endif
