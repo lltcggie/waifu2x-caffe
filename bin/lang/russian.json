@@ -26,6 +26,7 @@
 "IDC_RADIO_SCALE_RATIO":"По величине",
 "IDC_RADIO_SCALE_WIDTH":"По ширине",
 "IDC_RADIO_SCALE_HEIGHT":"По высоте",
+"IDC_RADIO_SCALE_WIDTH_HEIGHT":"По ширине и высоте",
 "IDC_STATIC_MODEL":"Профиль",
 "IDC_RADIO_MODEL_RGB":"2D изображ. (Профиль RGB)",
 "IDC_RADIO_MODEL_PHOTO":"Фотография, Аниме",
