@@ -53,7 +53,7 @@
 "MessageUseProcessorMode":"Procesador utilizado: %s",
 "MessageProcessTime":"Tiempo de proceso: %02d:%02d:%02d.%03d",
 "MessageInitTime":"Tiempo de inicializaión: %02d:%02d:%02d.%03d",
-"MessagecuDNNCheckTime":"cuDNN-check time: %02d:%02d:%02d.%03d",
+"MessagecuDNNCheckTime":"Tiempo de revisión de cuDNN: %02d:%02d:%02d.%03d",
 "MessageTitleError":"Error",
 "MessageScaleRateCheckError":"El factor de escala debe ser mayor de 0.0 y un número positivo",
 "MessageScaleWidthCheckError":"El tamaño debe ser un número entero y mayor de 0.",
