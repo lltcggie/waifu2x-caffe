@@ -64,7 +64,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <DelayLoadDLLs>cudnn64_6.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>cudnn64_7.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
       <AdditionalDependencies>Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
@@ -87,7 +87,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <DelayLoadDLLs>cudnn64_6.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>cudnn64_7.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
       <AdditionalDependencies>Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
