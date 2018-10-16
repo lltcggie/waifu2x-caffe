@@ -839,7 +839,7 @@ void DialogEvent::ProcessWaifu2x()
 
 			ret = w.waifu2x(p.first, p.second, ScaleRatio, ScaleWidth, ScaleHeight, [this]()
 			{
-				return cancelFlag;
+				return cancelFlag.load();
 			}, crop_size, crop_size, output_quality, output_depth, use_tta, batch_size);
 
 			num++;
