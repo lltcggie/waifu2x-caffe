@@ -14,18 +14,19 @@
     <ProjectGuid>{63FB3EFC-63B0-401C-BB54-F3A984DC233F}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>waifu2xcaffegui</RootNamespace>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -41,15 +42,15 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\caffe-build\install\include;D:\caffe-build\install\include\boost-1_59;$(CUDA_PATH_V8_0)\include;D:\opencv310\build_vc\install\include;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(SolutionDir)msgpack-c\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\opencv310\build_vc\install\x64\vc12\lib;D:\caffe-build\install\lib;$(CUDA_PATH_V8_0)\lib\$(PlatformName);D:\program\boost_1_59_0\stage\x64\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(CUDA_PATH_V10_0)\include;$(SolutionDir)lib\include;$(USERPROFILE)\.caffe\dependencies\libraries_v140_x64_py27_1.1.0\libraries\include;$(USERPROFILE)\.caffe\dependencies\libraries_v140_x64_py27_1.1.0\libraries\include\boost-1_61;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(SolutionDir)msgpack-c\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(CUDA_PATH_V10_0)\lib\$(PlatformName);$(SolutionDir)lib\$(PlatformName)\vc15\staticlib;$(SolutionDir)lib\lib;$(USERPROFILE)\.caffe\dependencies\libraries_v140_x64_py27_1.1.0\libraries\lib;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)bin\</OutDir>
     <TargetName>$(ProjectName)d</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>D:\caffe-build\install\include;D:\caffe-build\install\include\boost-1_59;$(CUDA_PATH_V8_0)\include;D:\opencv310\build_vc\install\include;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(SolutionDir)msgpack-c\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\opencv310\build_vc\install\x64\vc12\lib;D:\caffe-build\install\lib;$(CUDA_PATH_V8_0)\lib\$(PlatformName);D:\program\boost_1_59_0\stage\x64\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(CUDA_PATH_V10_0)\include;$(SolutionDir)lib\include;$(USERPROFILE)\.caffe\dependencies\libraries_v140_x64_py27_1.1.0\libraries\include;$(USERPROFILE)\.caffe\dependencies\libraries_v140_x64_py27_1.1.0\libraries\include\boost-1_61;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(SolutionDir)msgpack-c\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(CUDA_PATH_V10_0)\lib\$(PlatformName);$(SolutionDir)lib\$(PlatformName)\vc15\staticlib;$(SolutionDir)lib\lib;$(USERPROFILE)\.caffe\dependencies\libraries_v140_x64_py27_1.1.0\libraries\lib;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)bin\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -58,7 +59,7 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CMAKE_WINDOWS_BUILD;BOOST_ALL_NO_LIB;WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -79,7 +80,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CMAKE_WINDOWS_BUILD;BOOST_ALL_NO_LIB;WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
