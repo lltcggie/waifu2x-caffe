@@ -1,0 +1,23 @@
+@echo off
+
+cd caffe
+
+set MSVC_VERSION=14
+set USE_CUDNN=1
+set USE_NCCL=0
+set USE_OPENCV=0
+set USE_LEVELDB=0
+set USE_LMDB=0
+set USE_HDF5=0
+set WITH_NINJA=0
+set CPU_ONLY=0
+set CUDA_ARCH_NAME=Auto
+set CMAKE_CONFIG=Release
+set WITH_CUDA=1
+set BUILD_PYTHON=0
+set BUILD_PYTHON_LAYER=0
+set RUN_TESTS=0
+set CMAKE_INSTALL_PREFIX=../../lib
+set RUN_INSTALL=1
+
+scripts\build_win.cmd
