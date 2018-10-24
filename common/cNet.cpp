@@ -280,8 +280,20 @@ Waifu2x::eWaifu2xError cNet::ConstractNet(const Waifu2x::eWaifu2xModelType mode,
 	const auto retModelBin = readProtoBinary(modelbin_path, &param_model);
 	const auto retParamBin = readProtoBinary(caffemodel_path, &param_caffemodel);
 
-	if (retModelBin == Waifu2x::eWaifu2xError_OK && retParamBin == Waifu2x::eWaifu2xError_OK)
+	if ( retParamBin == Waifu2x::eWaifu2xError_OK &&
+		(retModelBin == Waifu2x::eWaifu2xError_OK || retModelBin == Waifu2x::eWaifu2xError_FailedOpenModelFile))
 	{
+		if (retModelBin == Waifu2x::eWaifu2xError_FailedOpenModelFile) // protobinÇÃÇ›Ç™ì«Ç›çûÇﬂÇ»Ç©Ç¡ÇΩÇ∆Ç´ÇÕprototxtÇ©ÇÁì«Ç›çûÇﬁ(Ç¬Ç¢Ç≈Ç…protobinÇ‡èëÇ´çûÇﬁ)
+		{
+			ret = readProtoText(model_path, &param_model);
+			if (ret != Waifu2x::eWaifu2xError_OK)
+				return ret;
+
+			ret = writeProtoBinary(param_model, modelbin_path);
+			if (ret != Waifu2x::eWaifu2xError_OK)
+				return ret;
+		}
+
 		ret = SetParameter(param_model, process);
 		if (ret != Waifu2x::eWaifu2xError_OK)
 			return ret;
