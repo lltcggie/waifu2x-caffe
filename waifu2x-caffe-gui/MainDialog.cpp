@@ -527,6 +527,18 @@ void DialogEvent::SetCropSizeList(const boost::filesystem::path & input_path)
 	}
 	), list.end());
 
+	bool isRecommendedCropSize = false;
+	Waifu2x::stInfo info;
+	if (Waifu2x::GetInfo(model_dir, info) && info.recommended_crop_size > 0)
+	{
+		tstring str(to_tstring(info.recommended_crop_size));
+		SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
+		isRecommendedCropSize = true;
+	}
+
+	if (list.size() > 0)
+		SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)TEXT("-----------------------"));
+
 	int mindiff = INT_MAX;
 	int defaultIndex = -1;
 	for (int i = 0; i < list.size(); i++)
@@ -534,13 +546,13 @@ void DialogEvent::SetCropSizeList(const boost::filesystem::path & input_path)
 		const int n = list[i];
 
 		tstring str(to_tstring(n));
-		SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
+		const int index = SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
 
 		const int diff = abs(DefaultCommonDivisor - n);
 		if (DefaultCommonDivisorRange.first <= n && n <= DefaultCommonDivisorRange.second && diff < mindiff)
 		{
 			mindiff = diff;
-			defaultIndex = i;
+			defaultIndex = index;
 		}
 	}
 
@@ -565,6 +577,9 @@ void DialogEvent::SetCropSizeList(const boost::filesystem::path & input_path)
 	if (defaultIndex == -1)
 		defaultIndex = defaultListIndex;
 
+	if(isRecommendedCropSize)
+		defaultIndex = 0;
+		 
 	if (GetWindowTextLength(hcrop) == 0)
 		SendMessage(hcrop, CB_SETCURSEL, defaultIndex, 0);
 }

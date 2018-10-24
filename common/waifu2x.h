@@ -59,6 +59,25 @@ public:
 class Waifu2x
 {
 public:
+	struct stInfo
+	{
+		struct stParam
+		{
+			int scale_factor;
+			int offset;
+		};
+
+		std::string name;
+		std::string arch_name;
+		bool has_noise_scale;
+		int channels;
+		int recommended_crop_size;
+
+		stParam noise;
+		stParam scale;
+		stParam noise_scale;
+	};
+
 	enum eWaifu2xModelType
 	{
 		eWaifu2xModelTypeNoise = 0,
@@ -183,4 +202,5 @@ public:
 	const std::string& used_process() const;
 
 	static std::string GetModelName(const boost::filesystem::path &model_dir);
+	static bool GetInfo(const boost::filesystem::path &model_dir, stInfo &info);
 };

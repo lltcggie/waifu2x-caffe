@@ -1149,3 +1149,14 @@ std::string Waifu2x::GetModelName(const boost::filesystem::path & model_dir)
 
 	return cNet::GetModelName(info_path);
 }
+
+bool Waifu2x::GetInfo(const boost::filesystem::path &model_dir, stInfo &info)
+{
+	const boost::filesystem::path mode_dir_path(GetModeDirPath(model_dir));
+	if (!boost::filesystem::exists(mode_dir_path))
+		return false;
+
+	const boost::filesystem::path info_path = mode_dir_path / "info.json";
+
+	return cNet::GetInfo(info_path, info) == Waifu2x::eWaifu2xError_OK;
+}
