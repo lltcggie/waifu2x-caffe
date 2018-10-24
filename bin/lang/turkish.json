@@ -30,6 +30,7 @@
 "IDC_RADIO_MODEL_RGB":"2-B çizim (RGB Modeli)",
 "IDC_RADIO_MODEL_PHOTO":"Fotoğrafçılık veya Anime",
 "IDC_RADIO_MODEL_Y":"2-B çizim (Y Modeli)",
+"IDC_RADIO_MODEL_UpResNet10":"2-B çizim (UpResNet10)",
 "IDC_CHECK_TTA":"TTA Modu Kullan",
 "IDC_STATIC_PROCESS_SPEED_SETTING":"İşleme Hızı Ayarları",
 "IDC_STATIC_PROCESSOR":"",

@@ -31,6 +31,7 @@
 "IDC_RADIO_MODEL_RGB":"2-D illust (RGB Model)",
 "IDC_RADIO_MODEL_PHOTO":"Photography, Anime",
 "IDC_RADIO_MODEL_Y":"2-D illust (Y Model)",
+"IDC_RADIO_MODEL_UpResNet10":"2-D illust (UpResNet10)",
 "IDC_CHECK_TTA":"Use TTA Mode",
 "IDC_STATIC_PROCESS_SPEED_SETTING":"Processing Speed Settings",
 "IDC_STATIC_PROCESSOR":"Use Processor",

@@ -30,6 +30,7 @@
 "IDC_RADIO_MODEL_RGB":"二次元插圖（RGB 模式）",
 "IDC_RADIO_MODEL_PHOTO":"照片和動畫（Photo 模式）",
 "IDC_RADIO_MODEL_Y":"二次元插圖（Y 模式）",
+"IDC_RADIO_MODEL_UpResNet10":"二次元插圖（UpResNet10）",
 "IDC_CHECK_TTA":"使用 TTA 模式",
 "IDC_STATIC_PROCESS_SPEED_SETTING":"處理速度設定",
 "IDC_STATIC_PROCESSOR":"使用處理器",

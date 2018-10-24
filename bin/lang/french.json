@@ -31,6 +31,7 @@
 "IDC_RADIO_MODEL_RGB":"Illustration 2D (modèle RGB)",
 "IDC_RADIO_MODEL_PHOTO":"Photo & animé (modèle Photo)",
 "IDC_RADIO_MODEL_Y":"Illustration 2D (modèle Y)",
+"IDC_RADIO_MODEL_UpResNet10":"Illustration 2D (UpResNet10)",
 "IDC_CHECK_TTA":"Utiliser mode TTA",
 "IDC_STATIC_PROCESS_SPEED_SETTING":"Vitesse de traitement",
 "IDC_STATIC_PROCESSOR":"Utiliser le processeur",

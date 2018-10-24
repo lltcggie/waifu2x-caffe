@@ -31,6 +31,7 @@
 "IDC_RADIO_MODEL_RGB":"2D 插图 — RGB 模型",
 "IDC_RADIO_MODEL_PHOTO":"照片或动画 — Photo 模型",
 "IDC_RADIO_MODEL_Y":"2D 插图 — Y 模型",
+"IDC_RADIO_MODEL_UpResNet10":"2D 插图 — UpResNet10",
 "IDC_CHECK_TTA":"TTA 模式",
 "IDC_STATIC_PROCESS_SPEED_SETTING":"处理速度设置",
 "IDC_STATIC_PROCESSOR":"处理器",

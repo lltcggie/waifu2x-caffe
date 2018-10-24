@@ -31,6 +31,7 @@
 "IDC_RADIO_MODEL_RGB":"2D 일러스트 (RGB 모델)",
 "IDC_RADIO_MODEL_PHOTO":"사진/애니메이션 (Photo 모델)",
 "IDC_RADIO_MODEL_Y":"2D 일러스트 (Y 모델)",
+"IDC_RADIO_MODEL_UpResNet10":"2D 일러스트 (UpResNet10)",
 "IDC_CHECK_TTA":"TTA 모드 사용",
 "IDC_STATIC_PROCESS_SPEED_SETTING":"처리 속도 설정",
 "IDC_STATIC_PROCESSOR":"사용할 처리 방식",

@@ -31,6 +31,7 @@
 "IDC_RADIO_MODEL_RGB":"2D изображ. (Профиль RGB)",
 "IDC_RADIO_MODEL_PHOTO":"Фотография, Аниме",
 "IDC_RADIO_MODEL_Y":"2D изображ. (Профиль Y)",
+"IDC_RADIO_MODEL_UpResNet10":"2D изображ. (UpResNet10)",
 "IDC_CHECK_TTA":"В режиме TTA ",
 "IDC_STATIC_PROCESS_SPEED_SETTING":"Скорость обработки",
 "IDC_STATIC_PROCESSOR":"Устройство обработки",

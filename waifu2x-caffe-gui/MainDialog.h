@@ -92,6 +92,7 @@ private:
 		eModelTypeY,
 		eModelTypeUpConvRGB,
 		eModelTypeUpConvPhoto,
+		eModelTypeUpResNet10,
 		eModelTypeEnd,
 	};
 

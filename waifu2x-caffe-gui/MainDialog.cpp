@@ -397,6 +397,11 @@ bool DialogEvent::SyncMember(const bool NotSyncCropSize, const bool silent)
 			modelType = eModelTypeY;
 			break;
 
+		case 5:
+			model_dir = TEXT("models/upresnet10");
+			modelType = eModelTypeUpResNet10;
+			break;
+
 		default:
 			break;
 		}
@@ -1592,6 +1597,7 @@ void DialogEvent::SetWindowTextLang()
 	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_RGB").c_str());
 	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_PHOTO").c_str());
 	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_Y").c_str());
+	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_UpResNet10").c_str());
 
 	SendMessage(GetDlgItem(dh, IDC_COMBO_MODEL), CB_SETCURSEL, cur, 0);
 }
@@ -2036,6 +2042,8 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 		index = 3;
 	else if (modelType == eModelTypeY)
 		index = 4;
+	else if (modelType == eModelTypeUpResNet10)
+		index = 5;
 	else
 		index = 0;
 
@@ -2195,6 +2203,7 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 			cmdModelTypeConstraintV.push_back(L"anime_style_art_rgb");
 			cmdModelTypeConstraintV.push_back(L"photo");
 			cmdModelTypeConstraintV.push_back(L"anime_style_art_y");
+			cmdModelTypeConstraintV.push_back(L"upresnet10");
 			TCLAPW::ValuesConstraint<std::wstring> cmdModelTypeConstraint(cmdModelTypeConstraintV);
 			TCLAPW::ValueArg<std::wstring> cmdModelType(L"y", L"model_type", L"model type",
 				false, L"upconv_7_anime_style_art_rgb", &cmdModelTypeConstraint, cmd);
@@ -2461,6 +2470,8 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 					else if (cmdModelType.getValue() == L"photo")
 						index = 3;
 					else if (cmdModelType.getValue() == L"anime_style_art_y")
+						index = 4;
+					else if (cmdModelType.getValue() == L"upresnet10")
 						index = 4;
 					else
 						index = 0;
