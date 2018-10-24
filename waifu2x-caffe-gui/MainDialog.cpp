@@ -2738,6 +2738,15 @@ void DialogEvent::CheckCUDNN(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 	}
 }
 
+void DialogEvent::OnModelChange(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
+{
+	if (HIWORD(wParam) == CBN_SELCHANGE)
+	{
+		OnSetInputFilePath();
+		UpdateAddString(hWnd, wParam, lParam, lpData);
+	}
+}
+
 LRESULT DialogEvent::OnSetInputFilePath(const TCHAR * tPath)
 {
 	HWND hWnd = GetDlgItem(dh, IDC_EDIT_INPUT);

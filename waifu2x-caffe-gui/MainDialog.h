@@ -193,6 +193,8 @@ public:
 
 	void CheckCUDNN(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData);
 
+	void OnModelChange(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData);
+
 	LRESULT OnSetInputFilePath(const TCHAR *tPath);
 
 	LRESULT OnSetInputFilePath();
