@@ -25,6 +25,8 @@
 
 const size_t AR_PATH_MAX(1024);
 
+const int MaxBatchSizeList = 20;
+
 const int MinCommonDivisor = 50;
 const int DefaultCommonDivisor = 128;
 const std::pair<int, int> DefaultCommonDivisorRange = {90, 140};
@@ -37,6 +39,7 @@ const TCHAR * const LangListFileName = TEXT("lang/LangList.txt");
 const TCHAR * const MultiFileStr = TEXT("(Multi File)");
 
 const UINT_PTR nIDEventTimeLeft = 1000;
+
 
 LangStringList DialogEvent::langStringList;
 HWND DialogEvent::dh;
@@ -485,6 +488,22 @@ bool DialogEvent::SyncMember(const bool NotSyncCropSize, const bool silent)
 			ret = false;
 
 			MessageBox(dh, langStringList.GetString(L"MessageCropSizeCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
+		}
+	}
+
+	{
+		TCHAR buf[AR_PATH_MAX] = TEXT("");
+		GetWindowText(GetDlgItem(dh, IDC_COMBO_BATCH_SIZE), buf, _countof(buf));
+		buf[_countof(buf) - 1] = TEXT('\0');
+
+		TCHAR *ptr = nullptr;
+		batch_size = _tcstol(buf, &ptr, 10);
+		if (!ptr || *ptr != '\0' || batch_size <= 0)
+		{
+			batch_size = 1;
+			ret = false;
+
+			MessageBox(dh, langStringList.GetString(L"MessageBatchSizeCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
 		}
 	}
 
@@ -1116,6 +1135,8 @@ void DialogEvent::SaveIni(const bool isSyncMember)
 
 	WritePrivateProfileString(TEXT("Setting"), TEXT("LastInputDirFix"), tInputDirFix.c_str(), getTString(SettingFilePath).c_str());
 	WritePrivateProfileString(TEXT("Setting"), TEXT("LastOutputDirFix"), tOutputDirFix.c_str(), getTString(SettingFilePath).c_str());
+
+	WritePrivateProfileString(TEXT("Setting"), TEXT("LastBatchSize"), to_tstring(batch_size).c_str(), getTString(SettingFilePath).c_str());
 }
 
 struct stFindParam
@@ -1596,6 +1617,7 @@ void DialogEvent::SetWindowTextLang()
 	SET_WINDOW_TEXT(IDC_BUTTON_OUTPUT_REF);
 	SET_WINDOW_TEXT(IDC_BUTTON_APP_SETTING);
 	SET_WINDOW_TEXT(IDC_BUTTON_CLEAR_OUTPUT_DIR);
+	SET_WINDOW_TEXT(IDC_STATIC_BATCH_SIZE);
 
 #undef SET_WINDOW_TEXT
 
@@ -1795,6 +1817,21 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 	}
 
 	{
+		HWND hbatch = GetDlgItem(dh, IDC_COMBO_BATCH_SIZE);
+
+		// バッチサイズリストに数列を突っ込んでいく
+		int mindiff = INT_MAX;
+		int defaultListIndex = -1;
+		for(int i = 1; i <= MaxBatchSizeList; i++)
+		{
+			tstring str(to_tstring(i));
+			SendMessage(hbatch, CB_ADDSTRING, 0, (LPARAM)str.c_str());
+		}
+
+		SendMessage(hbatch, CB_SETCURSEL, 0, 0);
+	}
+
+	{
 		HWND hcrop = GetDlgItem(dh, IDC_COMBO_CROP_SIZE);
 
 		SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)TEXT("-----------------------"));
@@ -1896,6 +1933,8 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 		GetPrivateProfileString(TEXT("Setting"), TEXT("LastOutputDirFix"), TEXT(""), tmp, _countof(tmp), getTString(SettingFilePath).c_str());
 		tmp[_countof(tmp) - 1] = TEXT('\0');
 		tOutputDirFix = tmp;
+
+		batch_size = GetPrivateProfileInt(TEXT("Setting"), TEXT("LastBatchSize"), 1, getTString(SettingFilePath).c_str());
 	}
 
 	TCHAR *ptr = nullptr;
@@ -2068,6 +2107,11 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 		SendMessage(GetDlgItem(hWnd, IDC_CHECK_TTA), BM_SETCHECK, BST_CHECKED, 0);
 	else
 		SendMessage(GetDlgItem(hWnd, IDC_CHECK_TTA), BM_SETCHECK, BST_UNCHECKED, 0);
+
+	if (1 <= batch_size && batch_size <= MaxBatchSizeList)
+	{
+		SendMessage(GetDlgItem(dh, IDC_COMBO_BATCH_SIZE), CB_SETCURSEL, batch_size - 1, 0);
+	}
 
 	SetWindowText(GetDlgItem(hWnd, IDC_EDIT_SCALE_RATIO), tScaleRatio.c_str());
 	SetWindowText(GetDlgItem(hWnd, IDC_EDIT_SCALE_WIDTH), tScaleWidth.c_str());
@@ -2440,7 +2484,8 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 
 				if (cmdBatchSizeFile.isSet())
 				{
-					batch_size = cmdBatchSizeFile.getValue();
+					SetWindowText(GetDlgItem(dh, IDC_COMBO_CROP_SIZE), to_tstring(cmdCropSizeFile.getValue()).c_str());
+					//batch_size = cmdBatchSizeFile.getValue();
 
 					isSetParam = true;
 				}

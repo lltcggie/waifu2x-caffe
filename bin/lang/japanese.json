@@ -97,5 +97,7 @@
 "IDC_STATIC_USE_GPU_NO":"使用GPU No",
 "IDC_RADIO_MODEL_UPCONV_RGB":"2次元イラスト (UpRGBモデル)",
 "IDC_RADIO_MODEL_UPCONV_PHOTO":"写真・アニメ (UpPhotoモデル)",
-"MessageLogFatalError":"致命的なエラーが発生しました。\r\n分割サイズが大きすぎる可能性があります"
+"MessageLogFatalError":"致命的なエラーが発生しました。\r\n分割サイズが大きすぎる可能性があります",
+"IDC_STATIC_BATCH_SIZE":"バッチサイズ",
+"MessageBatchSizeCheckError":"バッチサイズは0より大きい整数である必要があります"
 }
