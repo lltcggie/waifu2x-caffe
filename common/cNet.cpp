@@ -390,6 +390,13 @@ Waifu2x::eWaifu2xError cNet::SetParameter(caffe::NetParameter &param, const std:
 			else
 				layer_param->mutable_relu_param()->set_engine(caffe::ReLUParameter_Engine_CAFFE);
 		}
+		else if (type == "Sigmoid")
+		{
+			if (process == "cudnn")
+				layer_param->mutable_sigmoid_param()->set_engine(caffe::SigmoidParameter_Engine_CUDNN);
+			else
+				layer_param->mutable_sigmoid_param()->set_engine(caffe::SigmoidParameter_Engine_CAFFE);
+		}
 	}
 
 	return Waifu2x::eWaifu2xError_OK;
