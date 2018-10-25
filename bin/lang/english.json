@@ -99,5 +99,5 @@
 "IDC_RADIO_MODEL_UPCONV_PHOTO":"Photo (UpPhoto Model)",
 "MessageLogFatalError":"A fatal error has occurred.\r\nThere is a possibility the split size is too large",
 "IDC_STATIC_BATCH_SIZE":"Batch size",
-"MessageBatchSizeCheckError":"Batch size must be greater than 0",
+"MessageBatchSizeCheckError":"Batch size must be greater than 0"
 }
