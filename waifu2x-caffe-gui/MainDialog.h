@@ -22,6 +22,36 @@
 #define WM_END_THREAD (WM_APP + 7)
 
 
+enum eModelType
+{
+	eModelTypeUpConvRGB,
+	eModelTypeUpConvPhoto,
+	eModelTypeRGB,
+	eModelTypePhoto,
+	eModelTypeY,
+	eModelTypeUpResNet10,
+	eModelTypeEnd,
+};
+
+const tstring ModelPathList[eModelTypeEnd] = {
+	TEXT("models/upconv_7_anime_style_art_rgb"),
+	TEXT("models/upconv_7_photo"),
+	TEXT("models/anime_style_art_rgb"),
+	TEXT("models/photo"),
+	TEXT("models/anime_style_art"),
+	TEXT("models/upresnet10"),
+};
+
+const std::wstring ModelTitleLangKeyList[eModelTypeEnd] = {
+	L"IDC_RADIO_MODEL_UPCONV_RGB",
+	L"IDC_RADIO_MODEL_UPCONV_PHOTO",
+	L"IDC_RADIO_MODEL_RGB",
+	L"IDC_RADIO_MODEL_PHOTO",
+	L"IDC_RADIO_MODEL_Y",
+	L"IDC_RADIO_MODEL_UpResNet10",
+};
+
+
 // ダイアログ用
 class DialogEvent
 {
@@ -84,17 +114,6 @@ private:
 	};
 
 	eScaleType scaleType;
-
-	enum eModelType
-	{
-		eModelTypeRGB,
-		eModelTypePhoto,
-		eModelTypeY,
-		eModelTypeUpConvRGB,
-		eModelTypeUpConvPhoto,
-		eModelTypeUpResNet10,
-		eModelTypeEnd,
-	};
 
 	eModelType modelType;
 

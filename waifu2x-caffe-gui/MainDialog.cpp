@@ -373,40 +373,13 @@ bool DialogEvent::SyncMember(const bool NotSyncCropSize, const bool silent)
 
 	{
 		const int cur = SendMessage(GetDlgItem(dh, IDC_COMBO_MODEL), CB_GETCURSEL, 0, 0);
-		switch (cur)
+		for (int i = 0; i < eModelTypeEnd; i++)
 		{
-		case 0:
-			model_dir = TEXT("models/upconv_7_anime_style_art_rgb");
-			modelType = eModelTypeUpConvRGB;
-			break;
-
-		case 1:
-			model_dir = TEXT("models/upconv_7_photo");
-			modelType = eModelTypeUpConvPhoto;
-			break;
-
-		case 2:
-			model_dir = TEXT("models/anime_style_art_rgb");
-			modelType = eModelTypeRGB;
-			break;
-
-		case 3:
-			model_dir = TEXT("models/photo");
-			modelType = eModelTypePhoto;
-			break;
-
-		case 4:
-			model_dir = TEXT("models/anime_style_art");
-			modelType = eModelTypeY;
-			break;
-
-		case 5:
-			model_dir = TEXT("models/upresnet10");
-			modelType = eModelTypeUpResNet10;
-			break;
-
-		default:
-			break;
+			if (cur == i)
+			{
+				model_dir = ModelPathList[i];
+				modelType = (eModelType)i;
+			}
 		}
 	}
 
@@ -1649,12 +1622,10 @@ void DialogEvent::SetWindowTextLang()
 		SendMessage(hwndCombo, CB_DELETESTRING, 0, 0);
 	}
 
-	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_UPCONV_RGB").c_str());
-	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_UPCONV_PHOTO").c_str());
-	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_RGB").c_str());
-	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_PHOTO").c_str());
-	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_Y").c_str());
-	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_UpResNet10").c_str());
+	for (int i = 0; i < eModelTypeEnd; i++)
+	{
+		SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(ModelTitleLangKeyList[i].c_str()).c_str());
+	}
 
 	SendMessage(GetDlgItem(dh, IDC_COMBO_MODEL), CB_SETCURSEL, cur, 0);
 }
@@ -2106,20 +2077,14 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 	}
 
 	int index = 0;
-	if (modelType == eModelTypeUpConvRGB)
-		index = 0;
-	else if (modelType == eModelTypeUpConvPhoto)
-		index = 1;
-	else if (modelType == eModelTypeRGB)
-		index = 2;
-	else if (modelType == eModelTypePhoto)
-		index = 3;
-	else if (modelType == eModelTypeY)
-		index = 4;
-	else if (modelType == eModelTypeUpResNet10)
-		index = 5;
-	else
-		index = 0;
+	for (int i = 0; i < eModelTypeEnd; i++)
+	{
+		if (modelType == i)
+		{
+			index = i;
+			break;
+		}
+	}
 
 	SendMessage(GetDlgItem(dh, IDC_COMBO_MODEL), CB_SETCURSEL, index, 0);
 
