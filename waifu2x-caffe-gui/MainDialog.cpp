@@ -2242,15 +2242,13 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 				false, 0, &cmdNoOverwriteConstraint, cmd);
 
 			std::vector<std::wstring> cmdModelTypeConstraintV;
-			cmdModelTypeConstraintV.push_back(L"upconv_7_anime_style_art_rgb");
-			cmdModelTypeConstraintV.push_back(L"upconv_7_photo");
-			cmdModelTypeConstraintV.push_back(L"anime_style_art_rgb");
-			cmdModelTypeConstraintV.push_back(L"photo");
-			cmdModelTypeConstraintV.push_back(L"anime_style_art_y");
-			cmdModelTypeConstraintV.push_back(L"upresnet10");
+			for (int i = 0; i < eModelTypeEnd; i++)
+			{
+				cmdModelTypeConstraintV.push_back(ModelTypeList[i]);
+			}
 			TCLAPW::ValuesConstraint<std::wstring> cmdModelTypeConstraint(cmdModelTypeConstraintV);
 			TCLAPW::ValueArg<std::wstring> cmdModelType(L"y", L"model_type", L"model type",
-				false, L"upconv_7_anime_style_art_rgb", &cmdModelTypeConstraint, cmd);
+				false, DefaultModelType, &cmdModelTypeConstraint, cmd);
 
 			// definition of command line argument : end
 
@@ -2506,20 +2504,14 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 				if (cmdModelType.isSet())
 				{
 					int index = 0;
-					if (cmdModelType.getValue() == L"upconv_7_anime_style_art_rgb")
-						index = 0;
-					else if (cmdModelType.getValue() == L"upconv_7_photo")
-						index = 1;
-					else if (cmdModelType.getValue() == L"anime_style_art_rgb")
-						index = 2;
-					else if (cmdModelType.getValue() == L"photo")
-						index = 3;
-					else if (cmdModelType.getValue() == L"anime_style_art_y")
-						index = 4;
-					else if (cmdModelType.getValue() == L"upresnet10")
-						index = 4;
-					else
-						index = 0;
+					for (int i = 0; i < eModelTypeEnd; i++)
+					{
+						if (cmdModelType.getValue() == ModelTypeList[i])
+						{
+							index = i;
+							break;
+						}
+					}
 
 					SendMessage(GetDlgItem(dh, IDC_COMBO_MODEL), CB_SETCURSEL, index, 0);
 

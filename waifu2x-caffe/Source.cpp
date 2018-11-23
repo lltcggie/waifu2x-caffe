@@ -155,7 +155,7 @@ int main(int argc, char** argv)
 
 	ValueArg<tstring> cmdModelPath(TEXT(""), TEXT("model_dir"),
 		TEXT("path to custom model directory (don't append last / )"), false,
-		TEXT("models/upconv_7_anime_style_art_rgb"), TEXT("string"), cmd);
+		TEXT("models/cunet"), TEXT("string"), cmd);
 
 	std::vector<tstring> cmdProcessConstraintV;
 	cmdProcessConstraintV.push_back(TEXT("cpu"));

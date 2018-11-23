@@ -46,6 +46,18 @@ const tstring ModelPathList[eModelTypeEnd] = {
 	TEXT("models/cunet"),
 };
 
+const std::wstring ModelTypeList[eModelTypeEnd] = {
+	L"upconv_7_anime_style_art_rgb",
+	L"upconv_7_photo",
+	L"anime_style_art_rgb",
+	L"photo",
+	L"anime_style_art_y",
+	L"upresnet10",
+	L"cunet",
+};
+
+const std::wstring DefaultModelType = ModelTypeList[DefaultModel];
+
 const std::wstring ModelTitleLangKeyList[eModelTypeEnd] = {
 	L"IDC_RADIO_MODEL_UPCONV_RGB",
 	L"IDC_RADIO_MODEL_UPCONV_PHOTO",
