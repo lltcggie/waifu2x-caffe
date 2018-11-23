@@ -34,6 +34,8 @@ enum eModelType
 	eModelTypeEnd,
 };
 
+const int DefaultModel = eModelTypeCunet;
+
 const tstring ModelPathList[eModelTypeEnd] = {
 	TEXT("models/upconv_7_anime_style_art_rgb"),
 	TEXT("models/upconv_7_photo"),

@@ -1896,7 +1896,7 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 		tmp[_countof(tmp) - 1] = TEXT('\0');
 		tprcess = tmp;
 
-		modelType = (eModelType)GetPrivateProfileInt(TEXT("Setting"), TEXT("LastModel"), 0, getTString(SettingFilePath).c_str());
+		modelType = (eModelType)GetPrivateProfileInt(TEXT("Setting"), TEXT("LastModel"), DefaultModel, getTString(SettingFilePath).c_str());
 
 		use_tta = GetPrivateProfileInt(TEXT("Setting"), TEXT("LastUseTTA"), 0, getTString(SettingFilePath).c_str()) != 0;
 
