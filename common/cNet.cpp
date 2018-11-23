@@ -456,9 +456,6 @@ Waifu2x::eWaifu2xError cNet::LoadParameterFromJson(const boost::filesystem::path
 		return Waifu2x::eWaifu2xError_FailedParseModelFile;
 	}
 
-	if (d.Size() != 7)
-		return Waifu2x::eWaifu2xError_FailedParseModelFile;
-
 	int inputPlane = 0;
 	int outputPlane = 0;
 	try
@@ -476,9 +473,6 @@ Waifu2x::eWaifu2xError cNet::LoadParameterFromJson(const boost::filesystem::path
 
 	if (inputPlane != outputPlane)
 		return Waifu2x::eWaifu2xError_FailedParseModelFile;
-
-	//if (param.layer_size() < 17)
-	//	return Waifu2x::eWaifu2xError_FailedParseModelFile;
 
 	std::vector<boost::shared_ptr<caffe::Layer<float>>> list;
 	auto &v = mNet->layers();
