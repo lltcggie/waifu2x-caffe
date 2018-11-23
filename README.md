@@ -180,7 +180,8 @@ CUDA UpRGBモデル
       * 2次元イラスト(UpRGBモデル) : 2次元イラスト(RGBモデル)より高速かつ同等以上の画質で変換するモデル。ただしRGBモデルより消費するメモリ(VRAM)の量が多いので、変換中に強制終了する場合は分割サイズを調節すること
       * 写真・アニメ(UpPhotoモデル) : 写真・アニメ(Photoモデル)より高速かつ同等以上の画質で変換するモデル。ただしPhotoモデルより消費するメモリ(VRAM)の量が多いので、変換中に強制終了する場合は分割サイズを調節すること
       * 2次元イラスト(Yモデル) : 画像の輝度のみを変換する2次元イラスト用モデル
-      * 2次元イラスト(UpResNet10モデル) : 同梱のモデルで一番高画質で変換できるモデル。このモデルだけ分割サイズが違うと出力結果が変わるので注意すること
+      * 2次元イラスト(UpResNet10モデル) : 2次元イラスト(UpRGBモデル)より高画質で変換するモデル。このモデルは分割サイズが違うと出力結果が変わるので注意すること
+      * 2次元イラスト(CUnetモデル) : 2次元イラストを同梱のモデルで一番高画質で変換できるモデル。このモデルは分割サイズが違うと出力結果が変わるので注意すること
 
 ### 「TTAモードを使う」
     TTA(Test-Time Augmentation)モードを使うかどうかを指定します。
@@ -380,7 +381,7 @@ GUI版ではオプション指定に当てはまらなかった引数は入力�
 ### --no_overwrite <0|1>
      `1`を指定すると、画像の書き込み先に同名のファイルが存在する場合は変換を行いません。
 
-### -y <upconv_7_anime_style_art_rgb|upconv_7_photo|anime_style_art_rgb|photo|anime_style_art_y|upresnet10>,  --model_type <upconv_7_anime_style_art_rgb|upconv_7_photo|anime_style_art_rgb|photo|anime_style_art_y|upresnet10>
+### -y <upconv_7_anime_style_art_rgb|upconv_7_photo|anime_style_art_rgb|photo|anime_style_art_y|upresnet10|cunet>,  --model_type <upconv_7_anime_style_art_rgb|upconv_7_photo|anime_style_art_rgb|photo|anime_style_art_y|upresnet10|cunet>
      使用するモデルを指定します。
      GUIでの設定項目「モデル」と以下のように対応しています。
       * upconv_7_anime_style_art_rgb : 2次元イラスト(UpRGBモデル)
@@ -389,6 +390,7 @@ GUI版ではオプション指定に当てはまらなかった引数は入力�
       * photo : 写真・アニメ(Photoモデル)
       * anime_style_art_y : 2次元イラスト(Yモデル)
       * upresnet10 : 2次元イラスト(UpResNet10モデル)
+      * cunet : 2次元イラスト(CUnetモデル)
 
 
  コマンドラインオプション(CUI版)
@@ -416,14 +418,15 @@ GUI版ではオプション指定に当てはまらなかった引数は入力�
      保存される場所は、基本的には入力画像と同じディレクトリになります。
 
 ### --model_dir <文字列>
-     モデルが格納されているディレクトリへのパスを指定します。デフォルト値は`models/upconv_7_anime_style_art_rgb`です。
+     モデルが格納されているディレクトリへのパスを指定します。デフォルト値は`models/cunet`です。
      標準では以下のモデルが付属しています。
-      * `models/anime_style_art_rgb` : RGBすべてを変換する2次元画像用モデル
-      * `models/anime_style_art` : 輝度のみを変換する2次元画像用モデル
-      * `models/photo` : RGBすべてを変換する写真、アニメ画像用モデル
-      * `models/upconv_7_anime_style_art_rgb` : anime_style_art_rgbより高速かつ同等以上の画質で変換するモデル
-      * `models/upconv_7_photo` : photoより高速かつ同等以上の画質で変換するモデル
-      * `models/upresnet10` : 今のところ一番の高画質で変換するモデル(このモデルだけ分割サイズの設定で出力結果が変わります)
+      * `models/anime_style_art_rgb` : 2次元イラスト(RGBモデル)
+      * `models/anime_style_art` : 2次元イラスト(Yモデル)
+      * `models/photo` : 写真・アニメ(Photoモデル)
+      * `models/upconv_7_anime_style_art_rgb` : 2次元イラスト(UpRGBモデル)
+      * `models/upconv_7_photo` : 写真・アニメ(UpPhotoモデル)
+      * `models/upresnet10` : 2次元イラスト(UpResNet10モデル)
+      * `models/cunet` : 2次元イラスト(CUnetモデル)
       * `models/ukbench` : 旧式の写真用モデル(拡大するモデルのみ付属しています。ノイズ除去は出来ません)
      基本的には指定しなくても大丈夫です。デフォルト以外のモデルや自作のモデルを使用する時などに指定して下さい。
 
