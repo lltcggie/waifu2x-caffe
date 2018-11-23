@@ -548,11 +548,31 @@ void DialogEvent::SetCropSizeList(const boost::filesystem::path & input_path)
 
 	bool isRecommendedCropSize = false;
 	Waifu2x::stInfo info;
-	if (Waifu2x::GetInfo(model_dir, info) && info.recommended_crop_size > 0)
+	if (Waifu2x::GetInfo(model_dir, info))
 	{
-		tstring str(to_tstring(info.recommended_crop_size));
-		SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
-		isRecommendedCropSize = true;
+		int recommended_crop_size = 0;
+		switch (mode)
+		{
+		case Waifu2x::eWaifu2xModelTypeNoise:
+			recommended_crop_size = info.noise.recommended_crop_size;
+			break;
+		case Waifu2x::eWaifu2xModelTypeScale:
+			recommended_crop_size = info.scale.recommended_crop_size;
+			break;
+		case Waifu2x::eWaifu2xModelTypeNoiseScale:
+			recommended_crop_size = info.noise_scale.recommended_crop_size;
+			break;
+		case Waifu2x::eWaifu2xModelTypeAutoScale:
+			recommended_crop_size = info.noise_scale.recommended_crop_size;
+			break;
+		}
+
+		if (recommended_crop_size > 0)
+		{
+			tstring str(to_tstring(recommended_crop_size));
+			SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
+			isRecommendedCropSize = true;
+		}
 	}
 
 	if (list.size() > 0)

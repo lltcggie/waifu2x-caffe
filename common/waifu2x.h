@@ -65,13 +65,13 @@ public:
 		{
 			int scale_factor;
 			int offset;
+			int recommended_crop_size;
 		};
 
 		std::string name;
 		std::string arch_name;
 		bool has_noise_scale;
 		int channels;
-		int recommended_crop_size;
 
 		stParam noise;
 		stParam scale;
