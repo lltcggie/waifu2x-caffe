@@ -66,6 +66,8 @@ public:
 			int scale_factor;
 			int offset;
 			int recommended_crop_size;
+
+			stParam() : scale_factor(1), offset(0), recommended_crop_size(-1) {}
 		};
 
 		std::string name;
