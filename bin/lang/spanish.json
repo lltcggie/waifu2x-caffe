@@ -97,5 +97,6 @@
 "IDC_STATIC_USE_GPU_NO":"No utilizar GPU",
 "IDC_RADIO_MODEL_UPCONV_RGB":"Ilustración (Modelo UpRGB)",
 "IDC_RADIO_MODEL_UPCONV_PHOTO":"Fotografía (Modelo UpPhoto)",
-"MessageLogFatalError":"Un error fatal ocurrió.\r\nExiste una posibilidad de que el tamaño de recorte sea muy grande."
+"MessageLogFatalError":"Un error fatal ocurrió.\r\nExiste una posibilidad de que el tamaño de recorte sea muy grande.",
+"IDC_RADIO_MODEL_CUNET":"Ilustración (Modelo CUnet)"
 }

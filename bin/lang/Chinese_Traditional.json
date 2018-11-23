@@ -96,5 +96,6 @@
 "IDC_STATIC_USE_GPU_NO":"使用GPU數量",
 "IDC_RADIO_MODEL_UPCONV_RGB":"二次元插圖（UpRGB 模式）",
 "IDC_RADIO_MODEL_UPCONV_PHOTO":"照片和動畫（UpPhoto 模式）",
-"MessageLogFatalError":"發生嚴重錯誤。\r\n可能是分割大小過大"
+"MessageLogFatalError":"發生嚴重錯誤。\r\n可能是分割大小過大",
+"IDC_RADIO_MODEL_CUNET":"二次元插圖（CUnet 模式）"
 }

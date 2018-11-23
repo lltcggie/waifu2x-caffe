@@ -99,5 +99,6 @@
 "IDC_RADIO_MODEL_UPCONV_PHOTO":"照片或动画 — UpPhoto 模型",
 "MessageLogFatalError":"发生了致命错误。\r\n分割尺寸可能过大。",
 "IDC_STATIC_BATCH_SIZE":"批尺寸",
-"MessageBatchSizeCheckError":"批尺寸必须是大于 0 的整数"
+"MessageBatchSizeCheckError":"批尺寸必须是大于 0 的整数",
+"IDC_RADIO_MODEL_CUNET":"2D 插图 — CUnet 模型"
 }

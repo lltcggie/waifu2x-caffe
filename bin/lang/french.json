@@ -97,5 +97,6 @@
 "IDC_STATIC_USE_GPU_NO":"Utiliser GPU n°",
 "IDC_RADIO_MODEL_UPCONV_RGB":"Illustration 2D (modèle UpRGB)",
 "IDC_RADIO_MODEL_UPCONV_PHOTO":"Photo (modèle UpPhoto)",
-"MessageLogFatalError":"Erreur fatale\r\nLa taille de découpage est peut-être trop grande"
+"MessageLogFatalError":"Erreur fatale\r\nLa taille de découpage est peut-être trop grande",
+"IDC_RADIO_MODEL_CUNET":"Illustration 2D (modèle CUnet)"
 }

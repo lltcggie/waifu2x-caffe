@@ -97,5 +97,6 @@
 "IDC_STATIC_USE_GPU_NO":"사용할 GPU 번호",
 "IDC_RADIO_MODEL_UPCONV_RGB":"2D 일러스트 (UpRGB 모델)",
 "IDC_RADIO_MODEL_UPCONV_PHOTO":"사진/애니메이션 (UpPhoto 모델)",
-"MessageLogFatalError":"치명적인 오류가 발생했습니다.\r\n분할 크기가 너무 크게 설정되어 있을 가능성이 있습니다."
+"MessageLogFatalError":"치명적인 오류가 발생했습니다.\r\n분할 크기가 너무 크게 설정되어 있을 가능성이 있습니다.",
+"IDC_RADIO_MODEL_CUNET":"2D 일러스트 (CUnet 모델)"
 }

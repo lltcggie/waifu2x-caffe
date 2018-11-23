@@ -30,6 +30,7 @@ enum eModelType
 	eModelTypePhoto,
 	eModelTypeY,
 	eModelTypeUpResNet10,
+	eModelTypeCunet,
 	eModelTypeEnd,
 };
 
@@ -40,6 +41,7 @@ const tstring ModelPathList[eModelTypeEnd] = {
 	TEXT("models/photo"),
 	TEXT("models/anime_style_art"),
 	TEXT("models/upresnet10"),
+	TEXT("models/cunet"),
 };
 
 const std::wstring ModelTitleLangKeyList[eModelTypeEnd] = {
@@ -49,6 +51,7 @@ const std::wstring ModelTitleLangKeyList[eModelTypeEnd] = {
 	L"IDC_RADIO_MODEL_PHOTO",
 	L"IDC_RADIO_MODEL_Y",
 	L"IDC_RADIO_MODEL_UpResNet10",
+	L"IDC_RADIO_MODEL_CUNET",
 };
 
 

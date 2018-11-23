@@ -97,5 +97,6 @@
 "IDC_STATIC_USE_GPU_NO":"Использ. GPU №",
 "IDC_RADIO_MODEL_UPCONV_RGB":"2D изображ. (Профиль UpRGB)",
 "IDC_RADIO_MODEL_UPCONV_PHOTO":"Фото (Профиль UpPhoto)",
-"MessageLogFatalError":"Произошла критическая ошибка.\r\nВозможно размер блока слишком большой"
+"MessageLogFatalError":"Произошла критическая ошибка.\r\nВозможно размер блока слишком большой",
+"IDC_RADIO_MODEL_CUNET":"2D изображ. (Профиль CUnet)"
 }

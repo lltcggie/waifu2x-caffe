@@ -80,5 +80,8 @@
 "MessageAllFileFolder":"Bütün dosyalar ve klasörler(*.*)",
 "MessageTitleInputDialog":"Lütfen girdi dosyası veya klasörü seçin",
 "MessageTimeLeftUnknown":"Kalan Süre: Bilinmiyor",
-"MessageTimeLeft":"Kalan Süre"
+"MessageTimeLeft":"Kalan Süre",
+"IDC_RADIO_MODEL_UPCONV_RGB":"2-B çizim (UpRGB Modeli)",
+"IDC_RADIO_MODEL_UPCONV_PHOTO":"Fotoğrafçılık veya Anime (UpPhoto Modeli)",
+"IDC_RADIO_MODEL_CUNET":"2-B çizim (CUnet Modeli)"
 }
