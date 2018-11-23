@@ -190,11 +190,13 @@ Waifu2x::eWaifu2xError cNet::GetInfo(const boost::filesystem::path & info_path, 
 		const auto name = d["name"].GetString();
 		const auto arch_name = d["arch_name"].GetString();
 		const bool has_noise_scale = d.HasMember("has_noise_scale") && d["has_noise_scale"].GetBool() ? true : false;
+		const bool has_noise_only = d.HasMember("has_noise_only") && d["has_noise_only"].GetBool() ? true : false;
 		const int channels = d["channels"].GetInt();
 
 		info.name = name;
 		info.arch_name = arch_name;
 		info.has_noise_scale = has_noise_scale;
+		info.has_noise_only = has_noise_only;
 		info.channels = channels;
 
 		if (d.HasMember("offset"))

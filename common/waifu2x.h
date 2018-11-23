@@ -74,6 +74,7 @@ public:
 		std::string name;
 		std::string arch_name;
 		bool has_noise_scale;
+		bool has_noise_only;
 		int channels;
 
 		stParam noise;
@@ -141,7 +142,7 @@ private:
 
 	int mInputPlane; // ネットへの入力チャンネル数
 	int mMaxNetOffset; // ネットに入力するとどれくらい削れるか
-	bool mHasNoiseScale;
+	bool mHasNoiseScaleOnly;
 
 	float *mOutputBlock;
 	size_t mOutputBlockSize;

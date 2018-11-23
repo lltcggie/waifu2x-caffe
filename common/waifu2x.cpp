@@ -655,7 +655,7 @@ Waifu2x::eWaifu2xError Waifu2x::Init(const eWaifu2xModelType mode, const int noi
 		if (ret != Waifu2x::eWaifu2xError_OK)
 			return ret;
 
-		mHasNoiseScale = info.has_noise_scale;
+		mHasNoiseScaleOnly = info.has_noise_scale && !info.has_noise_only;
 		mInputPlane = info.channels;
 
 		if (mode == eWaifu2xModelTypeNoise || mode == eWaifu2xModelTypeNoiseScale || mode == eWaifu2xModelTypeAutoScale)
@@ -665,7 +665,7 @@ Waifu2x::eWaifu2xError Waifu2x::Init(const eWaifu2xModelType mode, const int noi
 			mNoiseNet.reset(new cNet);
 
 			eWaifu2xModelType Mode = mode;
-			if (info.has_noise_scale) // ノイズ除去と拡大を同時に行う
+			if (mHasNoiseScaleOnly) // ノイズ除去と拡大を同時に行う
 			{
 				// ノイズ除去拡大ネットの構築はeWaifu2xModelTypeNoiseScaleを指定する必要がある
 				Mode = eWaifu2xModelTypeNoiseScale;
@@ -905,7 +905,7 @@ Waifu2x::eWaifu2xError Waifu2x::ReconstructImage(const Factor factor, const int 
 
 	if (isReconstructNoise)
 	{
-		if (!mHasNoiseScale) // ノイズ除去だけ
+		if (!mHasNoiseScaleOnly) // ノイズ除去だけ
 		{
 			cv::Mat im;
 			cv::Size_<int> size;
