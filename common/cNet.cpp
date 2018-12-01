@@ -423,6 +423,13 @@ Waifu2x::eWaifu2xError cNet::SetParameter(caffe::NetParameter &param, const std:
 			else
 				layer_param->mutable_sigmoid_param()->set_engine(caffe::SigmoidParameter_Engine_CAFFE);
 		}
+		else if (type == "Pooling")
+		{
+			if (process == "cudnn")
+				layer_param->mutable_pooling_param()->set_engine(caffe::PoolingParameter_Engine_CUDNN);
+			else
+				layer_param->mutable_pooling_param()->set_engine(caffe::PoolingParameter_Engine_CAFFE);
+		}
 	}
 
 	return Waifu2x::eWaifu2xError_OK;
