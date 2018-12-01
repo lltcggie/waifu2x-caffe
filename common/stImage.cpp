@@ -770,7 +770,12 @@ void stImage::ShrinkImage(const int width, const int height)
 	const cv::Size_<int> ns(width, height);
 	if (mEndImage.size().width != ns.width || mEndImage.size().height != ns.height)
 	{
+		const auto scale_width = (float)mEndImage.size().width / (float)ns.width;
+		const auto scale_height = (float)mEndImage.size().height / (float)ns.height;
+
 		int argo = cv::INTER_CUBIC;
+		if (scale_width < 0.5 || scale_height < 0.5)
+			argo = cv::INTER_AREA;
 
 		cv::resize(mEndImage, mEndImage, ns, 0.0, 0.0, argo);
 	}
