@@ -744,10 +744,6 @@ void stImage::DeconvertFromNetFormat(const int input_plane)
 
 void stImage::ShrinkImage(const Factor scale)
 {
-	// TODO: scale = 1.0 ‚Å‚àˆ«‰e‹¿‚ð‹y‚Ú‚³‚È‚¢‚©’²‚×‚é
-
-	const int scaleBase = 2; // TODO: ƒ‚ƒfƒ‹‚ÌŠg‘å—¦‚É‚æ‚Á‚Ä‰Â•Ï‚Å‚«‚é‚æ‚¤‚É‚·‚é
-
 	const auto Width = scale.MultiNumerator(mOrgSize.width);
 	const auto Height = scale.MultiNumerator(mOrgSize.height);
 
@@ -765,8 +761,6 @@ void stImage::ShrinkImage(const Factor scale)
 
 void stImage::ShrinkImage(const int width, const int height)
 {
-	// TODO: scale = 1.0 ‚Å‚àˆ«‰e‹¿‚ð‹y‚Ú‚³‚È‚¢‚©’²‚×‚é
-
 	const cv::Size_<int> ns(width, height);
 	if (mEndImage.size().width != ns.width || mEndImage.size().height != ns.height)
 	{
