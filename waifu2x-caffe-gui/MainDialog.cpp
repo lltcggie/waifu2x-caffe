@@ -453,6 +453,10 @@ bool DialogEvent::SyncMember(const bool NotSyncCropSize, const bool silent)
 		GetWindowText(GetDlgItem(dh, IDC_COMBO_CROP_SIZE), buf, _countof(buf));
 		buf[_countof(buf) - 1] = TEXT('\0');
 
+		Waifu2x::stInfo info;
+		if (!Waifu2x::GetInfo(model_dir, info))
+			info.force_divisible_crop_size = 1;
+
 		TCHAR *ptr = nullptr;
 		crop_size = _tcstol(buf, &ptr, 10);
 		if (!ptr || *ptr != '\0' || crop_size <= 0)
@@ -461,6 +465,14 @@ bool DialogEvent::SyncMember(const bool NotSyncCropSize, const bool silent)
 			ret = false;
 
 			MessageBox(dh, langStringList.GetString(L"MessageCropSizeCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
+		}
+		else if (crop_size % info.force_divisible_crop_size != 0) // このモデルでは設定できないCropSize
+		{
+			wchar_t buf[1024] = { TEXT('\0') };
+			swprintf(buf, langStringList.GetString(L"MessageCropSizeDivisibleCheckError").c_str(), info.force_divisible_crop_size);
+
+			ret = false;
+			MessageBoxW(dh, buf, langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
 		}
 	}
 
@@ -557,6 +569,9 @@ void DialogEvent::SetCropSizeList(const boost::filesystem::path & input_path)
 	{
 		const int n = list[i];
 
+		if (n % info.force_divisible_crop_size != 0) // このモデルでは設定できないCropSize
+			continue;
+
 		tstring str(to_tstring(n));
 		const int index = SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
 
@@ -575,6 +590,9 @@ void DialogEvent::SetCropSizeList(const boost::filesystem::path & input_path)
 	int defaultListIndex = -1;
 	for (const auto n : CropSizeList)
 	{
+		if (n % info.force_divisible_crop_size != 0) // このモデルでは設定できないCropSize
+			continue;
+
 		tstring str(to_tstring(n));
 		const int index = SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
 
@@ -1822,31 +1840,6 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 		SendMessage(hbatch, CB_SETCURSEL, 0, 0);
 	}
 
-	{
-		HWND hcrop = GetDlgItem(dh, IDC_COMBO_CROP_SIZE);
-
-		SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)TEXT("-----------------------"));
-
-		// CropSizeListの値を追加していく
-		int mindiff = INT_MAX;
-		int defaultListIndex = -1;
-		for (const auto n : CropSizeList)
-		{
-			tstring str(to_tstring(n));
-			const int index = SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
-
-			const int diff = abs(DefaultCommonDivisor - n);
-			if (DefaultCommonDivisorRange.first <= n && n <= DefaultCommonDivisorRange.second && diff < mindiff)
-			{
-				mindiff = diff;
-				defaultListIndex = index;
-			}
-		}
-
-		if (GetWindowTextLength(hcrop) == 0)
-			SendMessage(hcrop, CB_SETCURSEL, defaultListIndex, 0);
-	}
-
 	tstring tScaleRatio;
 	tstring tScaleWidth;
 	tstring tScaleHeight;
@@ -2087,6 +2080,40 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 	}
 
 	SendMessage(GetDlgItem(dh, IDC_COMBO_MODEL), CB_SETCURSEL, index, 0);
+
+	{
+		HWND hcrop = GetDlgItem(dh, IDC_COMBO_CROP_SIZE);
+
+		SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)TEXT("-----------------------"));
+
+		const auto model_dir = ModelPathList[index];
+
+		Waifu2x::stInfo info;
+		if (!Waifu2x::GetInfo(model_dir, info))
+			info.force_divisible_crop_size = 1;
+
+		// CropSizeListの値を追加していく
+		int mindiff = INT_MAX;
+		int defaultListIndex = -1;
+		for (const auto n : CropSizeList)
+		{
+			if (n % info.force_divisible_crop_size != 0) // このモデルでは設定できないCropSize
+				continue;
+
+			tstring str(to_tstring(n));
+			const int index = SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
+
+			const int diff = abs(DefaultCommonDivisor - n);
+			if (DefaultCommonDivisorRange.first <= n && n <= DefaultCommonDivisorRange.second && diff < mindiff)
+			{
+				mindiff = diff;
+				defaultListIndex = index;
+			}
+		}
+
+		if (GetWindowTextLength(hcrop) == 0)
+			SendMessage(hcrop, CB_SETCURSEL, defaultListIndex, 0);
+	}
 
 	if (use_tta)
 		SendMessage(GetDlgItem(hWnd, IDC_CHECK_TTA), BM_SETCHECK, BST_CHECKED, 0);

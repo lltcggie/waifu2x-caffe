@@ -76,6 +76,7 @@ public:
 		bool has_noise_scale;
 		bool has_noise_only;
 		int channels;
+		int force_divisible_crop_size;
 
 		stParam noise;
 		stParam scale;

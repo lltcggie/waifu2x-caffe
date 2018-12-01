@@ -192,12 +192,14 @@ Waifu2x::eWaifu2xError cNet::GetInfo(const boost::filesystem::path & info_path, 
 		const bool has_noise_scale = d.HasMember("has_noise_scale") && d["has_noise_scale"].GetBool() ? true : false;
 		const bool has_noise_only = d.HasMember("has_noise_only") && d["has_noise_only"].GetBool() ? true : false;
 		const int channels = d["channels"].GetInt();
+		const int force_divisible_crop_size = d.HasMember("force_divisible_crop_size") ? d["force_divisible_crop_size"].GetInt() : 1;
 
 		info.name = name;
 		info.arch_name = arch_name;
 		info.has_noise_scale = has_noise_scale;
 		info.has_noise_only = has_noise_only;
 		info.channels = channels;
+		info.force_divisible_crop_size = force_divisible_crop_size;
 
 		if (d.HasMember("offset"))
 		{

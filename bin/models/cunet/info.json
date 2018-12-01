@@ -1,4 +1,4 @@
-{"name":"CUnet","arch_name":"upcunet","has_noise_scale":true,"has_noise_only":true, "channels":3,
+{"name":"CUnet","arch_name":"upcunet","has_noise_scale":true,"has_noise_only":true,"channels":3,"force_divisible_crop_size":4,
 "scale_factor":2,"offset":36,
 "scale_factor_noise":1,"offset_noise":28
 }
