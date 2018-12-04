@@ -100,5 +100,6 @@
 "MessageLogFatalError":"发生了致命错误。\r\n拆分尺寸可能过大。",
 "IDC_STATIC_BATCH_SIZE":"批尺寸",
 "MessageBatchSizeCheckError":"批尺寸必须是大于 0 的整数",
-"IDC_RADIO_MODEL_CUNET":"2D 插图 — CUnet 模型"
+"IDC_RADIO_MODEL_CUNET":"2D 插图 — CUnet 模型",
+"MessageCropSizeDivisibleCheckError":"这个模组的拆分尺寸必须是 %d 的正整数倍"
 }
