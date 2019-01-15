@@ -687,8 +687,8 @@ Waifu2x::eWaifu2xError Waifu2x::Init(const eWaifu2xModelType mode, const int noi
 			mMaxNetOffset = mNoiseNet->GetNetOffset();
 		}
 
-		// noise_scaleを持っている場合はαチャンネルの拡大のためにmScaleNetも構築する必要がある
-		if (info.has_noise_scale || mode == eWaifu2xModelTypeScale || mode == eWaifu2xModelTypeNoiseScale || mode == eWaifu2xModelTypeAutoScale)
+		// 拡大が必要な場合はαチャンネルの拡大のためにmScaleNetも構築する必要がある
+		if (mode == eWaifu2xModelTypeScale || mode == eWaifu2xModelTypeNoiseScale || mode == eWaifu2xModelTypeAutoScale)
 		{
 			const std::string base_name = "scale2.0x_model";
 
