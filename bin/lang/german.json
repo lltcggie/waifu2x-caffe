@@ -43,7 +43,7 @@
 "IDC_BUTTON_EXEC":"Starten",
 "IDC_STATIC_LANG_UI":"UI Sprache",
 "IDC_BUTTON_OUTPUT_REF":"Durchsuchen",
-"IDC_BUTTON_APP_SETTING":"App Einstellungen",
+"IDC_BUTTON_APP_SETTING":"Optionen",
 "IDC_BUTTON_CLEAR_OUTPUT_DIR":"Ausgabepfad zurücksetzen",
 "IDC_STATIC_ARG_START":"Mit Startoptionen Booten",
 "IDC_CHECK_ARG_START_AUTO":"Starten wenn geöffnet",
