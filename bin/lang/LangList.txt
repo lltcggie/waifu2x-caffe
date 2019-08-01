@@ -1,6 +1,6 @@
 ﻿;LangName	LangID	SubLangID	FileName
 English(US)	0x09	0x01	english.json
-German  0x07  0x01  german.json
+Deutsch(DE)	0x07	0x01	german.json
 Español        0x0A	0x01	spanish.json
 Français(FR)	0x0C	0x01	french.json
 Русский(RU)	0x19	0x01	russian.json
