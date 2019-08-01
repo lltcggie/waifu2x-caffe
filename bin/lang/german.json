@@ -6,7 +6,7 @@
 "IDC_STATIC_TANS_EXT_LIST":"Eingabedateiendungen",
 "IDC_STATIC_OUTPUT_EXT":"Ausgabedateiendung",
 "IDC_STATIC_OUTPUT_QUALITY":"Ausgabequalität",
-"IDC_STATIC_OUTPUT_DEPTH":"Bit-Tiefe der Ausgabe",
+"IDC_STATIC_OUTPUT_DEPTH":"Farbtiefe pro Kanal",
 "IDC_STATIC_AUTO_START":"Automatischer Start wenn Eingabedatei ausgewählt wurde",
 "IDC_RADIO_AUTO_START_NONE":"Kein automatischer Start",
 "IDC_RADIO_AUTO_START_ONE":"Bei einer Eingabedatei",
