@@ -98,7 +98,7 @@
 "IDC_RADIO_MODEL_UPCONV_RGB":"2-D illust (UpRGB Model)",
 "IDC_RADIO_MODEL_UPCONV_PHOTO":"Foto (UpPhoto Model)",
 "MessageLogFatalError":"Ein fataler Fehler ist aufgetreten.\r\nEventuell ist die Teilungsgröße zu hoch.",
-"IDC_STATIC_BATCH_SIZE":"Stapelgröße",
+"IDC_STATIC_BATCH_SIZE":"Batchgröße",
 "MessageBatchSizeCheckError":"Stapelgröße muss größer als 0 sein",
 "IDC_RADIO_MODEL_CUNET":"2-D illust (CUnet Model)",
 "MessageCropSizeDivisibleCheckError":"Teilungsgröße bei diesem Model muss durch %d teilbar sein."
