@@ -94,7 +94,7 @@
 "MessageCudaOldDeviceError":"Dein CUDA Gerät ist veraltet.\r\nBitte nutze ein Gerät mit Compute Capability 2.0 oder neuer",
 "OK":"OK",
 "Cancel":"Abbrechen",
-"IDC_STATIC_USE_GPU_NO":"GPU nicht benutzen",
+"IDC_STATIC_USE_GPU_NO":"Benutze GPU Nr.",
 "IDC_RADIO_MODEL_UPCONV_RGB":"2-D illust (UpRGB Model)",
 "IDC_RADIO_MODEL_UPCONV_PHOTO":"Foto (UpPhoto Model)",
 "MessageLogFatalError":"Ein fataler Fehler ist aufgetreten.\r\nEventuell ist die Teilungsgröße zu hoch.",
