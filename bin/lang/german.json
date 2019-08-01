@@ -37,7 +37,7 @@
 "IDC_STATIC_PROCESSOR":"Prozessornutzung",
 "IDC_RADIO_MODE_GPU":"CUDA (nutzt cuDNN)",
 "IDC_RADIO_MODE_CPU":"CPU",
-"IDC_STATIC_CROP_SIZE":"Teilungsgröße",
+"IDC_STATIC_CROP_SIZE":"Zuschneidegröße",
 "IDC_BUTTON_CHECK_CUDNN":"cuDNN überprüfen",
 "IDC_BUTTON_CANCEL":"Abbrechen",
 "IDC_BUTTON_EXEC":"Starten",
