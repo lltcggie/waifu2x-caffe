@@ -88,7 +88,7 @@
 "MessageExtStr":"Eingabedateiendungen(%s)",
 "MessageAllFileFolder":"Alle Dateien und Ordner(*.*)",
 "MessageTitleInputDialog":"Bitte wähle eine Datei oder einen Ordner",
-"MessageTimeLeftUnknown":"Übrige Zeit: Unbekannt",
+"MessageTimeLeftUnknown":"Restzeit: Unbekannt",
 "MessageTimeLeft":"Übrige Zeit",
 "MessageNoOverwrite":"Es existiert bereits eine Datei an dem Speicherort: %s",
 "MessageCudaOldDeviceError":"Dein CUDA Gerät ist veraltet.\r\nBitte nutze ein Gerät mit Compute Capability 2.0 oder neuer",
