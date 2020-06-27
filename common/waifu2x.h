@@ -11,8 +11,8 @@
 #include <opencv2/core.hpp>
 
 #define CUDNN_DLL_NAME "cudnn64_7.dll"
-#define CUDNN_REQUIRE_VERION_TEXT "v7.3"
-#define CUDNN_REQUIRE_VERION 7300
+#define CUDNN_REQUIRE_VERION_TEXT "v7.6"
+#define CUDNN_REQUIRE_VERION 7600
 
 
 namespace caffe
