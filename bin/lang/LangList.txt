@@ -10,3 +10,4 @@ Türkçe(TR)	0x1F	0x01	turkish.json
 繁體中文	0x04	0x01	Chinese_Traditional.json
 简体中文	0x04	0x02	Chinese_Simplified.json
 Português(BR)	0x16	0x01	portuguese_brazilian.json
+Čeština	0x05	0x01	czech.json
