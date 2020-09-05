@@ -2737,6 +2737,9 @@ void DialogEvent::CheckCUDNN(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 	case Waifu2x::eWaifu2xcuDNNError_CannotCreate:
 		MessageBox(dh, langStringList.GetString(L"MessagecuDNNCannotCreateError").c_str(), langStringList.GetString(L"MessageTitleResult").c_str(), MB_OK | MB_ICONERROR);
 		break;
+	case Waifu2x::eWaifu2xcuDNNError_OldCudaVersion:
+		MessageBox(dh, langStringList.GetString(L"MessageCudaOldVersionError").c_str(), langStringList.GetString(L"MessageTitleResult").c_str(), MB_OK | MB_ICONERROR);
+		break;
 	default:
 		MessageBox(dh, langStringList.GetString(L"MessagecuDNNDefautlError").c_str(), langStringList.GetString(L"MessageTitleResult").c_str(), MB_OK | MB_ICONERROR);
 	}

@@ -122,6 +122,7 @@ public:
 		eWaifu2xcuDNNError_NotFind,
 		eWaifu2xcuDNNError_OldVersion,
 		eWaifu2xcuDNNError_CannotCreate,
+		eWaifu2xcuDNNError_OldCudaVersion,
 	};
 
 	typedef std::function<bool()> waifu2xCancelFunc;

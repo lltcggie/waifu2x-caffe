@@ -465,21 +465,34 @@ Waifu2x::eWaifu2xcuDNNError Waifu2x::can_use_cuDNN()
 			typedef cudnnStatus_t(CUDNNWINAPI* cudnnCreateType)(cudnnHandle_t *);
 			typedef cudnnStatus_t(CUDNNWINAPI* cudnnDestroyType)(cudnnHandle_t);
 			typedef size_t(CUDNNWINAPI* cudnnGetVersionType)();
+			typedef size_t(CUDNNWINAPI* cudnnGetCudartVersionType)();
 
 			cudnnCreateType cudnnCreateFunc = (cudnnCreateType)GetProcAddress(hModule, "cudnnCreate");
 			cudnnDestroyType cudnnDestroyFunc = (cudnnDestroyType)GetProcAddress(hModule, "cudnnDestroy");
 			cudnnGetVersionType cudnnGetVersionFunc = (cudnnGetVersionType)GetProcAddress(hModule, "cudnnGetVersion");
-			if (cudnnCreateFunc != nullptr && cudnnDestroyFunc != nullptr && cudnnGetVersionFunc != nullptr)
+			cudnnGetCudartVersionType cudnnGetCudartVersionFunc = (cudnnGetCudartVersionType)GetProcAddress(hModule, "cudnnGetCudartVersion");
+			if (cudnnCreateFunc != nullptr && cudnnDestroyFunc != nullptr && cudnnGetVersionFunc != nullptr && cudnnGetCudartVersionFunc != nullptr)
 			{
 				if (cudnnGetVersionFunc() >= CUDNN_REQUIRE_VERION)
 				{
-					cudnnHandle_t h;
-					if (cudnnCreateFunc(&h) == CUDNN_STATUS_SUCCESS)
+					int runtimeVersion;
+					if (cudaRuntimeGetVersion(&runtimeVersion) == cudaSuccess)
 					{
-						if (cudnnDestroyFunc(h) == CUDNN_STATUS_SUCCESS)
-							cuDNNFlag = eWaifu2xcuDNNError_OK;
+						if (cudnnGetCudartVersionFunc() >= runtimeVersion)
+						{
+							cudnnHandle_t h;
+							if (cudnnCreateFunc(&h) == CUDNN_STATUS_SUCCESS)
+							{
+								if (cudnnDestroyFunc(h) == CUDNN_STATUS_SUCCESS)
+									cuDNNFlag = eWaifu2xcuDNNError_OK;
+								else
+									cuDNNFlag = eWaifu2xcuDNNError_CannotCreate;
+							}
+							else
+								cuDNNFlag = eWaifu2xcuDNNError_CannotCreate;
+						}
 						else
-							cuDNNFlag = eWaifu2xcuDNNError_CannotCreate;
+							cuDNNFlag = eWaifu2xcuDNNError_OldCudaVersion;
 					}
 					else
 						cuDNNFlag = eWaifu2xcuDNNError_CannotCreate;
