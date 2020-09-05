@@ -462,9 +462,9 @@ Waifu2x::eWaifu2xcuDNNError Waifu2x::can_use_cuDNN()
 		HMODULE hModule = LoadLibrary(TEXT(CUDNN_DLL_NAME));
 		if (hModule != NULL)
 		{
-			typedef cudnnStatus_t(__stdcall * cudnnCreateType)(cudnnHandle_t *);
-			typedef cudnnStatus_t(__stdcall * cudnnDestroyType)(cudnnHandle_t);
-			typedef uint64_t(__stdcall * cudnnGetVersionType)();
+			typedef cudnnStatus_t(CUDNNWINAPI* cudnnCreateType)(cudnnHandle_t *);
+			typedef cudnnStatus_t(CUDNNWINAPI* cudnnDestroyType)(cudnnHandle_t);
+			typedef size_t(CUDNNWINAPI* cudnnGetVersionType)();
 
 			cudnnCreateType cudnnCreateFunc = (cudnnCreateType)GetProcAddress(hModule, "cudnnCreate");
 			cudnnDestroyType cudnnDestroyFunc = (cudnnDestroyType)GetProcAddress(hModule, "cudnnDestroy");

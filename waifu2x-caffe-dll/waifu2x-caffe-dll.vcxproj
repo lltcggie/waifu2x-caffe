@@ -42,15 +42,15 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(CUDA_PATH_V10_2)\include;$(SolutionDir)lib\include;$(USERPROFILE)\.caffe\dependencies\libraries_v140_x64_py27_1.1.0\libraries\include;$(USERPROFILE)\.caffe\dependencies\libraries_v140_x64_py27_1.1.0\libraries\include\boost-1_61;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(SolutionDir)msgpack-c\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(CUDA_PATH_V10_2)\lib\$(PlatformName);$(SolutionDir)lib\$(PlatformName)\vc15\staticlib;$(SolutionDir)lib\lib;$(USERPROFILE)\.caffe\dependencies\libraries_v140_x64_py27_1.1.0\libraries\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(CUDA_PATH_V11_0)\include;$(SolutionDir)lib\include;$(USERPROFILE)\.caffe\dependencies\libraries_v140_x64_py27_1.1.0\libraries\include;$(USERPROFILE)\.caffe\dependencies\libraries_v140_x64_py27_1.1.0\libraries\include\boost-1_61;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(SolutionDir)msgpack-c\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(CUDA_PATH_V11_0)\lib\$(PlatformName);$(SolutionDir)lib\$(PlatformName)\vc15\staticlib;$(SolutionDir)lib\lib;$(USERPROFILE)\.caffe\dependencies\libraries_v140_x64_py27_1.1.0\libraries\lib;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)bin\</OutDir>
     <TargetName>$(ProjectName)d</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(CUDA_PATH_V10_2)\include;$(SolutionDir)lib\include;$(USERPROFILE)\.caffe\dependencies\libraries_v140_x64_py27_1.1.0\libraries\include;$(USERPROFILE)\.caffe\dependencies\libraries_v140_x64_py27_1.1.0\libraries\include\boost-1_61;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(SolutionDir)msgpack-c\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(CUDA_PATH_V10_2)\lib\$(PlatformName);$(SolutionDir)lib\$(PlatformName)\vc15\staticlib;$(SolutionDir)lib\lib;$(USERPROFILE)\.caffe\dependencies\libraries_v140_x64_py27_1.1.0\libraries\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(CUDA_PATH_V11_0)\include;$(SolutionDir)lib\include;$(USERPROFILE)\.caffe\dependencies\libraries_v140_x64_py27_1.1.0\libraries\include;$(USERPROFILE)\.caffe\dependencies\libraries_v140_x64_py27_1.1.0\libraries\include\boost-1_61;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(SolutionDir)msgpack-c\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(CUDA_PATH_V11_0)\lib\$(PlatformName);$(SolutionDir)lib\$(PlatformName)\vc15\staticlib;$(SolutionDir)lib\lib;$(USERPROFILE)\.caffe\dependencies\libraries_v140_x64_py27_1.1.0\libraries\lib;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)bin\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -65,7 +65,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <DelayLoadDLLs>cudnn64_7.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>cudnn64_8.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
       <AdditionalDependencies>Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -85,7 +85,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <DelayLoadDLLs>cudnn64_7.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>cudnn64_8.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
       <AdditionalDependencies>Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
