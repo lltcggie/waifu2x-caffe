@@ -19,15 +19,11 @@ GUI supports English, Japanese, Simplified Chinese, Traditional Chinese, Korean,
 
  * OS : Windows Vista以降 64bit (32bit用exeはありません)
  * メモリ : 空きメモリ1GB以上 (ただし、変換する画像サイズによる)
- * GPU : Compute Capability 3.0 以上のNVIDIA製GPU(CPUで変換する場合は不要)
+ * GPU : Compute Capability 3.5 以上のNVIDIA製GPU(CPUで変換する場合は不要)
  * Microsoft Visual C++ 2015 再頒布可能パッケージ Update 3(x64版)がインストールされていること(必須)
     - 上記パッケージは[こちら](https://www.microsoft.com/ja-jp/download/details.aspx?id=53587)
     - `ダウンロード` ボタンを押した後、`vcredist_x64.exe`を選択し、ダウンロード・インストールを行って下さい。
     - 見つからない場合は、「Visual C++ 2015 再頒布可能パッケージ Update 3」で検索してみて下さい。
-
-cuDNNで変換する場合はさらに
-
- * GPU : Compute Capability 3.0 以上のNVIDIA製GPU
 
 自分のGPUのCompute Capabilityが知りたい場合は[こちらのページ](https://developer.nvidia.com/cuda-gpus)で調べて下さい。
 

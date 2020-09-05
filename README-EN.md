@@ -19,14 +19,11 @@ At least the following environment is required to run this software.
 
  * OS: Windows Vista or later 64bit (There is no exe for 32bit)
  * Memory: 1GB or more of free memory (however, this depends on the image size to be converted)
+ * GPU: NVIDIA GPU with Compute Capability 3.5 or higher
  * Microsoft Visual C++ 2015 Redistributable Package Update 3 (x64 version) must be installed (Required)
     - The above package is [here.](https://www.microsoft.com/ja-jp/download/details.aspx?id=53587)
     - After pressing the `Download` button, select `vcredist_x64.exe` to download and install.
     - If you can't find it, try searching with "Visual C++ 2015 Redistributable Package Update 3".
-
-When converting with cuDNN
-
- * GPU: NVIDIA GPU with Compute Capability 3.0 or higher
 
 If you want to know the Compute Capability of your GPU, check it out on [this page](https://developer.nvidia.com/cuda-gpus).
 
