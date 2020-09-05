@@ -431,7 +431,7 @@ Waifu2x::eWaifu2xCudaError Waifu2x::can_use_CUDA()
 					{
 						cudaDeviceProp prop;
 						cudaGetDeviceProperties(&prop, 0);
-						if (prop.major >= 2)
+						if (prop.major >= 3 && prop.minor >= 5 || prop.major >= 4)
 							CudaFlag = eWaifu2xCudaError_OK;
 						else
 							CudaFlag = eWaifu2xCudaError_OldDevice;
