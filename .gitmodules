@@ -4,3 +4,13 @@
 [submodule "stb"]
 	path = stb
 	url = https://github.com/nothings/stb.git
+[submodule "msgpack-c"]
+	path = msgpack-c
+	url = https://github.com/msgpack/msgpack-c
+[submodule "caffe"]
+	path = caffe
+	url = https://github.com/lltcggie/caffe.git
+	branch = lltcggie/custom
+[submodule "opencv"]
+	path = opencv
+	url = https://github.com/opencv/opencv.git

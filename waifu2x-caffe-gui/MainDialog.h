@@ -22,11 +22,60 @@
 #define WM_END_THREAD (WM_APP + 7)
 
 
+enum eModelType
+{
+	eModelTypeUpConvRGB,
+	eModelTypeUpConvPhoto,
+	eModelTypeRGB,
+	eModelTypePhoto,
+	eModelTypeY,
+	eModelTypeUpResNet10,
+	eModelTypeCunet,
+	eModelTypeEnd,
+};
+
+const int DefaultModel = eModelTypeCunet;
+
+const tstring ModelPathList[eModelTypeEnd] = {
+	TEXT("models/upconv_7_anime_style_art_rgb"),
+	TEXT("models/upconv_7_photo"),
+	TEXT("models/anime_style_art_rgb"),
+	TEXT("models/photo"),
+	TEXT("models/anime_style_art"),
+	TEXT("models/upresnet10"),
+	TEXT("models/cunet"),
+};
+
+const std::wstring ModelTypeList[eModelTypeEnd] = {
+	L"upconv_7_anime_style_art_rgb",
+	L"upconv_7_photo",
+	L"anime_style_art_rgb",
+	L"photo",
+	L"anime_style_art_y",
+	L"upresnet10",
+	L"cunet",
+};
+
+const std::wstring DefaultModelType = ModelTypeList[DefaultModel];
+
+const std::wstring ModelTitleLangKeyList[eModelTypeEnd] = {
+	L"IDC_RADIO_MODEL_UPCONV_RGB",
+	L"IDC_RADIO_MODEL_UPCONV_PHOTO",
+	L"IDC_RADIO_MODEL_RGB",
+	L"IDC_RADIO_MODEL_PHOTO",
+	L"IDC_RADIO_MODEL_Y",
+	L"IDC_RADIO_MODEL_UpResNet10",
+	L"IDC_RADIO_MODEL_CUNET",
+};
+
+
 // ダイアログ用
 class DialogEvent
 {
 private:
-	HWND dh;
+	static HWND dh;
+
+	static LangStringList langStringList;
 
 	boost::filesystem::path exeDir;
 	std::vector<int> CropSizeList;
@@ -53,6 +102,8 @@ private:
 	int crop_size;
 	int batch_size;
 
+	int gpu_no;
+
 	std::vector<tstring> extList;
 
 	std::thread processThread;
@@ -75,23 +126,14 @@ private:
 		eScaleTypeRatio,
 		eScaleTypeWidth,
 		eScaleTypeHeight,
+		eScaleTypeWidthHeight,
 		eScaleTypeEnd,
 	};
 
 	eScaleType scaleType;
 
-	enum eModelType
-	{
-		eModelTypeRGB,
-		eModelTypePhoto,
-		eModelTypeY,
-		eModelTypeUpConvRGB,
-		eModelTypeEnd,
-	};
-
 	eModelType modelType;
 
-	LangStringList langStringList;
 	std::wstring LangName;
 
 	std::atomic<int64_t> TimeLeftThread;
@@ -109,17 +151,9 @@ private:
 
 	bool isNotSaveParam;
 
-private:
-	template<typename T>
-	static tstring to_tstring(T val)
-	{
-#ifdef UNICODE
-		return std::to_wstring(val);
-#else
-		return std::to_string(val);
-#endif
-	}
+	bool isSetInitCrop;
 
+private:
 	tstring AddName() const;
 
 	bool SyncMember(const bool NotSyncCropSize, const bool silent = false);
@@ -160,6 +194,8 @@ private:
 		_In_  LPARAM lParam
 	);
 
+	static void LogFatalFunc();
+
 public:
 	DialogEvent();
 
@@ -192,6 +228,8 @@ public:
 	void ScaleRadio(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData);
 
 	void CheckCUDNN(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData);
+
+	void OnModelChange(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData);
 
 	LRESULT OnSetInputFilePath(const TCHAR *tPath);
 

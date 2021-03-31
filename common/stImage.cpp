@@ -228,14 +228,29 @@ Waifu2x::eWaifu2xError stImage::LoadMat(cv::Mat &im, const boost::filesystem::pa
 		if (!readFile(input_file, img_data))
 			return Waifu2x::eWaifu2xError_FailedOpenInputFile;
 
-		cv::Mat im(img_data.size(), 1, CV_8U, img_data.data());
-		original_image = cv::imdecode(im, cv::IMREAD_UNCHANGED);
+		const boost::filesystem::path ipext(input_file.extension());
+		if (!boost::iequals(ipext.string(), ".bmp")) // 特定のファイル形式の場合OpenCVで読むとバグることがあるのでSTBIを優先させる
+		{
+			cv::Mat im(img_data.size(), 1, CV_8U, img_data.data());
+			original_image = cv::imdecode(im, cv::IMREAD_UNCHANGED);
 
-		if (original_image.empty())
+			if (original_image.empty())
+			{
+				const Waifu2x::eWaifu2xError ret = LoadMatBySTBI(original_image, img_data);
+				if (ret != Waifu2x::eWaifu2xError_OK)
+					return ret;
+			}
+		}
+		else
 		{
 			const Waifu2x::eWaifu2xError ret = LoadMatBySTBI(original_image, img_data);
 			if (ret != Waifu2x::eWaifu2xError_OK)
-				return ret;
+			{
+				cv::Mat im(img_data.size(), 1, CV_8U, img_data.data());
+				original_image = cv::imdecode(im, cv::IMREAD_UNCHANGED);
+				if (original_image.empty())
+					return ret;
+			}
 		}
 	}
 
@@ -335,6 +350,7 @@ void stImage::Clear()
 	mOrgFloatImage.release();
 	mTmpImageRGB.release();
 	mTmpImageA.release();
+	mTmpImageAOneColor.release();
 	mEndImage.release();
 }
 
@@ -365,6 +381,8 @@ Waifu2x::eWaifu2xError stImage::Load(const boost::filesystem::path &input_file)
 
 Waifu2x::eWaifu2xError stImage::Load(const void* source, const int width, const int height, const int channel, const int stride)
 {
+	Clear();
+
 	cv::Mat original_image(cv::Size(width, height), CV_MAKETYPE(CV_8U, channel), (void *)source, stride);
 
 	if (original_image.channels() >= 3) // RGBなのでBGRにする
@@ -378,18 +396,22 @@ Waifu2x::eWaifu2xError stImage::Load(const void* source, const int width, const 
 	}
 
 	mOrgFloatImage = original_image;
+	mOrgChannel = original_image.channels();
+	mOrgSize = original_image.size();
+
+	mIsRequestDenoise = false;
 
 	return Waifu2x::eWaifu2xError_OK;
 }
 
-double stImage::GetScaleFromWidth(const int width) const
+Factor stImage::GetScaleFromWidth(const int width) const
 {
-	return (double)width / (double)mOrgSize.width;
+	return Factor((double)width, (double)mOrgSize.width);
 }
 
-double stImage::GetScaleFromHeight(const int height) const
+Factor stImage::GetScaleFromHeight(const int height) const
 {
-	return (double)height / (double)mOrgSize.height;
+	return Factor((double)height, (double)mOrgSize.height);
 }
 
 bool stImage::RequestDenoise() const
@@ -402,6 +424,34 @@ void stImage::Preprocess(const int input_plane, const int net_offset)
 	mOrgFloatImage = ConvertToFloat(mOrgFloatImage);
 
 	ConvertToNetFormat(input_plane, net_offset);
+}
+
+bool stImage::IsOneColor(const cv::Mat & im)
+{
+	assert(im.channels() == 1);
+
+	const size_t Line = im.step1();
+	const size_t Width = im.size().width;
+	const size_t Height = im.size().height;
+
+	if (Width == 0 && Height == 0)
+		return true;
+
+	const float *ptr = (const float *)im.data;
+	const float color = ptr[0];
+
+	for (size_t i = 0; i < Height; i++)
+	{
+		for (size_t j = 0; j < Width; j++)
+		{
+			const size_t pos = Line * i + j;
+
+			if (ptr[pos] != color)
+				return false;
+		}
+	}
+
+	return true;
 }
 
 void stImage::ConvertToNetFormat(const int input_plane, const int alpha_offset)
@@ -449,10 +499,18 @@ void stImage::ConvertToNetFormat(const int input_plane, const int alpha_offset)
 				mTmpImageA = planes[3];
 				planes.resize(3);
 
-				AlphaMakeBorder(planes, mTmpImageA, alpha_offset); // 透明なピクセルと不透明なピクセルの境界部分の色を広げる
+				if (!IsOneColor(mTmpImageA))
+				{
+					AlphaMakeBorder(planes, mTmpImageA, alpha_offset); // 透明なピクセルと不透明なピクセルの境界部分の色を広げる
 
-				// α拡大用にRGBに変換
-				cv::cvtColor(mTmpImageA, mTmpImageA, CV_GRAY2RGB);
+					// α拡大用にRGBに変換
+					cv::cvtColor(mTmpImageA, mTmpImageA, CV_GRAY2RGB);
+				}
+				else
+				{
+					mTmpImageAOneColor = mTmpImageA;
+					mTmpImageA.release();
+				}
 			}
 
 			// BGRからRGBにする
@@ -561,10 +619,24 @@ void stImage::SetReconstructedImage(cv::Mat &dst, cv::Mat &src, const cv::Size_<
 	src.release();
 }
 
-void stImage::Postprocess(const int input_plane, const double scale, const int depth)
+void stImage::Postprocess(const int input_plane, const Factor scale, const int depth)
 {
 	DeconvertFromNetFormat(input_plane);
 	ShrinkImage(scale);
+
+	// 値を0～1にクリッピング
+	cv::threshold(mEndImage, mEndImage, 1.0, 1.0, cv::THRESH_TRUNC);
+	cv::threshold(mEndImage, mEndImage, 0.0, 0.0, cv::THRESH_TOZERO);
+
+	mEndImage = DeconvertFromFloat(mEndImage, depth);
+
+	AlphaCleanImage(mEndImage);
+}
+
+void stImage::Postprocess(const int input_plane, const int width, const int height, const int depth)
+{
+	DeconvertFromNetFormat(input_plane);
+	ShrinkImage(width, height);
 
 	// 値を0～1にクリッピング
 	cv::threshold(mEndImage, mEndImage, 1.0, 1.0, cv::THRESH_TRUNC);
@@ -611,6 +683,21 @@ void stImage::DeconvertFromNetFormat(const int input_plane)
 
 				cv::merge(planes, mEndImage);
 			}
+			else if (!mTmpImageAOneColor.empty()) // 単色版Aを戻す
+			{
+				std::vector<cv::Mat> planes;
+				cv::split(mEndImage, planes);
+
+				cv::Size_<int> zoom_size = planes[0].size();
+
+				// マージ先のサイズに合わせる
+				cv::resize(mTmpImageAOneColor, mTmpImageAOneColor, zoom_size, 0.0, 0.0, cv::INTER_NEAREST);
+
+				planes.push_back(mTmpImageAOneColor);
+				mTmpImageAOneColor.release();
+
+				cv::merge(planes, mEndImage);
+			}
 		}
 	}
 	else // RGBモデル
@@ -636,6 +723,16 @@ void stImage::DeconvertFromNetFormat(const int input_plane)
 				planes.push_back(mTmpImageA);
 				mTmpImageA.release();
 			}
+			else if (!mTmpImageAOneColor.empty()) // 単色版Aを戻す
+			{
+				cv::Size_<int> zoom_size = planes[0].size();
+
+				// マージ先のサイズに合わせる
+				cv::resize(mTmpImageAOneColor, mTmpImageAOneColor, zoom_size, 0.0, 0.0, cv::INTER_NEAREST);
+
+				planes.push_back(mTmpImageAOneColor);
+				mTmpImageAOneColor.release();
+			}
 
 			// RGBからBGRにする
 			std::swap(planes[0], planes[2]);
@@ -645,20 +742,33 @@ void stImage::DeconvertFromNetFormat(const int input_plane)
 	}
 }
 
-void stImage::ShrinkImage(const double scale)
+void stImage::ShrinkImage(const Factor scale)
 {
-	// TODO: scale = 1.0 でも悪影響を及ぼさないか調べる
+	const auto Width = scale.MultiNumerator(mOrgSize.width);
+	const auto Height = scale.MultiNumerator(mOrgSize.height);
 
-	const int scaleBase = 2; // TODO: モデルの拡大率によって可変できるようにする
-
-	const int scaleNum = ceil(log(scale) / log(scaleBase));
-	const double shrinkRatio = scale >= 1.0 ? scale / std::pow(scaleBase, scaleNum) : scale;
-
-	const cv::Size_<int> ns(mOrgSize.width * scale, mOrgSize.height * scale);
+	//const cv::Size_<int> ns(mOrgSize.width * scale, mOrgSize.height * scale);
+	const cv::Size_<int> ns((int)Width.toDouble(), (int)Height.toDouble());
 	if (mEndImage.size().width != ns.width || mEndImage.size().height != ns.height)
 	{
 		int argo = cv::INTER_CUBIC;
-		if (scale < 0.5)
+		if (scale.toDouble() < 0.5)
+			argo = cv::INTER_AREA;
+
+		cv::resize(mEndImage, mEndImage, ns, 0.0, 0.0, argo);
+	}
+}
+
+void stImage::ShrinkImage(const int width, const int height)
+{
+	const cv::Size_<int> ns(width, height);
+	if (mEndImage.size().width != ns.width || mEndImage.size().height != ns.height)
+	{
+		const auto scale_width = (float)mEndImage.size().width / (float)ns.width;
+		const auto scale_height = (float)mEndImage.size().height / (float)ns.height;
+
+		int argo = cv::INTER_CUBIC;
+		if (scale_width < 0.5 || scale_height < 0.5)
 			argo = cv::INTER_AREA;
 
 		cv::resize(mEndImage, mEndImage, ns, 0.0, 0.0, argo);

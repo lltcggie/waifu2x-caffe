@@ -174,7 +174,7 @@ cNet::cNet() : mModelScale(0), mInnerScale(0), mNetOffset(0), mInputPlane(0), mH
 cNet::~cNet()
 {}
 
-Waifu2x::eWaifu2xError cNet::GetInfo(const boost::filesystem::path & info_path, stInfo &info)
+Waifu2x::eWaifu2xError cNet::GetInfo(const boost::filesystem::path & info_path, Waifu2x::stInfo &info)
 {
 	rapidjson::Document d;
 	std::vector<char> jsonBuf;
@@ -190,12 +190,16 @@ Waifu2x::eWaifu2xError cNet::GetInfo(const boost::filesystem::path & info_path, 
 		const auto name = d["name"].GetString();
 		const auto arch_name = d["arch_name"].GetString();
 		const bool has_noise_scale = d.HasMember("has_noise_scale") && d["has_noise_scale"].GetBool() ? true : false;
+		const bool has_noise_only = d.HasMember("has_noise_only") && d["has_noise_only"].GetBool() ? true : false;
 		const int channels = d["channels"].GetInt();
+		const int force_divisible_crop_size = d.HasMember("force_divisible_crop_size") ? d["force_divisible_crop_size"].GetInt() : 1;
 
 		info.name = name;
 		info.arch_name = arch_name;
 		info.has_noise_scale = has_noise_scale;
+		info.has_noise_only = has_noise_only;
 		info.channels = channels;
+		info.force_divisible_crop_size = force_divisible_crop_size;
 
 		if (d.HasMember("offset"))
 		{
@@ -215,6 +219,14 @@ Waifu2x::eWaifu2xError cNet::GetInfo(const boost::filesystem::path & info_path, 
 			info.noise_scale.scale_factor = scale_factor;
 		}
 
+		if (d.HasMember("recommended_crop_size"))
+		{
+			const int recommended_crop_size = d["recommended_crop_size"].GetInt();
+			info.noise.recommended_crop_size = recommended_crop_size;
+			info.scale.recommended_crop_size = recommended_crop_size;
+			info.noise_scale.recommended_crop_size = recommended_crop_size;
+		}
+
 		if (d.HasMember("offset_noise"))
 		{
 			const int offset = d["offset_noise"].GetInt();
@@ -225,6 +237,12 @@ Waifu2x::eWaifu2xError cNet::GetInfo(const boost::filesystem::path & info_path, 
 		{
 			const int scale_factor = d["scale_factor_noise"].GetInt();
 			info.noise.scale_factor = scale_factor;
+		}
+
+		if (d.HasMember("recommended_crop_size_noise"))
+		{
+			const int recommended_crop_size = d["recommended_crop_size_noise"].GetInt();
+			info.noise.recommended_crop_size = recommended_crop_size;
 		}
 
 		if (d.HasMember("offset_scale"))
@@ -239,6 +257,12 @@ Waifu2x::eWaifu2xError cNet::GetInfo(const boost::filesystem::path & info_path, 
 			info.scale.scale_factor = scale_factor;
 		}
 
+		if (d.HasMember("recommended_crop_size_scale"))
+		{
+			const int recommended_crop_size = d["recommended_crop_size_scale"].GetInt();
+			info.scale.recommended_crop_size = recommended_crop_size;
+		}
+
 		if (d.HasMember("offset_noise_scale"))
 		{
 			const int offset = d["offset_noise_scale"].GetInt();
@@ -249,6 +273,12 @@ Waifu2x::eWaifu2xError cNet::GetInfo(const boost::filesystem::path & info_path, 
 		{
 			const int scale_factor = d["scale_factor_noise_scale"].GetInt();
 			info.noise_scale.scale_factor = scale_factor;
+		}
+
+		if (d.HasMember("recommended_crop_size_noise_scale"))
+		{
+			const int recommended_crop_size = d["recommended_crop_size_noise_scale"].GetInt();
+			info.noise_scale.recommended_crop_size = recommended_crop_size;
 		}
 	}
 	catch (...)
@@ -261,7 +291,7 @@ Waifu2x::eWaifu2xError cNet::GetInfo(const boost::filesystem::path & info_path, 
 
 // モデルファイルからネットワークを構築
 // processでcudnnが指定されなかった場合はcuDNNが呼び出されないように変更する
-Waifu2x::eWaifu2xError cNet::ConstractNet(const Waifu2x::eWaifu2xModelType mode, const boost::filesystem::path &model_path, const boost::filesystem::path &param_path, const stInfo &info, const std::string &process)
+Waifu2x::eWaifu2xError cNet::ConstractNet(const Waifu2x::eWaifu2xModelType mode, const boost::filesystem::path &model_path, const boost::filesystem::path &param_path, const Waifu2x::stInfo &info, const std::string &process)
 {
 	Waifu2x::eWaifu2xError ret;
 
@@ -280,8 +310,20 @@ Waifu2x::eWaifu2xError cNet::ConstractNet(const Waifu2x::eWaifu2xModelType mode,
 	const auto retModelBin = readProtoBinary(modelbin_path, &param_model);
 	const auto retParamBin = readProtoBinary(caffemodel_path, &param_caffemodel);
 
-	if (retModelBin == Waifu2x::eWaifu2xError_OK && retParamBin == Waifu2x::eWaifu2xError_OK)
+	if ( retParamBin == Waifu2x::eWaifu2xError_OK &&
+		(retModelBin == Waifu2x::eWaifu2xError_OK || retModelBin == Waifu2x::eWaifu2xError_FailedOpenModelFile))
 	{
+		if (retModelBin == Waifu2x::eWaifu2xError_FailedOpenModelFile) // protobinのみが読み込めなかったときはprototxtから読み込む(ついでにprotobinも書き込む)
+		{
+			ret = readProtoText(model_path, &param_model);
+			if (ret != Waifu2x::eWaifu2xError_OK)
+				return ret;
+
+			ret = writeProtoBinary(param_model, modelbin_path);
+			if (ret != Waifu2x::eWaifu2xError_OK)
+				return ret;
+		}
+
 		ret = SetParameter(param_model, process);
 		if (ret != Waifu2x::eWaifu2xError_OK)
 			return ret;
@@ -309,11 +351,11 @@ Waifu2x::eWaifu2xError cNet::ConstractNet(const Waifu2x::eWaifu2xModelType mode,
 	return Waifu2x::eWaifu2xError_OK;
 }
 
-void cNet::LoadParamFromInfo(const Waifu2x::eWaifu2xModelType mode, const stInfo &info)
+void cNet::LoadParamFromInfo(const Waifu2x::eWaifu2xModelType mode, const Waifu2x::stInfo &info)
 {
 	mModelScale = 2; // TODO: 動的に設定するようにする
 
-	stInfo::stParam param;
+	Waifu2x::stInfo::stParam param;
 
 	switch (mode)
 	{
@@ -349,9 +391,6 @@ Waifu2x::eWaifu2xError cNet::SetParameter(caffe::NetParameter &param, const std:
 		auto mid = input_layer->mutable_input_param()->mutable_shape();
 		if (mid->size() != 1 || mid->Mutable(0)->dim_size() != 4)
 			return Waifu2x::eWaifu2xError_FailedParseModelFile;
-		mid->Mutable(0)->set_dim(0, 1);
-		mid->Mutable(0)->set_dim(2, 142);
-		mid->Mutable(0)->set_dim(3, 142);
 	}
 
 	for (int i = 0; i < param.layer_size(); i++)
@@ -365,12 +404,33 @@ Waifu2x::eWaifu2xError cNet::SetParameter(caffe::NetParameter &param, const std:
 			else
 				layer_param->mutable_convolution_param()->set_engine(caffe::ConvolutionParameter_Engine_CAFFE);
 		}
+		else if (type == "Deconvolution")
+		{
+			if (process == "cudnn")
+				layer_param->mutable_convolution_param()->set_engine(caffe::ConvolutionParameter_Engine_CUDNN);
+			else
+				layer_param->mutable_convolution_param()->set_engine(caffe::ConvolutionParameter_Engine_CAFFE);
+		}
 		else if (type == "ReLU")
 		{
 			if (process == "cudnn")
 				layer_param->mutable_relu_param()->set_engine(caffe::ReLUParameter_Engine_CUDNN);
 			else
 				layer_param->mutable_relu_param()->set_engine(caffe::ReLUParameter_Engine_CAFFE);
+		}
+		else if (type == "Sigmoid")
+		{
+			if (process == "cudnn")
+				layer_param->mutable_sigmoid_param()->set_engine(caffe::SigmoidParameter_Engine_CUDNN);
+			else
+				layer_param->mutable_sigmoid_param()->set_engine(caffe::SigmoidParameter_Engine_CAFFE);
+		}
+		else if (type == "Pooling")
+		{
+			if (process == "cudnn")
+				layer_param->mutable_pooling_param()->set_engine(caffe::PoolingParameter_Engine_CUDNN);
+			else
+				layer_param->mutable_pooling_param()->set_engine(caffe::PoolingParameter_Engine_CAFFE);
 		}
 	}
 
@@ -431,9 +491,6 @@ Waifu2x::eWaifu2xError cNet::LoadParameterFromJson(const boost::filesystem::path
 		return Waifu2x::eWaifu2xError_FailedParseModelFile;
 	}
 
-	if (d.Size() != 7)
-		return Waifu2x::eWaifu2xError_FailedParseModelFile;
-
 	int inputPlane = 0;
 	int outputPlane = 0;
 	try
@@ -451,9 +508,6 @@ Waifu2x::eWaifu2xError cNet::LoadParameterFromJson(const boost::filesystem::path
 
 	if (inputPlane != outputPlane)
 		return Waifu2x::eWaifu2xError_FailedParseModelFile;
-
-	//if (param.layer_size() < 17)
-	//	return Waifu2x::eWaifu2xError_FailedParseModelFile;
 
 	std::vector<boost::shared_ptr<caffe::Layer<float>>> list;
 	auto &v = mNet->layers();
@@ -577,7 +631,7 @@ int cNet::GetInputMemorySize(const int crop_w, const int crop_h, const int outer
 
 	const int input_block_plane_size = input_block_width * input_block_height * mInputPlane;
 
-	return input_block_plane_size * sizeof(float);
+	return input_block_plane_size * batch_size * sizeof(float);
 	
 }
 
@@ -592,7 +646,7 @@ int cNet::GetOutputMemorySize(const int crop_w, const int crop_h, const int oute
 
 	const int output_block_plane_size = output_block_width * output_block_height * mInputPlane;
 
-	return output_block_plane_size * sizeof(float);
+	return output_block_plane_size * batch_size * sizeof(float);
 }
 
 // ネットワークを使って画像を再構築する
@@ -808,7 +862,7 @@ std::string cNet::GetModelName(const boost::filesystem::path &info_path)
 {
 	Waifu2x::eWaifu2xError ret;
 
-	stInfo info;
+	Waifu2x::stInfo info;
 	ret = GetInfo(info_path, info);
 	if (ret != Waifu2x::eWaifu2xError_OK)
 		return std::string();

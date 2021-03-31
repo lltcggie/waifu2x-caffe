@@ -14,6 +14,7 @@ private:
 
 	cv::Mat mTmpImageRGB; // RGB(あるいはY)
 	cv::Mat mTmpImageA; // αチャンネル
+	cv::Mat mTmpImageAOneColor; // αチャンネル(単色の場合使われる)
 
 	cv::Mat mEndImage; // 完成した画像
 
@@ -47,6 +48,9 @@ private:
 
 	static Waifu2x::eWaifu2xError WriteMat(const cv::Mat &im, const boost::filesystem::path &output_file, const boost::optional<int> &output_quality);
 
+	// im(1ch)が単色で構成されているか判定
+	static bool IsOneColor(const cv::Mat &im);
+
 	void ConvertToNetFormat(const int input_plane, const int alpha_offset);
 
 	Waifu2x::eWaifu2xError CreateBrightnessImage(const cv::Mat &float_image, cv::Mat &im);
@@ -64,7 +68,8 @@ private:
 	void SetReconstructedImage(cv::Mat &dst, cv::Mat &src, const cv::Size_<int> &size, const int inner_scale);
 
 	void DeconvertFromNetFormat(const int input_plane);
-	void ShrinkImage(const double scale);
+	void ShrinkImage(const Factor scale);
+	void ShrinkImage(const int width, const int height);
 
 	static int DepthBitToCVDepth(const int depth_bit);
 	static double GetValumeMaxFromCVDepth(const int cv_depth);
@@ -89,8 +94,8 @@ public:
 	// sourceはPostprocess()が終わるまで存在している必要がある
 	Waifu2x::eWaifu2xError Load(const void* source, const int width, const int height, const int channel, const int stride);
 
-	double GetScaleFromWidth(const int width) const;
-	double GetScaleFromHeight(const int width) const;
+	Factor GetScaleFromWidth(const int width) const;
+	Factor GetScaleFromHeight(const int width) const;
 
 	bool RequestDenoise() const;
 
@@ -120,7 +125,8 @@ public:
 	// size: GetScalePaddingedImage()で取得したsize
 	void SetReconstructedA(cv::Mat &im, const cv::Size_<int> &size, const int inner_scale);
 
-	void Postprocess(const int input_plane, const double scale, const int depth);
+	void Postprocess(const int input_plane, const Factor scale, const int depth);
+	void Postprocess(const int input_plane, const int width, const int height, const int depth);
 
 	cv::Mat GetEndImage() const;
 

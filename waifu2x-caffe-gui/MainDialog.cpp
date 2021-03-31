@@ -20,9 +20,12 @@
 #include "CControl.h"
 //#include <boost/program_options.hpp>
 #include <tclapw/CmdLine.h>
+#include <glog/logging.h>
 
 
 const size_t AR_PATH_MAX(1024);
+
+const int MaxBatchSizeList = 20;
 
 const int MinCommonDivisor = 50;
 const int DefaultCommonDivisor = 128;
@@ -38,68 +41,85 @@ const TCHAR * const MultiFileStr = TEXT("(Multi File)");
 const UINT_PTR nIDEventTimeLeft = 1000;
 
 
-// http://stackoverflow.com/questions/10167382/boostfilesystem-get-relative-path
-boost::filesystem::path relativePath(const boost::filesystem::path &path, const boost::filesystem::path &relative_to)
+LangStringList DialogEvent::langStringList;
+HWND DialogEvent::dh;
+
+
+namespace
 {
-	// create absolute paths
-	boost::filesystem::path p = boost::filesystem::absolute(path);
-	boost::filesystem::path r = boost::filesystem::absolute(relative_to);
-
-	// if root paths are different, return absolute path
-	if (p.root_path() != r.root_path())
-		return p;
-
-	// initialize relative path
-	boost::filesystem::path result;
-
-	// find out where the two paths diverge
-	boost::filesystem::path::const_iterator itr_path = p.begin();
-	boost::filesystem::path::const_iterator itr_relative_to = r.begin();
-	while (*itr_path == *itr_relative_to && itr_path != p.end() && itr_relative_to != r.end())
+	template<typename T>
+	static tstring to_tstring(T val)
 	{
-		++itr_path;
-		++itr_relative_to;
+#ifdef UNICODE
+		return std::to_wstring(val);
+#else
+		return std::to_string(val);
+#endif
 	}
 
-	// add "../" for each remaining token in relative_to
-	if (itr_relative_to != r.end())
+	// http://stackoverflow.com/questions/10167382/boostfilesystem-get-relative-path
+	boost::filesystem::path relativePath(const boost::filesystem::path &path, const boost::filesystem::path &relative_to)
 	{
-		++itr_relative_to;
-		while (itr_relative_to != r.end())
+		// create absolute paths
+		boost::filesystem::path p = boost::filesystem::absolute(path);
+		boost::filesystem::path r = boost::filesystem::absolute(relative_to);
+
+		// if root paths are different, return absolute path
+		if (p.root_path() != r.root_path())
+			return p;
+
+		// initialize relative path
+		boost::filesystem::path result;
+
+		// find out where the two paths diverge
+		boost::filesystem::path::const_iterator itr_path = p.begin();
+		boost::filesystem::path::const_iterator itr_relative_to = r.begin();
+		while (*itr_path == *itr_relative_to && itr_path != p.end() && itr_relative_to != r.end())
 		{
-			result /= "..";
+			++itr_path;
 			++itr_relative_to;
 		}
+
+		// add "../" for each remaining token in relative_to
+		if (itr_relative_to != r.end())
+		{
+			++itr_relative_to;
+			while (itr_relative_to != r.end())
+			{
+				result /= "..";
+				++itr_relative_to;
+			}
+		}
+
+		// add remaining path
+		while (itr_path != p.end())
+		{
+			result /= *itr_path;
+			++itr_path;
+		}
+
+		return result;
 	}
 
-	// add remaining path
-	while (itr_path != p.end())
+	std::vector<int> CommonDivisorList(const int N)
 	{
-		result /= *itr_path;
-		++itr_path;
+		std::vector<int> list;
+
+		const int sq = sqrt(N);
+		for (int i = 1; i <= sq; i++)
+		{
+			if (N % i == 0)
+				list.push_back(i);
+		}
+
+		const int sqs = list.size();
+		for (int i = 0; i < sqs; i++)
+			list.push_back(N / list[i]);
+
+		std::sort(list.begin(), list.end());
+
+		return list;
 	}
-
-	return result;
-}
-
-std::vector<int> CommonDivisorList(const int N)
-{
-	std::vector<int> list;
-
-	const int sq = sqrt(N);
-	for (int i = 1; i <= sq; i++)
-	{
-		if (N % i == 0)
-			list.push_back(i);
-	}
-
-	const int sqs = list.size();
-	for (int i = 0; i < sqs; i++)
-		list.push_back(N / list[i]);
-
-	std::sort(list.begin(), list.end());
-
-	return list;
 }
 
 
@@ -154,8 +174,10 @@ tstring DialogEvent::AddName() const
 			addstr += TEXT("(x") + to_tstring(scale_ratio) + TEXT(")");
 		else if (scaleType == eScaleTypeWidth)
 			addstr += TEXT("(width ") + to_tstring(scale_width) + TEXT(")");
-		else
+		else if (scaleType == eScaleTypeHeight)
 			addstr += TEXT("(height ") + to_tstring(scale_height) + TEXT(")");
+		else
+			addstr += TEXT("(") + to_tstring(scale_width) + TEXT("x") + to_tstring(scale_height) + TEXT(")");
 	}
 
 	if (output_depth != 8)
@@ -206,7 +228,9 @@ bool DialogEvent::SyncMember(const bool NotSyncCropSize, const bool silent)
 		modeStr = "auto_scale";
 	}
 
-	if (SendMessage(GetDlgItem(dh, IDC_RADIONOISE_LEVEL1), BM_GETCHECK, 0, 0))
+	if (SendMessage(GetDlgItem(dh, IDC_RADIONOISE_LEVEL0), BM_GETCHECK, 0, 0))
+		noise_level = 0;
+	else if (SendMessage(GetDlgItem(dh, IDC_RADIONOISE_LEVEL1), BM_GETCHECK, 0, 0))
 		noise_level = 1;
 	else if (SendMessage(GetDlgItem(dh, IDC_RADIONOISE_LEVEL2), BM_GETCHECK, 0, 0))
 		noise_level = 2;
@@ -217,8 +241,10 @@ bool DialogEvent::SyncMember(const bool NotSyncCropSize, const bool silent)
 		scaleType = eScaleTypeRatio;
 	else if (SendMessage(GetDlgItem(dh, IDC_RADIO_SCALE_WIDTH), BM_GETCHECK, 0, 0))
 		scaleType = eScaleTypeWidth;
-	else
+	else if (SendMessage(GetDlgItem(dh, IDC_RADIO_SCALE_HEIGHT), BM_GETCHECK, 0, 0))
 		scaleType = eScaleTypeHeight;
+	else
+		scaleType = eScaleTypeWidthHeight;
 
 	{
 		TCHAR buf[AR_PATH_MAX] = TEXT("");
@@ -276,39 +302,84 @@ bool DialogEvent::SyncMember(const bool NotSyncCropSize, const bool silent)
 				ret = false;
 
 				if (!silent)
-					MessageBox(dh, langStringList.GetString(L"MessageScaleHeightCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
+					MessageBox(dh, langStringList.GetString(L"MessageScaleWidthCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
 			}
 		}
 		else
 			scale_height = l;
 	}
 
+	if (scaleType == eScaleTypeWidthHeight)
+	{
+		TCHAR buf[AR_PATH_MAX] = TEXT("");
+		GetWindowText(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH_HEIGHT), buf, _countof(buf));
+		buf[_countof(buf) - 1] = TEXT('\0');
+
+		std::vector<const TCHAR *> v;
+		TCHAR *p = buf;
+		TCHAR *context= nullptr;
+		for (;;)
+		{
+			const auto str = _tcstok_s(p, TEXT(" x"), &context);
+			if (!str)
+				break;
+			p = nullptr;
+
+			v.push_back(str);
+		}
+
+		if (v.size() == 2)
+		{
+			TCHAR *ptr = nullptr;
+			long l = 0;
+			
+			l = _tcstol(v[0], &ptr, 10);
+			if (!ptr || *ptr != TEXT('\0') || l <= 0)
+			{
+				ret = false;
+
+				if (!silent)
+					MessageBox(dh, langStringList.GetString(L"MessageScaleWidthCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
+			}
+			else
+			{
+				scale_width = l;
+			}
+
+			if (ret)
+			{
+				l = _tcstol(v[1], &ptr, 10);
+				if (!ptr || *ptr != TEXT('\0') || l <= 0)
+				{
+					ret = false;
+
+					if (!silent)
+						MessageBox(dh, langStringList.GetString(L"MessageScaleWidthCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
+				}
+				else
+				{
+					scale_height = l;
+				}
+			}
+		}
+		else
+		{
+			ret = false;
+
+			if (!silent)
+				MessageBox(dh, langStringList.GetString(L"MessageScaleWidthCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
+		}
+	}
+
 	{
 		const int cur = SendMessage(GetDlgItem(dh, IDC_COMBO_MODEL), CB_GETCURSEL, 0, 0);
-		switch (cur)
+		for (int i = 0; i < eModelTypeEnd; i++)
 		{
-		case 0:
-			model_dir = TEXT("models/anime_style_art_rgb");
-			modelType = eModelTypeRGB;
-			break;
-
-		case 1:
-			model_dir = TEXT("models/photo");
-			modelType = eModelTypePhoto;
-			break;
-
-		case 2:
-			model_dir = TEXT("models/upconv_7_anime_style_art_rgb");
-			modelType = eModelTypeUpConvRGB;
-			break;
-
-		case 3:
-			model_dir = TEXT("models/anime_style_art");
-			modelType = eModelTypeY;
-			break;
-
-		default:
-			break;
+			if (cur == i)
+			{
+				model_dir = ModelPathList[i];
+				modelType = (eModelType)i;
+			}
 		}
 	}
 
@@ -382,6 +453,10 @@ bool DialogEvent::SyncMember(const bool NotSyncCropSize, const bool silent)
 		GetWindowText(GetDlgItem(dh, IDC_COMBO_CROP_SIZE), buf, _countof(buf));
 		buf[_countof(buf) - 1] = TEXT('\0');
 
+		Waifu2x::stInfo info;
+		if (!Waifu2x::GetInfo(model_dir, info))
+			info.force_divisible_crop_size = 1;
+
 		TCHAR *ptr = nullptr;
 		crop_size = _tcstol(buf, &ptr, 10);
 		if (!ptr || *ptr != '\0' || crop_size <= 0)
@@ -390,6 +465,30 @@ bool DialogEvent::SyncMember(const bool NotSyncCropSize, const bool silent)
 			ret = false;
 
 			MessageBox(dh, langStringList.GetString(L"MessageCropSizeCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
+		}
+		else if (crop_size % info.force_divisible_crop_size != 0) // このモデルでは設定できないCropSize
+		{
+			wchar_t buf[1024] = { TEXT('\0') };
+			swprintf(buf, langStringList.GetString(L"MessageCropSizeDivisibleCheckError").c_str(), info.force_divisible_crop_size);
+
+			ret = false;
+			MessageBoxW(dh, buf, langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
+		}
+	}
+
+	{
+		TCHAR buf[AR_PATH_MAX] = TEXT("");
+		GetWindowText(GetDlgItem(dh, IDC_COMBO_BATCH_SIZE), buf, _countof(buf));
+		buf[_countof(buf) - 1] = TEXT('\0');
+
+		TCHAR *ptr = nullptr;
+		batch_size = _tcstol(buf, &ptr, 10);
+		if (!ptr || *ptr != '\0' || batch_size <= 0)
+		{
+			batch_size = 1;
+			ret = false;
+
+			MessageBox(dh, langStringList.GetString(L"MessageBatchSizeCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
 		}
 	}
 
@@ -400,6 +499,9 @@ bool DialogEvent::SyncMember(const bool NotSyncCropSize, const bool silent)
 
 void DialogEvent::SetCropSizeList(const boost::filesystem::path & input_path)
 {
+	if (isSetInitCrop)
+		return;
+
 	HWND hcrop = GetDlgItem(dh, IDC_COMBO_CROP_SIZE);
 
 	int gcd = 1;
@@ -429,20 +531,55 @@ void DialogEvent::SetCropSizeList(const boost::filesystem::path & input_path)
 	}
 	), list.end());
 
+	bool isRecommendedCropSize = false;
+	Waifu2x::stInfo info;
+	if (Waifu2x::GetInfo(model_dir, info))
+	{
+		int recommended_crop_size = 0;
+		switch (mode)
+		{
+		case Waifu2x::eWaifu2xModelTypeNoise:
+			recommended_crop_size = info.noise.recommended_crop_size;
+			break;
+		case Waifu2x::eWaifu2xModelTypeScale:
+			recommended_crop_size = info.scale.recommended_crop_size;
+			break;
+		case Waifu2x::eWaifu2xModelTypeNoiseScale:
+			recommended_crop_size = info.noise_scale.recommended_crop_size;
+			break;
+		case Waifu2x::eWaifu2xModelTypeAutoScale:
+			recommended_crop_size = info.noise_scale.recommended_crop_size;
+			break;
+		}
+
+		if (recommended_crop_size > 0)
+		{
+			tstring str(to_tstring(recommended_crop_size));
+			SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
+			isRecommendedCropSize = true;
+		}
+	}
+
+	if (list.size() > 0)
+		SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)TEXT("-----------------------"));
+
 	int mindiff = INT_MAX;
 	int defaultIndex = -1;
 	for (int i = 0; i < list.size(); i++)
 	{
 		const int n = list[i];
 
+		if (n % info.force_divisible_crop_size != 0) // このモデルでは設定できないCropSize
+			continue;
+
 		tstring str(to_tstring(n));
-		SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
+		const int index = SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
 
 		const int diff = abs(DefaultCommonDivisor - n);
 		if (DefaultCommonDivisorRange.first <= n && n <= DefaultCommonDivisorRange.second && diff < mindiff)
 		{
 			mindiff = diff;
-			defaultIndex = i;
+			defaultIndex = index;
 		}
 	}
 
@@ -453,6 +590,9 @@ void DialogEvent::SetCropSizeList(const boost::filesystem::path & input_path)
 	int defaultListIndex = -1;
 	for (const auto n : CropSizeList)
 	{
+		if (n % info.force_divisible_crop_size != 0) // このモデルでは設定できないCropSize
+			continue;
+
 		tstring str(to_tstring(n));
 		const int index = SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
 
@@ -467,6 +607,9 @@ void DialogEvent::SetCropSizeList(const boost::filesystem::path & input_path)
 	if (defaultIndex == -1)
 		defaultIndex = defaultListIndex;
 
+	if(isRecommendedCropSize)
+		defaultIndex = 0;
+		 
 	if (GetWindowTextLength(hcrop) == 0)
 		SendMessage(hcrop, CB_SETCURSEL, defaultIndex, 0);
 }
@@ -694,7 +837,7 @@ void DialogEvent::ProcessWaifu2x()
 	Waifu2x::eWaifu2xError ret;
 
 	Waifu2x w;
-	ret = w.Init(mode, noise_level, model_dir, process);
+	ret = w.Init(mode, noise_level, model_dir, process, gpu_no);
 	if (ret != Waifu2x::eWaifu2xError_OK)
 		SendMessage(dh, WM_ON_WAIFU2X_ERROR, (WPARAM)&ret, 0);
 	else
@@ -716,7 +859,11 @@ void DialogEvent::ProcessWaifu2x()
 		case eScaleTypeWidth:
 			ScaleWidth = scale_width;
 			break;
+		case eScaleTypeHeight:
+			ScaleHeight = scale_height;
+			break;
 		default:
+			ScaleWidth = scale_width;
 			ScaleHeight = scale_height;
 			break;
 		}
@@ -742,7 +889,7 @@ void DialogEvent::ProcessWaifu2x()
 
 			ret = w.waifu2x(p.first, p.second, ScaleRatio, ScaleWidth, ScaleHeight, [this]()
 			{
-				return cancelFlag;
+				return cancelFlag.load();
 			}, crop_size, crop_size, output_quality, output_depth, use_tta, batch_size);
 
 			num++;
@@ -778,6 +925,8 @@ void DialogEvent::ProcessWaifu2x()
 				TimeLeftThread = ceil(TimeLeft);
 			}
 		}
+
+		Waifu2x::quit_thread_liblary();
 
 		const auto ProcessEndTime = std::chrono::system_clock::now();
 
@@ -886,7 +1035,7 @@ void DialogEvent::Waifu2xTime()
 void DialogEvent::SaveIni(const bool isSyncMember)
 {
 	if (isSyncMember)
-		SyncMember(true);
+		SyncMember(true, true);
 
 	if (isNotSaveParam)
 		return;
@@ -896,6 +1045,7 @@ void DialogEvent::SaveIni(const bool isSyncMember)
 	tstring tScaleRatio;
 	tstring tScaleWidth;
 	tstring tScaleHeight;
+	tstring tScaleWidthHeight;
 	tstring tmode;
 	tstring tScaleMode;
 	tstring tprcess;
@@ -914,6 +1064,11 @@ void DialogEvent::SaveIni(const bool isSyncMember)
 		tScaleHeight = to_tstring(scale_height);
 	else
 		tScaleHeight = TEXT("");
+
+	if (scale_width > 0 && scale_height > 0)
+		tScaleWidthHeight = to_tstring(scale_width) + TEXT("x") + to_tstring(scale_height);
+	else
+		tScaleWidthHeight = TEXT("");
 
 	switch (mode)
 	{
@@ -943,8 +1098,10 @@ void DialogEvent::SaveIni(const bool isSyncMember)
 		tScaleMode = TEXT("Ratio");
 	else if (scaleType == eScaleTypeWidth)
 		tScaleMode = TEXT("Width");
-	else
+	else  if (scaleType == eScaleTypeHeight)
 		tScaleMode = TEXT("Height");
+	else
+		tScaleMode = TEXT("WidthHeight");
 
 	WritePrivateProfileString(TEXT("Setting"), TEXT("LastScaleMode"), tScaleMode.c_str(), getTString(SettingFilePath).c_str());
 
@@ -953,6 +1110,8 @@ void DialogEvent::SaveIni(const bool isSyncMember)
 	WritePrivateProfileString(TEXT("Setting"), TEXT("LastScaleWidth"), tScaleWidth.c_str(), getTString(SettingFilePath).c_str());
 
 	WritePrivateProfileString(TEXT("Setting"), TEXT("LastScaleHeight"), tScaleHeight.c_str(), getTString(SettingFilePath).c_str());
+
+	WritePrivateProfileString(TEXT("Setting"), TEXT("LastScaleWidthHeight"), tScaleWidthHeight.c_str(), getTString(SettingFilePath).c_str());
 
 	WritePrivateProfileString(TEXT("Setting"), TEXT("LastOutputExt"), outputExt.c_str(), getTString(SettingFilePath).c_str());
 
@@ -967,6 +1126,8 @@ void DialogEvent::SaveIni(const bool isSyncMember)
 	WritePrivateProfileString(TEXT("Setting"), TEXT("LastModel"), to_tstring(modelType).c_str(), getTString(SettingFilePath).c_str());
 
 	WritePrivateProfileString(TEXT("Setting"), TEXT("LastUseTTA"), to_tstring(use_tta ? 1 : 0).c_str(), getTString(SettingFilePath).c_str());
+
+	WritePrivateProfileString(TEXT("Setting"), TEXT("LastDeviceNo"), to_tstring(gpu_no).c_str(), getTString(SettingFilePath).c_str());
 
 	if (output_quality)
 		WritePrivateProfileString(TEXT("Setting"), TEXT("LastOutputQuality"), boost::lexical_cast<tstring>(*output_quality).c_str(), getTString(SettingFilePath).c_str());
@@ -985,6 +1146,8 @@ void DialogEvent::SaveIni(const bool isSyncMember)
 
 	WritePrivateProfileString(TEXT("Setting"), TEXT("LastInputDirFix"), tInputDirFix.c_str(), getTString(SettingFilePath).c_str());
 	WritePrivateProfileString(TEXT("Setting"), TEXT("LastOutputDirFix"), tOutputDirFix.c_str(), getTString(SettingFilePath).c_str());
+
+	WritePrivateProfileString(TEXT("Setting"), TEXT("LastBatchSize"), to_tstring(batch_size).c_str(), getTString(SettingFilePath).c_str());
 }
 
 struct stFindParam
@@ -1056,7 +1219,6 @@ UINT_PTR DialogEvent::OFNHookProcIn(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM
 		{
 		case CDN_SELCHANGE:
 		{
-			TCHAR szPath[AR_PATH_MAX] = TEXT("");
 			HWND hParent = GetParent(hdlg);
 
 			stFindParam param;
@@ -1078,16 +1240,40 @@ UINT_PTR DialogEvent::OFNHookProcIn(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM
 
 				if (results.size() > 1)
 				{
-					TCHAR str[10000] = TEXT("");
+					const size_t addSize = 5000;
+					std::vector<TCHAR> str(10000);
+					str[0] = TEXT('\0');
+
+					size_t nlen = 0;
+					const auto funcC = [&nlen, &str, addSize](const TCHAR c)
+					{
+						while (str.size() <= nlen + 1 + 1)
+							str.resize(str.size() + addSize);
+
+						str.data()[nlen] = c;
+						nlen += 1;
+					};
+
+					const auto funcStr = [&nlen, &str, addSize](const tstring &s)
+					{
+						while (str.size() <= nlen + s.length() + 1)
+							str.resize(str.size() + addSize);
+
+						memcpy(str.data() + nlen, s.c_str(), sizeof(TCHAR) * s.length());
+						nlen += s.length();
+					};
 
 					for (const auto &p : results)
 					{
-						_tcscat_s(str, TEXT("\""));
-						_tcscat_s(str, p.c_str());
-						_tcscat_s(str, TEXT("\" "));
+						funcC(TEXT('\"'));
+						funcStr(p);
+						funcC(TEXT('\"'));
+						funcC(TEXT(' '));
 					}
 
-					CommDlg_OpenSave_SetControlText(hParent, edt1, str);
+					str[nlen] = TEXT('\0');
+
+					CommDlg_OpenSave_SetControlText(hParent, edt1, str.data());
 				}
 				else if(results.size() == 1)
 					CommDlg_OpenSave_SetControlText(hParent, edt1, results[0].c_str());
@@ -1153,7 +1339,7 @@ UINT_PTR DialogEvent::OFNHookProcOut(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARA
 				szPath[_countof(szPath) - 1] = TEXT('\0');
 
 				boost::filesystem::path p(szPath);
-				if (boost::filesystem::is_empty(szPath) || boost::filesystem::is_directory(szPath))
+				if (boost::filesystem::exists(p) && (boost::filesystem::is_empty(p) || boost::filesystem::is_directory(p)))
 				{
 					const auto filename = getTString(p.filename());
 
@@ -1172,11 +1358,11 @@ UINT_PTR DialogEvent::OFNHookProcOut(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARA
 	return 0L;
 }
 
-DialogEvent::DialogEvent() : dh(nullptr), mode(Waifu2x::eWaifu2xModelTypeNoiseScale), modeStr("noise_scale"), noise_level(1), scale_ratio(2.0), scale_width(0), scale_height(0), model_dir(TEXT("models/anime_style_art_rgb")),
+DialogEvent::DialogEvent() : mode(Waifu2x::eWaifu2xModelTypeNoiseScale), modeStr("noise_scale"), noise_level(0), scale_ratio(2.0), scale_width(0), scale_height(0), model_dir(TEXT("models/anime_style_art_rgb")),
 process("gpu"), outputExt(TEXT(".png")), inputFileExt(TEXT("png:jpg:jpeg:tif:tiff:bmp:tga")),
-use_tta(false), output_depth(8), crop_size(128), batch_size(1), isLastError(false), scaleType(eScaleTypeEnd),
+use_tta(false), output_depth(8), crop_size(128), batch_size(1), gpu_no(0), isLastError(false), scaleType(eScaleTypeEnd),
 TimeLeftThread(-1), TimeLeftGetTimeThread(0), isCommandLineStart(false), tAutoMode(TEXT("none")),
-isArgStartAuto(true), isArgStartSuccessFinish(true), isOutputNoOverwrite(false), isNotSaveParam(false)
+isArgStartAuto(true), isArgStartSuccessFinish(true), isOutputNoOverwrite(false), isNotSaveParam(false), isSetInitCrop(false)
 {}
 
 void DialogEvent::Exec(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
@@ -1279,7 +1465,7 @@ void DialogEvent::Timer(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 
 	if (TimeLeft == -1)
 	{
-		SetWindowText(GetDlgItem(dh, IDC_EDIT_LOG), langStringList.GetString(L"MessageTimeLeftUnkown").c_str());
+		SetWindowText(GetDlgItem(dh, IDC_EDIT_LOG), langStringList.GetString(L"MessageTimeLeftUnknown").c_str());
 	}
 	else
 	{
@@ -1419,6 +1605,7 @@ void DialogEvent::SetWindowTextLang()
 	SET_WINDOW_TEXT(IDC_RADIO_MODE_NOISE);
 	SET_WINDOW_TEXT(IDC_RADIO_AUTO_SCALE);
 	SET_WINDOW_TEXT(IDC_STATIC_JPEG_NOISE_LEVEL);
+	SET_WINDOW_TEXT(IDC_RADIONOISE_LEVEL0);
 	SET_WINDOW_TEXT(IDC_RADIONOISE_LEVEL1);
 	SET_WINDOW_TEXT(IDC_RADIONOISE_LEVEL2);
 	SET_WINDOW_TEXT(IDC_RADIONOISE_LEVEL3);
@@ -1426,6 +1613,7 @@ void DialogEvent::SetWindowTextLang()
 	SET_WINDOW_TEXT(IDC_RADIO_SCALE_RATIO);
 	SET_WINDOW_TEXT(IDC_RADIO_SCALE_WIDTH);
 	SET_WINDOW_TEXT(IDC_RADIO_SCALE_HEIGHT);
+	SET_WINDOW_TEXT(IDC_RADIO_SCALE_WIDTH_HEIGHT);
 	SET_WINDOW_TEXT(IDC_STATIC_MODEL);
 	SET_WINDOW_TEXT(IDC_CHECK_TTA);
 	SET_WINDOW_TEXT(IDC_STATIC_PROCESS_SPEED_SETTING);
@@ -1440,6 +1628,7 @@ void DialogEvent::SetWindowTextLang()
 	SET_WINDOW_TEXT(IDC_BUTTON_OUTPUT_REF);
 	SET_WINDOW_TEXT(IDC_BUTTON_APP_SETTING);
 	SET_WINDOW_TEXT(IDC_BUTTON_CLEAR_OUTPUT_DIR);
+	SET_WINDOW_TEXT(IDC_STATIC_BATCH_SIZE);
 
 #undef SET_WINDOW_TEXT
 
@@ -1451,10 +1640,10 @@ void DialogEvent::SetWindowTextLang()
 		SendMessage(hwndCombo, CB_DELETESTRING, 0, 0);
 	}
 
-	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_RGB").c_str());
-	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_PHOTO").c_str());
-	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_UPCONV_RGB").c_str());
-	SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(L"IDC_RADIO_MODEL_Y").c_str());
+	for (int i = 0; i < eModelTypeEnd; i++)
+	{
+		SendMessage(hwndCombo, CB_ADDSTRING, 0, (LPARAM)langStringList.GetString(ModelTitleLangKeyList[i].c_str()).c_str());
+	}
 
 	SendMessage(GetDlgItem(dh, IDC_COMBO_MODEL), CB_SETCURSEL, cur, 0);
 }
@@ -1605,6 +1794,9 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 		SendMessage(hlang, CB_SETCURSEL, defaultListIndex, 0);
 	}
 
+	// 致命的エラーが発生した時にLogFatalFuncを呼び出すようにする
+	google::InstallFailureFunction(LogFatalFunc);
+
 	SetWindowTextLang();
 
 	{
@@ -1634,33 +1826,24 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 	}
 
 	{
-		HWND hcrop = GetDlgItem(dh, IDC_COMBO_CROP_SIZE);
+		HWND hbatch = GetDlgItem(dh, IDC_COMBO_BATCH_SIZE);
 
-		SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)TEXT("-----------------------"));
-
-		// CropSizeListの値を追加していく
+		// バッチサイズリストに数列を突っ込んでいく
 		int mindiff = INT_MAX;
 		int defaultListIndex = -1;
-		for (const auto n : CropSizeList)
+		for(int i = 1; i <= MaxBatchSizeList; i++)
 		{
-			tstring str(to_tstring(n));
-			const int index = SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
-
-			const int diff = abs(DefaultCommonDivisor - n);
-			if (DefaultCommonDivisorRange.first <= n && n <= DefaultCommonDivisorRange.second && diff < mindiff)
-			{
-				mindiff = diff;
-				defaultListIndex = index;
-			}
+			tstring str(to_tstring(i));
+			SendMessage(hbatch, CB_ADDSTRING, 0, (LPARAM)str.c_str());
 		}
 
-		if (GetWindowTextLength(hcrop) == 0)
-			SendMessage(hcrop, CB_SETCURSEL, defaultListIndex, 0);
+		SendMessage(hbatch, CB_SETCURSEL, 0, 0);
 	}
 
 	tstring tScaleRatio;
 	tstring tScaleWidth;
 	tstring tScaleHeight;
+	tstring tScaleWidthHeight;
 
 	tstring tScaleMode;
 	tstring tmode;
@@ -1680,6 +1863,10 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 		tmp[_countof(tmp) - 1] = TEXT('\0');
 		tScaleHeight = tmp;
 
+		GetPrivateProfileString(TEXT("Setting"), TEXT("LastScaleWidthHeight"), TEXT("0"), tmp, _countof(tmp), getTString(SettingFilePath).c_str());
+		tmp[_countof(tmp) - 1] = TEXT('\0');
+		tScaleWidthHeight = tmp;
+
 		GetPrivateProfileString(TEXT("Setting"), TEXT("LastScaleMode"), TEXT("Ratio"), tmp, _countof(tmp), getTString(SettingFilePath).c_str());
 		tmp[_countof(tmp) - 1] = TEXT('\0');
 		tScaleMode = tmp;
@@ -1696,15 +1883,17 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 		tmp[_countof(tmp) - 1] = TEXT('\0');
 		tmode = tmp;
 
-		noise_level = GetPrivateProfileInt(TEXT("Setting"), TEXT("LastNoiseLevel"), 1, getTString(SettingFilePath).c_str());
+		noise_level = GetPrivateProfileInt(TEXT("Setting"), TEXT("LastNoiseLevel"), 0, getTString(SettingFilePath).c_str());
 
 		GetPrivateProfileString(TEXT("Setting"), TEXT("LastProcess"), TEXT("gpu"), tmp, _countof(tmp), getTString(SettingFilePath).c_str());
 		tmp[_countof(tmp) - 1] = TEXT('\0');
 		tprcess = tmp;
 
-		modelType = (eModelType)GetPrivateProfileInt(TEXT("Setting"), TEXT("LastModel"), 0, getTString(SettingFilePath).c_str());
+		modelType = (eModelType)GetPrivateProfileInt(TEXT("Setting"), TEXT("LastModel"), DefaultModel, getTString(SettingFilePath).c_str());
 
 		use_tta = GetPrivateProfileInt(TEXT("Setting"), TEXT("LastUseTTA"), 0, getTString(SettingFilePath).c_str()) != 0;
+
+		gpu_no = GetPrivateProfileInt(TEXT("Setting"), TEXT("LastDeviceNo"), 0, getTString(SettingFilePath).c_str());
 
 		output_quality.reset();
 		const int num = GetPrivateProfileInt(TEXT("Setting"), TEXT("LastOutputQuality"), -100, getTString(SettingFilePath).c_str());
@@ -1728,6 +1917,8 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 		GetPrivateProfileString(TEXT("Setting"), TEXT("LastOutputDirFix"), TEXT(""), tmp, _countof(tmp), getTString(SettingFilePath).c_str());
 		tmp[_countof(tmp) - 1] = TEXT('\0');
 		tOutputDirFix = tmp;
+
+		batch_size = GetPrivateProfileInt(TEXT("Setting"), TEXT("LastBatchSize"), 1, getTString(SettingFilePath).c_str());
 	}
 
 	TCHAR *ptr = nullptr;
@@ -1746,8 +1937,8 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 	if (outputExt.length() > 0 && outputExt[0] != TEXT('.'))
 		outputExt = L"." + outputExt;
 
-	if (!(1 <= noise_level && noise_level <= 3))
-		noise_level = 1;
+	if (!(0 <= noise_level && noise_level <= 3))
+		noise_level = 0;
 
 	if (tprcess == TEXT("gpu"))
 		process = "gpu";
@@ -1757,12 +1948,99 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 	if (!((eModelType)0 <= modelType && modelType < eModelTypeEnd))
 		modelType = eModelTypeRGB;
 
+	if (tScaleMode == TEXT("Ratio"))
+	{
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_RATIO), BM_SETCHECK, BST_CHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_HEIGHT), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH_HEIGHT), BM_SETCHECK, BST_UNCHECKED, 0);
+
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), TRUE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH_HEIGHT), FALSE);
+	}
+	else if (tScaleMode == TEXT("Width"))
+	{
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_RATIO), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH), BM_SETCHECK, BST_CHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_HEIGHT), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH_HEIGHT), BM_SETCHECK, BST_UNCHECKED, 0);
+
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), TRUE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH_HEIGHT), FALSE);
+	}
+	else if (tScaleMode == TEXT("Height"))
+	{
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_RATIO), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_HEIGHT), BM_SETCHECK, BST_CHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH_HEIGHT), BM_SETCHECK, BST_UNCHECKED, 0);
+
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), TRUE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH_HEIGHT), FALSE);
+	}
+	else
+	{
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_RATIO), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_HEIGHT), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH_HEIGHT), BM_SETCHECK, BST_CHECKED, 0);
+
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH_HEIGHT), TRUE);
+	}
+
+	if (noise_level == 0)
+	{
+		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL0), BM_SETCHECK, BST_CHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL1), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL2), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL3), BM_SETCHECK, BST_UNCHECKED, 0);
+	}
+	else if (noise_level == 1)
+	{
+		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL0), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL1), BM_SETCHECK, BST_CHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL2), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL3), BM_SETCHECK, BST_UNCHECKED, 0);
+	}
+	else if (noise_level == 2)
+	{
+		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL0), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL1), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL2), BM_SETCHECK, BST_CHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL3), BM_SETCHECK, BST_UNCHECKED, 0);
+	}
+	else
+	{
+		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL0), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL1), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL2), BM_SETCHECK, BST_UNCHECKED, 0);
+		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL3), BM_SETCHECK, BST_CHECKED, 0);
+	}
+
 	if (tmode == TEXT("noise"))
 	{
 		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
 		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
 		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE), BM_SETCHECK, BST_CHECKED, 0);
 		SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+
+		EnableWindow(GetDlgItem(dh, IDC_RADIO_SCALE_RATIO), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_RADIO_SCALE_WIDTH), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_RADIO_SCALE_HEIGHT), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_RADIO_SCALE_WIDTH_HEIGHT), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH_HEIGHT), FALSE);
 	}
 	else if (tmode == TEXT("scale"))
 	{
@@ -1770,6 +2048,11 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_SCALE), BM_SETCHECK, BST_CHECKED, 0);
 		SendMessage(GetDlgItem(hWnd, IDC_RADIO_MODE_NOISE), BM_SETCHECK, BST_UNCHECKED, 0);
 		SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
+
+		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL0), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL1), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL2), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL3), FALSE);
 	}
 	else if (tmode == TEXT("auto_scale"))
 	{
@@ -1786,77 +2069,66 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 		SendMessage(GetDlgItem(hWnd, IDC_RADIO_AUTO_SCALE), BM_SETCHECK, BST_UNCHECKED, 0);
 	}
 
-	if (tScaleMode == TEXT("Ratio"))
-	{
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_RATIO), BM_SETCHECK, BST_CHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_HEIGHT), BM_SETCHECK, BST_UNCHECKED, 0);
-
-		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), TRUE);
-		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
-		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
-	}
-	else if (tScaleMode == TEXT("Width"))
-	{
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_RATIO), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH), BM_SETCHECK, BST_CHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_HEIGHT), BM_SETCHECK, BST_UNCHECKED, 0);
-
-		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), FALSE);
-		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), TRUE);
-		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
-	}
-	else
-	{
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_RATIO), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_HEIGHT), BM_SETCHECK, BST_CHECKED, 0);
-
-		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), FALSE);
-		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
-		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), TRUE);
-	}
-
-	if (noise_level == 1)
-	{
-		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL1), BM_SETCHECK, BST_CHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL2), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL3), BM_SETCHECK, BST_UNCHECKED, 0);
-	}
-	else if (noise_level == 2)
-	{
-		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL1), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL2), BM_SETCHECK, BST_CHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL3), BM_SETCHECK, BST_UNCHECKED, 0);
-	}
-	else
-	{
-		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL1), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL2), BM_SETCHECK, BST_UNCHECKED, 0);
-		SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL3), BM_SETCHECK, BST_CHECKED, 0);
-	}
-
-
 	int index = 0;
-	if (modelType == eModelTypeRGB)
-		index = 0;
-	else if (modelType == eModelTypePhoto)
-		index = 1;
-	else if (modelType == eModelTypeUpConvRGB)
-		index = 2;
-	else
-		index = 3;
+	for (int i = 0; i < eModelTypeEnd; i++)
+	{
+		if (modelType == i)
+		{
+			index = i;
+			break;
+		}
+	}
 
 	SendMessage(GetDlgItem(dh, IDC_COMBO_MODEL), CB_SETCURSEL, index, 0);
+
+	{
+		HWND hcrop = GetDlgItem(dh, IDC_COMBO_CROP_SIZE);
+
+		SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)TEXT("-----------------------"));
+
+		const auto model_dir = ModelPathList[index];
+
+		Waifu2x::stInfo info;
+		if (!Waifu2x::GetInfo(model_dir, info))
+			info.force_divisible_crop_size = 1;
+
+		// CropSizeListの値を追加していく
+		int mindiff = INT_MAX;
+		int defaultListIndex = -1;
+		for (const auto n : CropSizeList)
+		{
+			if (n % info.force_divisible_crop_size != 0) // このモデルでは設定できないCropSize
+				continue;
+
+			tstring str(to_tstring(n));
+			const int index = SendMessage(hcrop, CB_ADDSTRING, 0, (LPARAM)str.c_str());
+
+			const int diff = abs(DefaultCommonDivisor - n);
+			if (DefaultCommonDivisorRange.first <= n && n <= DefaultCommonDivisorRange.second && diff < mindiff)
+			{
+				mindiff = diff;
+				defaultListIndex = index;
+			}
+		}
+
+		if (GetWindowTextLength(hcrop) == 0)
+			SendMessage(hcrop, CB_SETCURSEL, defaultListIndex, 0);
+	}
 
 	if (use_tta)
 		SendMessage(GetDlgItem(hWnd, IDC_CHECK_TTA), BM_SETCHECK, BST_CHECKED, 0);
 	else
 		SendMessage(GetDlgItem(hWnd, IDC_CHECK_TTA), BM_SETCHECK, BST_UNCHECKED, 0);
 
+	if (1 <= batch_size && batch_size <= MaxBatchSizeList)
+	{
+		SendMessage(GetDlgItem(dh, IDC_COMBO_BATCH_SIZE), CB_SETCURSEL, batch_size - 1, 0);
+	}
+
 	SetWindowText(GetDlgItem(hWnd, IDC_EDIT_SCALE_RATIO), tScaleRatio.c_str());
 	SetWindowText(GetDlgItem(hWnd, IDC_EDIT_SCALE_WIDTH), tScaleWidth.c_str());
 	SetWindowText(GetDlgItem(hWnd, IDC_EDIT_SCALE_HEIGHT), tScaleHeight.c_str());
+	SetWindowText(GetDlgItem(hWnd, IDC_EDIT_SCALE_WIDTH_HEIGHT), tScaleWidthHeight.c_str());
 
 	SetWindowText(GetDlgItem(hWnd, IDC_EDIT_INPUT_EXT_LIST), inputFileExt.c_str());
 
@@ -1902,22 +2174,22 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 		if (nArgs > 1)
 		{
 			// definition of command line arguments
-			TCLAP::CmdLine cmd(L"waifu2x reimplementation using Caffe", L' ', L"1.0.0");
+			TCLAPW::CmdLine cmd(L"waifu2x reimplementation using Caffe", L' ', L"1.0.0");
 
 			// GUIでは-iを付けない
-			TCLAP::UnlabeledMultiArg<std::wstring> cmdInputFile(L"input_file_paths", L"input file paths", false,
+			TCLAPW::UnlabeledMultiArg<std::wstring> cmdInputFile(L"input_file_paths", L"input file paths", false,
 				L"string", cmd);
 
 			// GUIでは出力先フォルダのみの指定
-			TCLAP::ValueArg<std::wstring> cmdOutputDir(L"o", L"output_folder",
+			TCLAPW::ValueArg<std::wstring> cmdOutputDir(L"o", L"output_folder",
 				L"path to output image folder", false,
 				L"", L"string", cmd);
 
-			TCLAP::ValueArg<std::wstring> cmdInputFileExt(L"l", L"input_extention_list",
+			TCLAPW::ValueArg<std::wstring> cmdInputFileExt(L"l", L"input_extention_list",
 				L"extention to input image file when input_path is folder", false, L"png:jpg:jpeg:tif:tiff:bmp:tga",
 				L"string", cmd);
 
-			TCLAP::ValueArg<std::wstring> cmdOutputFileExt(L"e", L"output_extention",
+			TCLAPW::ValueArg<std::wstring> cmdOutputFileExt(L"e", L"output_extention",
 				L"extention to output image file when output_path is (auto) or input_path is folder", false,
 				L"png", L"string", cmd);
 
@@ -1926,83 +2198,88 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 			cmdModeConstraintV.push_back(L"scale");
 			cmdModeConstraintV.push_back(L"noise_scale");
 			cmdModeConstraintV.push_back(L"auto_scale");
-			TCLAP::ValuesConstraint<std::wstring> cmdModeConstraint(cmdModeConstraintV);
-			TCLAP::ValueArg<std::wstring> cmdMode(L"m", L"mode", L"image processing mode",
+			TCLAPW::ValuesConstraint<std::wstring> cmdModeConstraint(cmdModeConstraintV);
+			TCLAPW::ValueArg<std::wstring> cmdMode(L"m", L"mode", L"image processing mode",
 				false, L"noise_scale", &cmdModeConstraint, cmd);
 
 			std::vector<int> cmdNRLConstraintV;
+			cmdNRLConstraintV.push_back(0);
 			cmdNRLConstraintV.push_back(1);
 			cmdNRLConstraintV.push_back(2);
 			cmdNRLConstraintV.push_back(3);
-			TCLAP::ValuesConstraint<int> cmdNRLConstraint(cmdNRLConstraintV);
-			TCLAP::ValueArg<int> cmdNRLevel(L"n", L"noise_level", L"noise reduction level",
-				false, 1, &cmdNRLConstraint, cmd);
+			TCLAPW::ValuesConstraint<int> cmdNRLConstraint(cmdNRLConstraintV);
+			TCLAPW::ValueArg<int> cmdNRLevel(L"n", L"noise_level", L"noise reduction level",
+				false, 0, &cmdNRLConstraint, cmd);
 
-			TCLAP::ValueArg<double> cmdScaleRatio(L"s", L"scale_ratio",
+			TCLAPW::ValueArg<double> cmdScaleRatio(L"s", L"scale_ratio",
 				L"custom scale ratio", false, 2.0, L"double", cmd);
 
-			TCLAP::ValueArg<int> cmdScaleWidth(L"w", L"scale_width",
+			TCLAPW::ValueArg<int> cmdScaleWidth(L"w", L"scale_width",
 				L"custom scale width", false, 0, L"double", cmd);
 
-			TCLAP::ValueArg<int> cmdScaleHeight(L"h", L"scale_height",
+			TCLAPW::ValueArg<int> cmdScaleHeight(L"h", L"scale_height",
 				L"custom scale height", false, 0, L"double", cmd);
 
 			std::vector<std::wstring> cmdProcessConstraintV;
 			cmdProcessConstraintV.push_back(L"cpu");
 			cmdProcessConstraintV.push_back(L"gpu");
-			TCLAP::ValuesConstraint<std::wstring> cmdProcessConstraint(cmdProcessConstraintV);
-			TCLAP::ValueArg<std::wstring> cmdProcess(L"p", L"process", L"process mode",
+			TCLAPW::ValuesConstraint<std::wstring> cmdProcessConstraint(cmdProcessConstraintV);
+			TCLAPW::ValueArg<std::wstring> cmdProcess(L"p", L"process", L"process mode",
 				false, L"gpu", &cmdProcessConstraint, cmd);
 
-			TCLAP::ValueArg<int> cmdOutputQuality(L"q", L"output_quality",
+			TCLAPW::ValueArg<int> cmdOutputQuality(L"q", L"output_quality",
 				L"output image quality", false,
 				-1, L"int", cmd);
 
-			TCLAP::ValueArg<int> cmdOutputDepth(L"d", L"output_depth",
+			TCLAPW::ValueArg<int> cmdOutputDepth(L"d", L"output_depth",
 				L"output image chaneel depth bit", false,
 				8, L"int", cmd);
 
-			TCLAP::ValueArg<int> cmdCropSizeFile(L"c", L"crop_size",
+			TCLAPW::ValueArg<int> cmdCropSizeFile(L"c", L"crop_size",
 				L"input image split size", false,
 				128, L"int", cmd);
 
-			TCLAP::ValueArg<int> cmdBatchSizeFile(L"b", L"batch_size",
+			TCLAPW::ValueArg<int> cmdBatchSizeFile(L"b", L"batch_size",
 				L"input batch size", false,
 				1, L"int", cmd);
+
+			TCLAPW::ValueArg<int> cmdGPUNoFile(L"", L"gpu",
+				L"gpu device no", false,
+				0, L"int", cmd);
 
 			std::vector<int> cmdBoolConstraintV;
 			cmdBoolConstraintV.push_back(0);
 			cmdBoolConstraintV.push_back(1);
 
-			TCLAP::ValuesConstraint<int> cmdTTAConstraint(cmdBoolConstraintV);
-			TCLAP::ValueArg<int> cmdTTA(L"t", L"tta", L"8x slower and slightly high quality",
+			TCLAPW::ValuesConstraint<int> cmdTTAConstraint(cmdBoolConstraintV);
+			TCLAPW::ValueArg<int> cmdTTA(L"t", L"tta", L"8x slower and slightly high quality",
 				false, 0, &cmdTTAConstraint, cmd);
 
 			// GUI独自
-			TCLAP::ValuesConstraint<int> cmdAutoStartConstraint(cmdBoolConstraintV);
-			TCLAP::ValueArg<int> cmdAutoStart(L"", L"auto_start", L"to run automatically at startup",
+			TCLAPW::ValuesConstraint<int> cmdAutoStartConstraint(cmdBoolConstraintV);
+			TCLAPW::ValueArg<int> cmdAutoStart(L"", L"auto_start", L"to run automatically at startup",
 				false, 0, &cmdAutoStartConstraint, cmd);
 
-			TCLAP::ValuesConstraint<int> cmdAutoExitConstraint(cmdBoolConstraintV);
-			TCLAP::ValueArg<int> cmdAutoExit(L"", L"auto_exit", L"exit when the run was succeeded",
+			TCLAPW::ValuesConstraint<int> cmdAutoExitConstraint(cmdBoolConstraintV);
+			TCLAPW::ValueArg<int> cmdAutoExit(L"", L"auto_exit", L"exit when the run was succeeded",
 				false, 0, &cmdAutoExitConstraint, cmd);
 
-			TCLAP::ValuesConstraint<int> cmdNoOverwriteConstraint(cmdBoolConstraintV);
-			TCLAP::ValueArg<int> cmdNoOverwrite(L"", L"no_overwrite", L"don't overwrite output file",
+			TCLAPW::ValuesConstraint<int> cmdNoOverwriteConstraint(cmdBoolConstraintV);
+			TCLAPW::ValueArg<int> cmdNoOverwrite(L"", L"no_overwrite", L"don't overwrite output file",
 				false, 0, &cmdNoOverwriteConstraint, cmd);
 
 			std::vector<std::wstring> cmdModelTypeConstraintV;
-			cmdModelTypeConstraintV.push_back(L"anime_style_art_rgb");
-			cmdModelTypeConstraintV.push_back(L"photo");
-			cmdModelTypeConstraintV.push_back(L"anime_style_art_y");
-			cmdModelTypeConstraintV.push_back(L"upconv_7_anime_style_art_rgb");
-			TCLAP::ValuesConstraint<std::wstring> cmdModelTypeConstraint(cmdModelTypeConstraintV);
-			TCLAP::ValueArg<std::wstring> cmdModelType(L"y", L"model_type", L"model type",
-				false, L"anime_style_art_rgb", &cmdModelTypeConstraint, cmd);
+			for (int i = 0; i < eModelTypeEnd; i++)
+			{
+				cmdModelTypeConstraintV.push_back(ModelTypeList[i]);
+			}
+			TCLAPW::ValuesConstraint<std::wstring> cmdModelTypeConstraint(cmdModelTypeConstraintV);
+			TCLAPW::ValueArg<std::wstring> cmdModelType(L"y", L"model_type", L"model type",
+				false, DefaultModelType, &cmdModelTypeConstraint, cmd);
 
 			// definition of command line argument : end
 
-			TCLAP::Arg::enableIgnoreMismatched();
+			TCLAPW::Arg::enableIgnoreMismatched();
 
 			// parse command line arguments
 			try
@@ -2076,20 +2353,30 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 				{
 					const auto noise_level = cmdNRLevel.getValue();
 
-					if (noise_level == 1)
+					if (noise_level == 0)
 					{
+						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL0), BM_SETCHECK, BST_CHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL1), BM_SETCHECK, BST_UNCHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL2), BM_SETCHECK, BST_UNCHECKED, 0);
+						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL3), BM_SETCHECK, BST_UNCHECKED, 0);
+					}
+					else if (noise_level == 1)
+					{
+						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL0), BM_SETCHECK, BST_UNCHECKED, 0);
 						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL1), BM_SETCHECK, BST_CHECKED, 0);
 						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL2), BM_SETCHECK, BST_UNCHECKED, 0);
 						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL3), BM_SETCHECK, BST_UNCHECKED, 0);
 					}
 					else if (noise_level == 2)
 					{
+						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL0), BM_SETCHECK, BST_UNCHECKED, 0);
 						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL1), BM_SETCHECK, BST_UNCHECKED, 0);
 						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL2), BM_SETCHECK, BST_CHECKED, 0);
 						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL3), BM_SETCHECK, BST_UNCHECKED, 0);
 					}
 					else
 					{
+						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL0), BM_SETCHECK, BST_UNCHECKED, 0);
 						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL1), BM_SETCHECK, BST_UNCHECKED, 0);
 						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL2), BM_SETCHECK, BST_UNCHECKED, 0);
 						SendMessage(GetDlgItem(hWnd, IDC_RADIONOISE_LEVEL3), BM_SETCHECK, BST_CHECKED, 0);
@@ -2098,15 +2385,37 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 					isSetParam = true;
 				}
 
-				if (cmdScaleWidth.isSet())
+				if (cmdScaleWidth.isSet() && cmdScaleHeight.isSet())
+				{
+					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_RATIO), BM_SETCHECK, BST_UNCHECKED, 0);
+					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH), BM_SETCHECK, BST_UNCHECKED, 0);
+					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_HEIGHT), BM_SETCHECK, BST_UNCHECKED, 0);
+					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH_HEIGHT), BM_SETCHECK, BST_CHECKED, 0);
+
+					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), FALSE);
+					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
+					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
+					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH_HEIGHT), TRUE);
+
+					auto str = to_tstring(cmdScaleWidth.getValue());
+					str += TEXT("x");
+					str += to_tstring(cmdScaleHeight.getValue());
+
+					SetWindowText(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH_HEIGHT), str.c_str());
+
+					isSetParam = true;
+				}
+				else if (cmdScaleWidth.isSet())
 				{
 					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_RATIO), BM_SETCHECK, BST_UNCHECKED, 0);
 					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH), BM_SETCHECK, BST_CHECKED, 0);
 					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_HEIGHT), BM_SETCHECK, BST_UNCHECKED, 0);
+					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH_HEIGHT), BM_SETCHECK, BST_UNCHECKED, 0);
 
 					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), FALSE);
 					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), TRUE);
 					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
+					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH_HEIGHT), FALSE);
 
 					SetWindowText(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), to_tstring(cmdScaleWidth.getValue()).c_str());
 
@@ -2117,10 +2426,12 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_RATIO), BM_SETCHECK, BST_UNCHECKED, 0);
 					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH), BM_SETCHECK, BST_UNCHECKED, 0);
 					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_HEIGHT), BM_SETCHECK, BST_CHECKED, 0);
+					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH_HEIGHT), BM_SETCHECK, BST_UNCHECKED, 0);
 
 					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), FALSE);
 					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
 					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), TRUE);
+					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH_HEIGHT), TRUE);
 
 					SetWindowText(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), to_tstring(cmdScaleHeight.getValue()).c_str());
 
@@ -2131,10 +2442,12 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_RATIO), BM_SETCHECK, BST_CHECKED, 0);
 					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH), BM_SETCHECK, BST_UNCHECKED, 0);
 					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_HEIGHT), BM_SETCHECK, BST_UNCHECKED, 0);
+					SendMessage(GetDlgItem(hWnd, IDC_RADIO_SCALE_WIDTH_HEIGHT), BM_SETCHECK, BST_UNCHECKED, 0);
 
 					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), TRUE);
 					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
 					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
+					EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH_HEIGHT), FALSE);
 
 					SetWindowText(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), to_tstring(cmdScaleRatio.getValue()).c_str());
 
@@ -2176,11 +2489,20 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 					SetWindowText(GetDlgItem(dh, IDC_COMBO_CROP_SIZE), to_tstring(cmdCropSizeFile.getValue()).c_str());
 
 					isSetParam = true;
+					isSetInitCrop = true;
 				}
 
 				if (cmdBatchSizeFile.isSet())
 				{
-					batch_size = cmdBatchSizeFile.getValue();
+					SetWindowText(GetDlgItem(dh, IDC_COMBO_CROP_SIZE), to_tstring(cmdCropSizeFile.getValue()).c_str());
+					//batch_size = cmdBatchSizeFile.getValue();
+
+					isSetParam = true;
+				}
+
+				if (cmdGPUNoFile.isSet())
+				{
+					gpu_no = cmdGPUNoFile.getValue();
 
 					isSetParam = true;
 				}
@@ -2209,14 +2531,14 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 				if (cmdModelType.isSet())
 				{
 					int index = 0;
-					if (cmdModelType.getValue() == L"anime_style_art_rgb")
-						index = 0;
-					else if (cmdModelType.getValue() == L"photo")
-						index = 1;
-					else if (cmdModelType.getValue() == L"anime_style_art_y")
-						index = 2;
-					else
-						index = 3;
+					for (int i = 0; i < eModelTypeEnd; i++)
+					{
+						if (cmdModelType.getValue() == ModelTypeList[i])
+						{
+							index = i;
+							break;
+						}
+					}
 
 					SendMessage(GetDlgItem(dh, IDC_COMBO_MODEL), CB_SETCURSEL, index, 0);
 
@@ -2261,6 +2583,8 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 
 		LocalFree(lplpszArgs);
 	}
+
+	isSetInitCrop = false;
 }
 
 void DialogEvent::Cancel(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
@@ -2302,12 +2626,14 @@ void DialogEvent::OnModeChange(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID l
 
 	if (isNoise)
 	{
+		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL0), TRUE);
 		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL1), TRUE);
 		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL2), TRUE);
 		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL3), TRUE);
 	}
 	else
 	{
+		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL0), FALSE);
 		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL1), FALSE);
 		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL2), FALSE);
 		EnableWindow(GetDlgItem(dh, IDC_RADIONOISE_LEVEL3), FALSE);
@@ -2318,6 +2644,7 @@ void DialogEvent::OnModeChange(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID l
 		EnableWindow(GetDlgItem(dh, IDC_RADIO_SCALE_RATIO), TRUE);
 		EnableWindow(GetDlgItem(dh, IDC_RADIO_SCALE_WIDTH), TRUE);
 		EnableWindow(GetDlgItem(dh, IDC_RADIO_SCALE_HEIGHT), TRUE);
+		EnableWindow(GetDlgItem(dh, IDC_RADIO_SCALE_WIDTH_HEIGHT), TRUE);
 
 		ScaleRadio(NULL, NULL, NULL, NULL); // ここでReplaceAddString()やるからreturn
 		return;
@@ -2327,10 +2654,12 @@ void DialogEvent::OnModeChange(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID l
 		EnableWindow(GetDlgItem(dh, IDC_RADIO_SCALE_RATIO), FALSE);
 		EnableWindow(GetDlgItem(dh, IDC_RADIO_SCALE_WIDTH), FALSE);
 		EnableWindow(GetDlgItem(dh, IDC_RADIO_SCALE_HEIGHT), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_RADIO_SCALE_WIDTH_HEIGHT), FALSE);
 
 		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), FALSE);
 		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
 		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH_HEIGHT), FALSE);
 	}
 
 	ReplaceAddString();
@@ -2343,18 +2672,28 @@ void DialogEvent::ScaleRadio(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), TRUE);
 		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
 		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH_HEIGHT), FALSE);
 	}
 	else if (SendMessage(GetDlgItem(dh, IDC_RADIO_SCALE_WIDTH), BM_GETCHECK, 0, 0))
 	{
 		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), FALSE);
 		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), TRUE);
 		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH_HEIGHT), FALSE);
+	}
+	else if (SendMessage(GetDlgItem(dh, IDC_RADIO_SCALE_HEIGHT), BM_GETCHECK, 0, 0))
+	{
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), TRUE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH_HEIGHT), FALSE);
 	}
 	else
 	{
 		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_RATIO), FALSE);
 		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH), FALSE);
-		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), TRUE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_HEIGHT), FALSE);
+		EnableWindow(GetDlgItem(dh, IDC_EDIT_SCALE_WIDTH_HEIGHT), TRUE);
 	}
 
 	ReplaceAddString();
@@ -2398,8 +2737,20 @@ void DialogEvent::CheckCUDNN(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 	case Waifu2x::eWaifu2xcuDNNError_CannotCreate:
 		MessageBox(dh, langStringList.GetString(L"MessagecuDNNCannotCreateError").c_str(), langStringList.GetString(L"MessageTitleResult").c_str(), MB_OK | MB_ICONERROR);
 		break;
+	case Waifu2x::eWaifu2xcuDNNError_OldCudaVersion:
+		MessageBox(dh, langStringList.GetString(L"MessageCudaOldVersionError").c_str(), langStringList.GetString(L"MessageTitleResult").c_str(), MB_OK | MB_ICONERROR);
+		break;
 	default:
 		MessageBox(dh, langStringList.GetString(L"MessagecuDNNDefautlError").c_str(), langStringList.GetString(L"MessageTitleResult").c_str(), MB_OK | MB_ICONERROR);
+	}
+}
+
+void DialogEvent::OnModelChange(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
+{
+	if (HIWORD(wParam) == CBN_SELCHANGE)
+	{
+		OnSetInputFilePath();
+		UpdateAddString(hWnd, wParam, lParam, lpData);
 	}
 }
 
@@ -2888,6 +3239,7 @@ void DialogEvent::AppSetting(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 		bool isOutputNoOverwrite;
 		tstring tInputDirFix;
 		tstring tOutputDirFix;
+		int gpu_no;
 
 	private:
 		void AppSettingDialogEvent::SetWindowTextLang()
@@ -2914,7 +3266,9 @@ void DialogEvent::AppSetting(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 			SET_WINDOW_TEXT(IDC_STATIC_INPUT_DIR_FIX);
 			SET_WINDOW_TEXT(IDC_STATIC_OUTPUT_DIR_FIX);
 
-			SET_WINDOW_TEXT(IDC_CHECK_OUTPUT_NO_OVERWIRITE);
+			SET_WINDOW_TEXT(IDC_CHECK_OUTPUT_NO_OVERWRITE);
+
+			SET_WINDOW_TEXT(IDC_STATIC_USE_GPU_NO);
 
 #undef SET_WINDOW_TEXT
 		}
@@ -2926,6 +3280,9 @@ void DialogEvent::AppSetting(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 		void AppSettingDialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 		{
 			dh = hWnd;
+
+			HICON hIcon = (HICON)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_ICON_W2X), IMAGE_ICON, 16, 16, 0);
+			SendMessage(hWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
 
 			SetWindowTextLang();
 
@@ -2966,10 +3323,12 @@ void DialogEvent::AppSetting(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 				SendMessage(GetDlgItem(hWnd, IDC_CHECK_ARG_START_SUCCESS_FINISH), BM_SETCHECK, BST_CHECKED, 0);
 
 			if (isOutputNoOverwrite)
-				SendMessage(GetDlgItem(hWnd, IDC_CHECK_OUTPUT_NO_OVERWIRITE), BM_SETCHECK, BST_CHECKED, 0);
+				SendMessage(GetDlgItem(hWnd, IDC_CHECK_OUTPUT_NO_OVERWRITE), BM_SETCHECK, BST_CHECKED, 0);
 
 			SetWindowText(GetDlgItem(hWnd, IDC_EDIT_INPUT_DIR_FIX), tInputDirFix.c_str());
 			SetWindowText(GetDlgItem(hWnd, IDC_EDIT_OUTPUT_DIR_FIX), tOutputDirFix.c_str());
+
+			SetWindowText(GetDlgItem(hWnd, IDC_EDIT_USE_GPU_NO), to_tstring(gpu_no).c_str());
 		}
 
 		void Close(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
@@ -2979,6 +3338,8 @@ void DialogEvent::AppSetting(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 
 		void sync()
 		{
+			TCHAR *ptr = nullptr;
+
 			if (SendMessage(GetDlgItem(dh, IDC_RADIO_AUTO_START_ONE), BM_GETCHECK, 0, 0))
 				tAutoMode = TEXT("one");
 			else if (SendMessage(GetDlgItem(dh, IDC_RADIO_AUTO_START_MULTI), BM_GETCHECK, 0, 0))
@@ -2993,7 +3354,7 @@ void DialogEvent::AppSetting(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 
 			isArgStartAuto = SendMessage(GetDlgItem(dh, IDC_CHECK_ARG_START_AUTO), BM_GETCHECK, 0, 0) == BST_CHECKED;
 			isArgStartSuccessFinish = SendMessage(GetDlgItem(dh, IDC_CHECK_ARG_START_SUCCESS_FINISH), BM_GETCHECK, 0, 0) == BST_CHECKED;
-			isOutputNoOverwrite = SendMessage(GetDlgItem(dh, IDC_CHECK_OUTPUT_NO_OVERWIRITE), BM_GETCHECK, 0, 0) == BST_CHECKED;
+			isOutputNoOverwrite = SendMessage(GetDlgItem(dh, IDC_CHECK_OUTPUT_NO_OVERWRITE), BM_GETCHECK, 0, 0) == BST_CHECKED;
 
 			TCHAR buf[AR_PATH_MAX] = TEXT("");
 
@@ -3004,6 +3365,12 @@ void DialogEvent::AppSetting(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 			GetWindowText(GetDlgItem(dh, IDC_EDIT_OUTPUT_DIR_FIX), buf, _countof(buf));
 			buf[_countof(buf) - 1] = TEXT('\0');
 			tOutputDirFix = buf;
+
+			GetWindowText(GetDlgItem(dh, IDC_EDIT_USE_GPU_NO), buf, _countof(buf));
+			buf[_countof(buf) - 1] = TEXT('\0');
+			const auto devno = _tcstol(buf, &ptr, 10);
+			if ((!ptr || *ptr == TEXT('\0')) && devno >= 0)
+				gpu_no = devno;
 		}
 
 		void AppSettingDialogEvent::OK(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
@@ -3027,6 +3394,7 @@ void DialogEvent::AppSetting(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 	cAppSettingDialogEvent.isOutputNoOverwrite = isOutputNoOverwrite;
 	cAppSettingDialogEvent.tInputDirFix = tInputDirFix;
 	cAppSettingDialogEvent.tOutputDirFix = tOutputDirFix;
+	cAppSettingDialogEvent.gpu_no = gpu_no;
 
 	CDialog cDialog;
 
@@ -3047,10 +3415,17 @@ void DialogEvent::AppSetting(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 		isOutputNoOverwrite = cAppSettingDialogEvent.isOutputNoOverwrite;
 		tInputDirFix = cAppSettingDialogEvent.tInputDirFix;
 		tOutputDirFix = cAppSettingDialogEvent.tOutputDirFix;
+		gpu_no = cAppSettingDialogEvent.gpu_no;
 
 		if (tOutputDirFix.length() > 0 && boost::filesystem::exists(tOutputDirFix))
 		{
 			output_dir = tOutputDirFix;
 		}
 	}
+}
+
+void DialogEvent::LogFatalFunc()
+{
+	MessageBox(dh, langStringList.GetString(L"MessageLogFatalError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
+	abort();
 }

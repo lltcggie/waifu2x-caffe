@@ -94,7 +94,8 @@ private:
 		if (LangList.size() > 0)
 			return LangList[0];
 
-		return stLangSetting();
+		static stLangSetting empty;
+		return empty;
 	}
 
 	void ReadLangFile(const stLangSetting &lang, std::unordered_map<std::wstring, std::wstring> &langStringMap) const
