@@ -432,5 +432,5 @@ Created [waifu2x-converter](https://github.com/WL-Amigo/waifu2x-converter-cpp) b
 will be grateful to.
 Also, @paul70078 for translating the message into English, @yoonhakcher for translating the message into Simplified Chinese, @mzhboy for the pull request for Simplified Chinese translation,
 @Kenin0726 for translating the message into Korean, @aruhirin for suggesting improvements to the Korean translation,
-@Lizardon1995 for translating messages in Traditional Chinese, @yoonhakcher, @Scharynche for pull request for Turkish translation, @Serized for pull request for French translation, Brazilian Portuguese @Simrafael for pull request for translation, @AndreasWebdev for pull request for German translation, @07pepa for pull request for Czech translation,
+@Lizardon1995 for translating messages in Traditional Chinese, @yoonhakcher, @Scharynche for pull request for Turkish translation, @Serized for pull request for French translation, Brazilian Portuguese @Simrafael for pull request for translation, @AndreasWebdev for pull request for German translation, @07pepa for pull request for Czech translation, @07pepa for pull request for Italian translation,
 Thanks to JYUNYA for providing the GUI version of the icon.
