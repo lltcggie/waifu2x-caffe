@@ -196,7 +196,7 @@ layer {
 }
 layer {
   name: "/res1/axpy"
-  type: "Axpy"
+  type: "AxpyFast"
   bottom: "/res1/fc2_sigmoid"
   bottom: "/res1/conv2_relu"
   bottom: "/res1/crop"
@@ -353,7 +353,7 @@ layer {
 }
 layer {
   name: "/res2/axpy"
-  type: "Axpy"
+  type: "AxpyFast"
   bottom: "/res2/fc2_sigmoid"
   bottom: "/res2/conv2_relu"
   bottom: "/res2/crop"
@@ -510,7 +510,7 @@ layer {
 }
 layer {
   name: "/res3/axpy"
-  type: "Axpy"
+  type: "AxpyFast"
   bottom: "/res3/fc2_sigmoid"
   bottom: "/res3/conv2_relu"
   bottom: "/res3/crop"
@@ -667,7 +667,7 @@ layer {
 }
 layer {
   name: "/res4/axpy"
-  type: "Axpy"
+  type: "AxpyFast"
   bottom: "/res4/fc2_sigmoid"
   bottom: "/res4/conv2_relu"
   bottom: "/res4/crop"
@@ -824,7 +824,7 @@ layer {
 }
 layer {
   name: "/res5/axpy"
-  type: "Axpy"
+  type: "AxpyFast"
   bottom: "/res5/fc2_sigmoid"
   bottom: "/res5/conv2_relu"
   bottom: "/res5/crop"

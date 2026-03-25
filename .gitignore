@@ -243,5 +243,8 @@ ModelManifest.xml
 
 # FAKE - F# Make
 .fake/
+
 *.caffemodel
 *.protobin
+/lib/
+/opencv_contrib-*/

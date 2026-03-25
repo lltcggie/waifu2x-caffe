@@ -1,11 +1,8 @@
 #include <stdio.h>
+#include <iostream>
 #include <algorithm>
-#include <boost/filesystem.hpp>
-#include <boost/foreach.hpp>
+#include <filesystem>
 #include <functional>
-#include <boost/tokenizer.hpp>
-#include <boost/tokenizer.hpp>
-#include <glog/logging.h>
 #include <codecvt>
 #include "../common/waifu2x.h"
 
@@ -17,6 +14,7 @@
 #include <fcntl.h>
 using namespace TCLAPW;
 typedef std::wstring tstring;
+typedef std::wstringstream tstringstream;
 typedef wchar_t TCHAR;
 #ifndef TEXT
 #define TEXT(x) L##x
@@ -26,7 +24,7 @@ typedef wchar_t TCHAR;
 #define tprintf wprintf
 #define CHAR_STR_FORMAT L"%S"
 
-const tstring& path_to_tstring(const boost::filesystem::path &p)
+tstring path_to_tstring(const std::filesystem::path& p)
 {
 	return p.wstring();
 }
@@ -34,6 +32,7 @@ const tstring& path_to_tstring(const boost::filesystem::path &p)
 #include <tclap/CmdLine.h>
 using namespace TCLAP;
 typedef std::string tstring;
+typedef std::stringstream tstringstream;
 typedef char TCHAR;
 #ifndef TEXT
 #define TEXT(x) x
@@ -43,7 +42,7 @@ typedef char TCHAR;
 #define tprintf printf
 #define CHAR_STR_FORMAT "%s"
 
-const tstring& path_to_tstring(const boost::filesystem::path &p)
+tstring path_to_tstring(const std::filesystem::path& p)
 {
 	return p.string();
 }
@@ -51,22 +50,22 @@ const tstring& path_to_tstring(const boost::filesystem::path &p)
 
 
 // http://stackoverflow.com/questions/10167382/boostfilesystem-get-relative-path
-boost::filesystem::path relativePath(const boost::filesystem::path &path, const boost::filesystem::path &relative_to)
+std::filesystem::path relativePath(const std::filesystem::path& path, const std::filesystem::path& relative_to)
 {
 	// create absolute paths
-	boost::filesystem::path p = boost::filesystem::absolute(path);
-	boost::filesystem::path r = boost::filesystem::absolute(relative_to);
+	std::filesystem::path p = std::filesystem::absolute(path);
+	std::filesystem::path r = std::filesystem::absolute(relative_to);
 
 	// if root paths are different, return absolute path
 	if (p.root_path() != r.root_path())
 		return p;
 
 	// initialize relative path
-	boost::filesystem::path result;
+	std::filesystem::path result;
 
 	// find out where the two paths diverge
-	boost::filesystem::path::const_iterator itr_path = p.begin();
-	boost::filesystem::path::const_iterator itr_relative_to = r.begin();
+	std::filesystem::path::const_iterator itr_path = p.begin();
+	std::filesystem::path::const_iterator itr_relative_to = r.begin();
 	while (*itr_path == *itr_relative_to && itr_path != p.end() && itr_relative_to != r.end()) {
 		++itr_path;
 		++itr_relative_to;
@@ -98,14 +97,6 @@ int main(int argc, char** argv)
 #endif
 
 	Waifu2x::init_liblary(argc, argv);
-
-	// Caffeのエラーでないログを保存しないようにする
-	google::SetLogDestination(google::GLOG_INFO, "");
-	google::SetLogDestination(google::GLOG_WARNING, "");
-
-	// Caffeのエラーログを「error_log_～」に出力
-	google::SetLogDestination(google::GLOG_ERROR, "error_log_");
-	google::SetLogDestination(google::GLOG_FATAL, "error_log_");
 
 	// definition of command line arguments
 	CmdLine cmd(TEXT("waifu2x reimplementation using Caffe"), ' ', TEXT("1.0.0"));
@@ -209,22 +200,22 @@ int main(int argc, char** argv)
 	{
 #ifdef WIN_UNICODE
 		int nArgs = 0;
-		LPTSTR *lplpszArgs = CommandLineToArgvW(GetCommandLine(), &nArgs);
+		LPTSTR* lplpszArgs = CommandLineToArgvW(GetCommandLine(), &nArgs);
 		cmd.parse(nArgs, lplpszArgs);
 		LocalFree(lplpszArgs);
 #else
 		cmd.parse(argc, argv);
 #endif
 	}
-	catch (std::exception &e)
+	catch (std::exception& e)
 	{
 		tprintf(TEXT("エラー: ") CHAR_STR_FORMAT TEXT("\n"), e.what());
 		return 1;
 	}
 
-	boost::optional<double> ScaleRatio;
-	boost::optional<int> ScaleWidth;
-	boost::optional<int> ScaleHeight;
+	std::optional<double> ScaleRatio;
+	std::optional<int> ScaleWidth;
+	std::optional<int> ScaleHeight;
 
 	int crop_w = cmdCropSizeFile.getValue();
 	int crop_h = cmdCropSizeFile.getValue();
@@ -236,14 +227,14 @@ int main(int argc, char** argv)
 		crop_h = cmdCropHeight.getValue();
 
 	if (cmdScaleWidth.getValue() > 0)
-		ScaleWidth = cmdScaleWidth.getValue();
+		ScaleWidth = (int)cmdScaleWidth.getValue();
 	if (cmdScaleHeight.getValue() > 0)
-		ScaleHeight = cmdScaleHeight.getValue();
+		ScaleHeight = (int)cmdScaleHeight.getValue();
 
 	if (cmdScaleWidth.getValue() == 0 && cmdScaleHeight.getValue() == 0)
 		ScaleRatio = cmdScaleRatio.getValue();
 
-	const boost::filesystem::path input_path(boost::filesystem::absolute((cmdInputFile.getValue())));
+	const std::filesystem::path input_path(std::filesystem::absolute((cmdInputFile.getValue())));
 
 	tstring outputExt = cmdOutputFileExt.getValue();
 	if (outputExt.length() > 0 && outputExt[0] != TEXT('.'))
@@ -265,9 +256,9 @@ int main(int argc, char** argv)
 	const bool use_tta = cmdTTALevel.getValue() == 1;
 
 	std::vector<std::pair<tstring, tstring>> file_paths;
-	if (boost::filesystem::is_directory(input_path)) // input_pathがフォルダならそのディレクトリ以下の画像ファイルを一括変換
+	if (std::filesystem::is_directory(input_path)) // input_pathがフォルダならそのディレクトリ以下の画像ファイルを一括変換
 	{
-		boost::filesystem::path output_path;
+		std::filesystem::path output_path;
 
 		if (cmdOutputFile.getValue() == TEXT("(auto)"))
 		{
@@ -277,7 +268,7 @@ int main(int argc, char** argv)
 			addstr += tModelName;
 			addstr += TEXT(")");
 
-			const tstring &mode = cmdMode.getValue();
+			const tstring& mode = cmdMode.getValue();
 
 			addstr += TEXT("(") + mode + TEXT(")");
 
@@ -288,7 +279,7 @@ int main(int argc, char** argv)
 				addstr += TEXT("(tta)");
 			if (mode.find(TEXT("scale")) != mode.npos)
 			{
-				if(ScaleRatio)
+				if (ScaleRatio)
 					addstr += TEXT("(x") + to_tstring(*ScaleRatio) + TEXT(")");
 				else if (ScaleWidth && ScaleHeight)
 					addstr += TEXT("(") + to_tstring(*ScaleWidth) + TEXT("x") + to_tstring(*ScaleHeight) + TEXT(")");
@@ -301,16 +292,16 @@ int main(int argc, char** argv)
 			if (cmdOutputDepth.getValue() != 8)
 				addstr += TEXT("(") + to_tstring(cmdOutputDepth.getValue()) + TEXT("bit)");
 
-			output_path = input_path.branch_path() / (path_to_tstring(input_path.stem()) + addstr);
+			output_path = input_path.parent_path() / (path_to_tstring(input_path.stem()) + addstr);
 		}
 		else
 			output_path = cmdOutputFile.getValue();
 
-		output_path = boost::filesystem::absolute(output_path);
+		output_path = std::filesystem::absolute(output_path);
 
-		if (!boost::filesystem::exists(output_path))
+		if (!std::filesystem::exists(output_path))
 		{
-			if (!boost::filesystem::create_directory(output_path))
+			if (!std::filesystem::create_directory(output_path))
 			{
 				tprintf(TEXT("エラー: 出力フォルダ「%s」の作成に失敗しました\n"), path_to_tstring(output_path).c_str());
 				return 1;
@@ -321,58 +312,69 @@ int main(int argc, char** argv)
 		{
 			// input_extention_listを文字列の配列にする
 
-			typedef boost::char_separator<TCHAR> char_separator;
-			typedef boost::tokenizer<char_separator, tstring::const_iterator, tstring> tokenizer;
-
-			char_separator sep(TEXT(":"), TEXT(""), boost::drop_empty_tokens);
-			tokenizer tokens(cmdInputFileExt.getValue(), sep);
-
-			for (tokenizer::iterator tok_iter = tokens.begin(); tok_iter != tokens.end(); ++tok_iter)
+			tstringstream check1(cmdInputFileExt.getValue());
+			tstring ext;
+			while (std::getline(check1, ext, TEXT(':')))
 			{
-				tstring ext(*tok_iter);
 				std::transform(ext.begin(), ext.end(), ext.begin(), totlower);
 				extList.push_back(TEXT(".") + ext);
 			}
+
+			//typedef boost::char_separator<TCHAR> char_separator;
+			//typedef boost::tokenizer<char_separator, tstring::const_iterator, tstring> tokenizer;
+
+			//char_separator sep(TEXT(":"), TEXT(""), boost::drop_empty_tokens);
+			//tokenizer tokens(cmdInputFileExt.getValue(), sep);
+
+			//for (tokenizer::iterator tok_iter = tokens.begin(); tok_iter != tokens.end(); ++tok_iter)
+			//{
+			//	tstring ext(*tok_iter);
+			//	std::transform(ext.begin(), ext.end(), ext.begin(), totlower);
+			//	extList.push_back(TEXT(".") + ext);
+			//}
 		}
 
-		// 変換する画像の入力、出力パスを取得
-		const auto func = [&extList, &input_path, &output_path, &outputExt, &file_paths](const boost::filesystem::path &path)
-		{
-			BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::recursive_directory_iterator(path),
-				boost::filesystem::recursive_directory_iterator()))
-			{
-				if (boost::filesystem::is_directory(p))
-				{
-					const auto out_relative = relativePath(p, input_path);
-					const auto out_absolute = output_path / out_relative;
 
-					if (!boost::filesystem::exists(out_absolute))
-					{
-						if (!boost::filesystem::create_directory(out_absolute))
-						{
-							tprintf(TEXT("エラー: 出力フォルダ「%s」の作成に失敗しました\n"), path_to_tstring(out_absolute).c_str());
-							return false;
-						}
-					}
-				}
-				else
+
+		// 変換する画像の入力、出力パスを取得
+		const auto func = [&extList, &input_path, &output_path, &outputExt, &file_paths](const std::filesystem::path& path)
+			{
+				for (const auto& i : std::filesystem::recursive_directory_iterator(path))
 				{
-					tstring ext(path_to_tstring(p.extension()));
-					std::transform(ext.begin(), ext.end(), ext.begin(), totlower);
-					if (std::find(extList.begin(), extList.end(), ext) != extList.end())
+					const std::filesystem::path& p = i.path();
+
+					if (std::filesystem::is_directory(p))
 					{
 						const auto out_relative = relativePath(p, input_path);
 						const auto out_absolute = output_path / out_relative;
 
-						const auto out = path_to_tstring(out_absolute.branch_path() / out_absolute.stem()) + outputExt;
+						if (!std::filesystem::exists(out_absolute))
+						{
+							if (!std::filesystem::create_directory(out_absolute))
+							{
+								tprintf(TEXT("エラー: 出力フォルダ「%s」の作成に失敗しました\n"), path_to_tstring(out_absolute).c_str());
+								return false;
+							}
+						}
+					}
+					else
+					{
+						tstring ext(path_to_tstring(p.extension()));
+						std::transform(ext.begin(), ext.end(), ext.begin(), totlower);
+						if (std::find(extList.begin(), extList.end(), ext) != extList.end())
+						{
+							const auto out_relative = relativePath(p, input_path);
+							const auto out_absolute = output_path / out_relative;
 
-						file_paths.emplace_back(path_to_tstring(p), out);
+							const auto out = path_to_tstring(out_absolute.parent_path() / out_absolute.stem()) + outputExt;
+
+							file_paths.emplace_back(path_to_tstring(p), out);
+						}
 					}
 				}
-			}
 
-			return true;
-		};
+				return true;
+			};
 
 		if (!func(input_path))
 			return 1;
@@ -393,7 +395,7 @@ int main(int argc, char** argv)
 			addstr += tModelName;
 			addstr += TEXT(")");
 
-			const tstring &mode = cmdMode.getValue();
+			const tstring& mode = cmdMode.getValue();
 
 			addstr += TEXT("(") + mode + TEXT(")");
 
@@ -461,11 +463,11 @@ int main(int argc, char** argv)
 	}
 
 	bool isError = false;
-	for (const auto &p : file_paths)
+	for (const auto& p : file_paths)
 	{
 		const Waifu2x::eWaifu2xError ret = w.waifu2x(p.first, p.second, ScaleRatio, ScaleWidth, ScaleHeight, nullptr,
 			crop_w, crop_h,
-			cmdOutputQuality.getValue() == -1 ? boost::optional<int>() : cmdOutputQuality.getValue(), cmdOutputDepth.getValue(), use_tta, cmdBatchSizeFile.getValue());
+			cmdOutputQuality.getValue() == -1 ? std::optional<int>() : cmdOutputQuality.getValue(), cmdOutputDepth.getValue(), use_tta, cmdBatchSizeFile.getValue());
 		if (ret != Waifu2x::eWaifu2xError_OK)
 		{
 			switch (ret)

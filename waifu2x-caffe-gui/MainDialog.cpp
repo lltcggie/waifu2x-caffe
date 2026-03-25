@@ -58,22 +58,22 @@ namespace
 	}
 
 	// http://stackoverflow.com/questions/10167382/boostfilesystem-get-relative-path
-	boost::filesystem::path relativePath(const boost::filesystem::path &path, const boost::filesystem::path &relative_to)
+	std::filesystem::path relativePath(const std::filesystem::path &path, const std::filesystem::path &relative_to)
 	{
 		// create absolute paths
-		boost::filesystem::path p = boost::filesystem::absolute(path);
-		boost::filesystem::path r = boost::filesystem::absolute(relative_to);
+		std::filesystem::path p = std::filesystem::absolute(path);
+		std::filesystem::path r = std::filesystem::absolute(relative_to);
 
 		// if root paths are different, return absolute path
 		if (p.root_path() != r.root_path())
 			return p;
 
 		// initialize relative path
-		boost::filesystem::path result;
+		std::filesystem::path result;
 
 		// find out where the two paths diverge
-		boost::filesystem::path::const_iterator itr_path = p.begin();
-		boost::filesystem::path::const_iterator itr_relative_to = r.begin();
+		std::filesystem::path::const_iterator itr_path = p.begin();
+		std::filesystem::path::const_iterator itr_relative_to = r.begin();
 		while (*itr_path == *itr_relative_to && itr_path != p.end() && itr_relative_to != r.end())
 		{
 			++itr_path;
@@ -497,7 +497,7 @@ bool DialogEvent::SyncMember(const bool NotSyncCropSize, const bool silent)
 	return ret;
 }
 
-void DialogEvent::SetCropSizeList(const boost::filesystem::path & input_path)
+void DialogEvent::SetCropSizeList(const std::filesystem::path & input_path)
 {
 	if (isSetInitCrop)
 		return;
@@ -505,7 +505,7 @@ void DialogEvent::SetCropSizeList(const boost::filesystem::path & input_path)
 	HWND hcrop = GetDlgItem(dh, IDC_COMBO_CROP_SIZE);
 
 	int gcd = 1;
-	if (boost::filesystem::exists(input_path) && !boost::filesystem::is_directory(input_path))
+	if (std::filesystem::exists(input_path) && !std::filesystem::is_directory(input_path))
 	{
 		cv::Mat mat;
 		const auto ret = stImage::LoadMat(mat, input_path.string());
@@ -620,17 +620,17 @@ void DialogEvent::ProcessWaifu2x()
 
 	const auto inputFunc = [this, &file_paths](const tstring &input)
 	{
-		const boost::filesystem::path input_path(boost::filesystem::absolute(input));
+		const std::filesystem::path input_path(std::filesystem::absolute(input));
 
-		if (boost::filesystem::is_directory(input_path)) // input_pathがフォルダならそのディレクトリ以下の画像ファイルを一括変換
+		if (std::filesystem::is_directory(input_path)) // input_pathがフォルダならそのディレクトリ以下の画像ファイルを一括変換
 		{
-			boost::filesystem::path output_path(output_str);
+			std::filesystem::path output_path(output_str);
 
-			output_path = boost::filesystem::absolute(output_path);
+			output_path = std::filesystem::absolute(output_path);
 
-			if (!boost::filesystem::exists(output_path))
+			if (!std::filesystem::exists(output_path))
 			{
-				if (!boost::filesystem::create_directory(output_path))
+				if (!std::filesystem::create_directory(output_path))
 				{
 					SendMessage(dh, WM_FAILD_CREATE_DIR, (WPARAM)&output_path, 0);
 					PostMessage(dh, WM_END_THREAD, 0, 0);
@@ -640,12 +640,12 @@ void DialogEvent::ProcessWaifu2x()
 			}
 
 			// 変換する画像の入力、出力パスを取得
-			const auto func = [this, &input_path, &output_path, &file_paths](const boost::filesystem::path &path)
+			const auto func = [this, &input_path, &output_path, &file_paths](const std::filesystem::path &path)
 			{
-				BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::recursive_directory_iterator(path),
-					boost::filesystem::recursive_directory_iterator()))
+				BOOST_FOREACH(const std::filesystem::path& p, std::make_pair(std::filesystem::recursive_directory_iterator(path),
+					std::filesystem::recursive_directory_iterator()))
 				{
-					if (!boost::filesystem::is_directory(p))
+					if (!std::filesystem::is_directory(p))
 					{
 						tstring ext(getTString(p.extension()));
 #ifdef UNICODE
@@ -674,12 +674,12 @@ void DialogEvent::ProcessWaifu2x()
 
 			for (const auto &p : file_paths)
 			{
-				const boost::filesystem::path out_path(p.second);
-				const boost::filesystem::path out_dir(out_path.parent_path());
+				const std::filesystem::path out_path(p.second);
+				const std::filesystem::path out_dir(out_path.parent_path());
 
-				if (!boost::filesystem::exists(out_dir))
+				if (!std::filesystem::exists(out_dir))
 				{
-					if (!boost::filesystem::create_directories(out_dir))
+					if (!std::filesystem::create_directories(out_dir))
 					{
 						SendMessage(dh, WM_FAILD_CREATE_DIR, (WPARAM)&out_dir, 0);
 						PostMessage(dh, WM_END_THREAD, 0, 0);
@@ -691,12 +691,12 @@ void DialogEvent::ProcessWaifu2x()
 		}
 		else
 		{
-			const boost::filesystem::path output_path(output_str);
+			const std::filesystem::path output_path(output_str);
 			const auto outDir = output_path.branch_path();
 
-			if (!outDir.empty() && !boost::filesystem::exists(outDir))
+			if (!outDir.empty() && !std::filesystem::exists(outDir))
 			{
-				if (!boost::filesystem::create_directories(outDir))
+				if (!std::filesystem::create_directories(outDir))
 				{
 					SendMessage(dh, WM_FAILD_CREATE_DIR, (WPARAM)&outDir, 0);
 					PostMessage(dh, WM_END_THREAD, 0, 0);
@@ -711,8 +711,8 @@ void DialogEvent::ProcessWaifu2x()
 
 	const auto inputFuncMulti = [this, &file_paths](const tstring &input)
 	{
-		const boost::filesystem::path input_path(boost::filesystem::absolute(input));
-		const boost::filesystem::path output_path(boost::filesystem::absolute(output_str));
+		const std::filesystem::path input_path(std::filesystem::absolute(input));
+		const std::filesystem::path output_path(std::filesystem::absolute(output_str));
 
 		const auto outilenameFunc = [&output_path](const tstring &path) -> std::wstring
 		{
@@ -720,11 +720,11 @@ void DialogEvent::ProcessWaifu2x()
 			return out.wstring();
 		};
 
-		if (boost::filesystem::is_directory(input_path)) // input_pathがフォルダならそのディレクトリ以下の画像ファイルを一括変換
+		if (std::filesystem::is_directory(input_path)) // input_pathがフォルダならそのディレクトリ以下の画像ファイルを一括変換
 		{
-			if (!boost::filesystem::exists(output_path))
+			if (!std::filesystem::exists(output_path))
 			{
-				if (!boost::filesystem::create_directory(output_path))
+				if (!std::filesystem::create_directory(output_path))
 				{
 					SendMessage(dh, WM_FAILD_CREATE_DIR, (WPARAM)&output_path, 0);
 					PostMessage(dh, WM_END_THREAD, 0, 0);
@@ -736,12 +736,12 @@ void DialogEvent::ProcessWaifu2x()
 			const auto inputDirName = input_path.filename();
 
 			// 変換する画像の入力、出力パスを取得
-			const auto func = [this, &input_path, &output_path, &file_paths, &inputDirName](const boost::filesystem::path &path)
+			const auto func = [this, &input_path, &output_path, &file_paths, &inputDirName](const std::filesystem::path &path)
 			{
-				BOOST_FOREACH(const boost::filesystem::path& p, std::make_pair(boost::filesystem::recursive_directory_iterator(path),
-					boost::filesystem::recursive_directory_iterator()))
+				BOOST_FOREACH(const std::filesystem::path& p, std::make_pair(std::filesystem::recursive_directory_iterator(path),
+					std::filesystem::recursive_directory_iterator()))
 				{
-					if (!boost::filesystem::is_directory(p))
+					if (!std::filesystem::is_directory(p))
 					{
 						tstring ext(getTString(p.extension()));
 #ifdef UNICODE
@@ -770,12 +770,12 @@ void DialogEvent::ProcessWaifu2x()
 
 			for (const auto &p : file_paths)
 			{
-				const boost::filesystem::path out_path(p.second);
-				const boost::filesystem::path out_dir(out_path.parent_path());
+				const std::filesystem::path out_path(p.second);
+				const std::filesystem::path out_dir(out_path.parent_path());
 
-				if (!boost::filesystem::exists(out_dir))
+				if (!std::filesystem::exists(out_dir))
 				{
-					if (!boost::filesystem::create_directories(out_dir))
+					if (!std::filesystem::create_directories(out_dir))
 					{
 						SendMessage(dh, WM_FAILD_CREATE_DIR, (WPARAM)&out_dir, 0);
 						PostMessage(dh, WM_END_THREAD, 0, 0);
@@ -789,9 +789,9 @@ void DialogEvent::ProcessWaifu2x()
 		{
 			const auto &outDir = output_path;
 
-			if (!boost::filesystem::exists(outDir))
+			if (!std::filesystem::exists(outDir))
 			{
-				if (!boost::filesystem::create_directories(outDir))
+				if (!std::filesystem::create_directories(outDir))
 				{
 					SendMessage(dh, WM_FAILD_CREATE_DIR, (WPARAM)&outDir, 0);
 					PostMessage(dh, WM_END_THREAD, 0, 0);
@@ -849,8 +849,8 @@ void DialogEvent::ProcessWaifu2x()
 
 		ProgessFunc(maxFile, 0);
 
-		boost::optional<double> ScaleRatio;
-		boost::optional<int> ScaleWidth, ScaleHeight;
+		std::optional<double> ScaleRatio;
+		std::optional<int> ScaleWidth, ScaleHeight;
 		switch (scaleType)
 		{
 		case eScaleTypeRatio:
@@ -875,7 +875,7 @@ void DialogEvent::ProcessWaifu2x()
 		const auto fileNum = file_paths.size();
 		for (const auto &p : file_paths)
 		{
-			if (isOutputNoOverwrite && boost::filesystem::exists(p.second)) // 上書き禁止ならメッセージ表示して無視
+			if (isOutputNoOverwrite && std::filesystem::exists(p.second)) // 上書き禁止ならメッセージ表示して無視
 			{
 				SendMessage(dh, WM_ON_WAIFU2X_NO_OVERWRITE, (WPARAM)p.first.c_str(), (LPARAM)p.second.c_str());
 
@@ -943,10 +943,10 @@ void DialogEvent::ReplaceAddString() // ファイル名の自動設定部分を書き換える
 {
 	SyncMember(true, true);
 
-	const boost::filesystem::path output_path(output_str);
+	const std::filesystem::path output_path(output_str);
 	tstring stem;
 
-	if (input_str_multi.size() == 0 && !boost::filesystem::is_directory(input_str))
+	if (input_str_multi.size() == 0 && !std::filesystem::is_directory(input_str))
 		stem = getTString(output_path.stem());
 	else
 		stem = getTString(output_path.filename());
@@ -963,8 +963,8 @@ void DialogEvent::ReplaceAddString() // ファイル名の自動設定部分を書き換える
 
 			autoSetAddName = addstr;
 
-			boost::filesystem::path new_out_path;
-			if (input_str_multi.size() == 0 && !boost::filesystem::is_directory(input_str))
+			std::filesystem::path new_out_path;
+			if (input_str_multi.size() == 0 && !std::filesystem::is_directory(input_str))
 				new_out_path = output_path.branch_path() / (new_name + outputExt);
 			else
 				new_out_path = output_path.branch_path() / (new_name);
@@ -1040,7 +1040,7 @@ void DialogEvent::SaveIni(const bool isSyncMember)
 	if (isNotSaveParam)
 		return;
 
-	const boost::filesystem::path SettingFilePath(exeDir / SettingFileName);
+	const std::filesystem::path SettingFilePath(exeDir / SettingFileName);
 
 	tstring tScaleRatio;
 	tstring tScaleWidth;
@@ -1338,8 +1338,8 @@ UINT_PTR DialogEvent::OFNHookProcOut(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARA
 			{
 				szPath[_countof(szPath) - 1] = TEXT('\0');
 
-				boost::filesystem::path p(szPath);
-				if (boost::filesystem::exists(p) && (boost::filesystem::is_empty(p) || boost::filesystem::is_directory(p)))
+				std::filesystem::path p(szPath);
+				if (std::filesystem::exists(p) && (std::filesystem::is_empty(p) || std::filesystem::is_directory(p)))
 				{
 					const auto filename = getTString(p.filename());
 
@@ -1505,7 +1505,7 @@ void DialogEvent::OnDialogEnd(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lp
 
 void DialogEvent::OnFaildCreateDir(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 {
-	const boost::filesystem::path *p = (const boost::filesystem::path *)wParam;
+	const std::filesystem::path *p = (const std::filesystem::path *)wParam;
 
 	TCHAR msg[1024 * 2];
 	_stprintf(msg, langStringList.GetString(L"MessageCreateOutDirError").c_str(), getTString(*p).c_str());
@@ -1730,15 +1730,15 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 		GetModuleFileName(NULL, texepath, _countof(texepath));
 		texepath[_countof(texepath) - 1] = TEXT('\0');
 
-		const boost::filesystem::path exePath(texepath);
+		const std::filesystem::path exePath(texepath);
 		exeDir = exePath.branch_path();
 	}
 
-	const boost::filesystem::path SettingFilePath(exeDir / SettingFileName);
+	const std::filesystem::path SettingFilePath(exeDir / SettingFileName);
 
 	{
-		const boost::filesystem::path LangDirPath(exeDir / LangDir);
-		const boost::filesystem::path LangListPath(exeDir / LangListFileName);
+		const std::filesystem::path LangDirPath(exeDir / LangDir);
+		const std::filesystem::path LangListPath(exeDir / LangListFileName);
 		langStringList.SetLangBaseDir(getTString(LangDirPath));
 		langStringList.ReadLangList(getTString(LangListPath));
 	}
@@ -1811,7 +1811,7 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 		SendMessage(houtext, CB_SETCURSEL, 0, 0);
 	}
 
-	const boost::filesystem::path CropSizeListPath(exeDir / CropSizeListName);
+	const std::filesystem::path CropSizeListPath(exeDir / CropSizeListName);
 	std::ifstream ifs(CropSizeListPath.wstring());
 	if (ifs)
 	{
@@ -2132,7 +2132,7 @@ void DialogEvent::Create(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData)
 
 	SetWindowText(GetDlgItem(hWnd, IDC_EDIT_INPUT_EXT_LIST), inputFileExt.c_str());
 
-	if (tOutputDirFix.length() > 0 && boost::filesystem::exists(tOutputDirFix))
+	if (tOutputDirFix.length() > 0 && std::filesystem::exists(tOutputDirFix))
 	{
 		output_dir = tOutputDirFix;
 		SetWindowText(GetDlgItem(hWnd, IDC_EDIT_OUTPUT), output_dir.c_str());
@@ -2758,9 +2758,9 @@ LRESULT DialogEvent::OnSetInputFilePath(const TCHAR * tPath)
 {
 	HWND hWnd = GetDlgItem(dh, IDC_EDIT_INPUT);
 
-	boost::filesystem::path path(tPath);
+	std::filesystem::path path(tPath);
 
-	if (!boost::filesystem::exists(path))
+	if (!std::filesystem::exists(path))
 	{
 		MessageBox(dh, langStringList.GetString(L"MessageInputCheckError").c_str(), langStringList.GetString(L"MessageTitleError").c_str(), MB_OK | MB_ICONERROR);
 		return 0L;
@@ -2770,9 +2770,9 @@ LRESULT DialogEvent::OnSetInputFilePath(const TCHAR * tPath)
 
 	SyncMember(true, true);
 
-	boost::filesystem::path outpath(output_dir);
+	std::filesystem::path outpath(output_dir);
 
-	if (boost::filesystem::is_directory(path))
+	if (std::filesystem::is_directory(path))
 	{
 		HWND ho = GetDlgItem(dh, IDC_EDIT_OUTPUT);
 
@@ -2832,7 +2832,7 @@ LRESULT DialogEvent::OnSetInputFilePath()
 		const tstring addstr(AddName());
 		autoSetAddName = AddName();
 
-		boost::filesystem::path outpath(output_dir);
+		std::filesystem::path outpath(output_dir);
 
 		if (output_dir.length() == 0) // 出力パス未設定なら入力ファイルと同じフォルダ
 		{
@@ -2840,10 +2840,10 @@ LRESULT DialogEvent::OnSetInputFilePath()
 			outpath = outpath.branch_path();
 		}
 
-		boost::filesystem::path baseDir(input_str_multi[0]);
+		std::filesystem::path baseDir(input_str_multi[0]);
 
 		tstring filename;
-		if (boost::filesystem::is_directory(baseDir))
+		if (std::filesystem::is_directory(baseDir))
 			filename = baseDir.filename().wstring();
 		else
 			filename = baseDir.stem().wstring();
@@ -2865,15 +2865,15 @@ LRESULT DialogEvent::OnSetOutputFilePath(const TCHAR * tPath)
 
 	if (input_str.length() > 0 || input_str_multi.size() > 0)
 	{
-		boost::filesystem::path path(input_str);
-		boost::filesystem::path outpath(tPath);
+		std::filesystem::path path(input_str);
+		std::filesystem::path outpath(tPath);
 
 		if (input_str_multi.size() > 0)
 		{
 			path = input_str_multi[0];
 		}
 
-		if (boost::filesystem::is_directory(path))
+		if (std::filesystem::is_directory(path))
 		{
 			HWND ho = GetDlgItem(dh, IDC_EDIT_OUTPUT);
 
@@ -2952,7 +2952,7 @@ LRESULT DialogEvent::DropInput(HWND hWnd, WPARAM wParam, LPARAM lParam, WNDPROC 
 		}
 
 		if (tAutoMode == TEXT("one") ||
-			(tAutoMode == TEXT("multi") && (input_str_multi.size() > 0 || boost::filesystem::is_directory(szTmp))))
+			(tAutoMode == TEXT("multi") && (input_str_multi.size() > 0 || std::filesystem::is_directory(szTmp))))
 		{
 			::PostMessage(GetDlgItem(dh, IDC_BUTTON_EXEC), BM_CLICK, 0, 0);
 		}
@@ -3037,7 +3037,7 @@ void DialogEvent::InputRef(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpDat
 	*tfp = TEXT('\0');
 	tfp++;
 
-	if (tInputDirFix.length() > 0 && boost::filesystem::exists(tInputDirFix))
+	if (tInputDirFix.length() > 0 && std::filesystem::exists(tInputDirFix))
 		ofn.lpstrInitialDir = tInputDirFix.c_str();
 	else
 		ofn.lpstrInitialDir = szPath;
@@ -3104,7 +3104,7 @@ void DialogEvent::InputRef(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpDat
 			}
 
 			if (tAutoMode == TEXT("one") ||
-				(tAutoMode == TEXT("multi") && (input_str_multi.size() > 0 || boost::filesystem::is_directory(szFile.data()))))
+				(tAutoMode == TEXT("multi") && (input_str_multi.size() > 0 || std::filesystem::is_directory(szFile.data()))))
 			{
 				::PostMessage(GetDlgItem(dh, IDC_BUTTON_EXEC), BM_CLICK, 0, 0);
 			}
@@ -3139,7 +3139,7 @@ void DialogEvent::OutputRef(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpDa
 	memcpy(tfp, allFilesExt.c_str(), allFilesExt.length() * sizeof(TCHAR));
 	tfp += allFilesExt.length();
 
-	if (tOutputDirFix.length() > 0 && boost::filesystem::exists(tOutputDirFix))
+	if (tOutputDirFix.length() > 0 && std::filesystem::exists(tOutputDirFix))
 		ofn.lpstrInitialDir = tOutputDirFix.c_str();
 	else
 		ofn.lpstrInitialDir = szPath;
@@ -3417,7 +3417,7 @@ void DialogEvent::AppSetting(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpD
 		tOutputDirFix = cAppSettingDialogEvent.tOutputDirFix;
 		gpu_no = cAppSettingDialogEvent.gpu_no;
 
-		if (tOutputDirFix.length() > 0 && boost::filesystem::exists(tOutputDirFix))
+		if (tOutputDirFix.length() > 0 && std::filesystem::exists(tOutputDirFix))
 		{
 			output_dir = tOutputDirFix;
 		}

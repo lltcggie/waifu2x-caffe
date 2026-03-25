@@ -14,19 +14,19 @@
     <ProjectGuid>{7C406EE4-2309-4D4C-98BB-CB7BA865FC41}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>waifu2x-caffe</RootNamespace>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -42,15 +42,15 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(CUDA_PATH_V11_0)\include;$(SolutionDir)lib\include;$(USERPROFILE)\.caffe\dependencies\libraries_v140_x64_py27_1.1.0\libraries\include;$(USERPROFILE)\.caffe\dependencies\libraries_v140_x64_py27_1.1.0\libraries\include\boost-1_61;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(SolutionDir)msgpack-c\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(CUDA_PATH_V11_0)\lib\$(PlatformName);$(SolutionDir)lib\$(PlatformName)\vc15\staticlib;$(SolutionDir)lib\lib;$(USERPROFILE)\.caffe\dependencies\libraries_v140_x64_py27_1.1.0\libraries\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(CUDA_PATH_V13_0)\include;$(SolutionDir)lib\include;$(SolutionDir)lib\include\opencv2;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(SolutionDir)msgpack-c\include;$(SolutionDir)opencv\modules\dnn\src;$(IncludePath)</IncludePath>
+    <LibraryPath>$(CUDA_PATH_V13_0)\lib\$(PlatformName);$(SolutionDir)lib\$(PlatformName)\vc17\staticlib;$(SolutionDir)lib\lib;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)bin\</OutDir>
     <TargetName>$(ProjectName)d</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(CUDA_PATH_V11_0)\include;$(SolutionDir)lib\include;$(USERPROFILE)\.caffe\dependencies\libraries_v140_x64_py27_1.1.0\libraries\include;$(USERPROFILE)\.caffe\dependencies\libraries_v140_x64_py27_1.1.0\libraries\include\boost-1_61;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(SolutionDir)msgpack-c\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(CUDA_PATH_V11_0)\lib\$(PlatformName);$(SolutionDir)lib\$(PlatformName)\vc15\staticlib;$(SolutionDir)lib\lib;$(USERPROFILE)\.caffe\dependencies\libraries_v140_x64_py27_1.1.0\libraries\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(CUDA_PATH_V13_0)\include;$(SolutionDir)lib\include;$(SolutionDir)lib\include\opencv2;$(SolutionDir)rapidjson\include;$(SolutionDir)stb;$(SolutionDir)include;$(SolutionDir)msgpack-c\include;$(SolutionDir)opencv\modules\dnn\src;$(IncludePath)</IncludePath>
+    <LibraryPath>$(CUDA_PATH_V13_0)\lib\$(PlatformName);$(SolutionDir)lib\$(PlatformName)\vc17\staticlib;$(SolutionDir)lib\lib;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)bin\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -59,8 +59,9 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>BOOST_ALL_NO_LIB;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -77,8 +78,9 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>BOOST_ALL_NO_LIB;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -90,15 +92,31 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\common\cNet.cpp" />
-    <ClCompile Include="..\common\stImage.cpp" />
-    <ClCompile Include="..\common\waifu2x.cpp" />
-    <ClCompile Include="Source.cpp" />
+    <ClCompile Include="..\common\cNet.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\common\stImage.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\common\waifu2x.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="axpy_fast_layer.cpp" />
+    <ClCompile Include="slice_layer.cpp" />
+    <ClCompile Include="Source.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Test.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\cNet.h" />
     <ClInclude Include="..\common\stImage.h" />
     <ClInclude Include="..\common\waifu2x.h" />
+    <ClInclude Include="axpy.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

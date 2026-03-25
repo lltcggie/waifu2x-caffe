@@ -29,7 +29,7 @@ static bool readFile(boost::iostreams::stream<boost::iostreams::file_descriptor_
 }
 
 template<typename BufType>
-static bool readFile(const boost::filesystem::path &path, std::vector<BufType> &buf)
+static bool readFile(const std::filesystem::path &path, std::vector<BufType> &buf)
 {
 	boost::iostreams::stream<boost::iostreams::file_descriptor_source> is;
 
@@ -45,7 +45,7 @@ static bool readFile(const boost::filesystem::path &path, std::vector<BufType> &
 	return readFile(is, buf);
 }
 
-static Waifu2x::eWaifu2xError readProtoText(const boost::filesystem::path &path, ::google::protobuf::Message* proto)
+static Waifu2x::eWaifu2xError readProtoText(const std::filesystem::path &path, ::google::protobuf::Message* proto)
 {
 	boost::iostreams::stream<boost::iostreams::file_descriptor_source> is;
 
@@ -74,7 +74,7 @@ static Waifu2x::eWaifu2xError readProtoText(const boost::filesystem::path &path,
 	return Waifu2x::eWaifu2xError_OK;
 }
 
-static Waifu2x::eWaifu2xError writeProtoBinary(const ::google::protobuf::Message& proto, const boost::filesystem::path &path)
+static Waifu2x::eWaifu2xError writeProtoBinary(const ::google::protobuf::Message& proto, const std::filesystem::path &path)
 {
 	boost::iostreams::stream<boost::iostreams::file_descriptor> os;
 
@@ -96,7 +96,7 @@ static Waifu2x::eWaifu2xError writeProtoBinary(const ::google::protobuf::Message
 	return Waifu2x::eWaifu2xError_OK;
 }
 
-static Waifu2x::eWaifu2xError readProtoBinary(const boost::filesystem::path &path, ::google::protobuf::Message* proto)
+static Waifu2x::eWaifu2xError readProtoBinary(const std::filesystem::path &path, ::google::protobuf::Message* proto)
 {
 	boost::iostreams::stream<boost::iostreams::file_descriptor_source> is;
 
@@ -130,7 +130,7 @@ static Waifu2x::eWaifu2xError readProtoBinary(const boost::filesystem::path &pat
 
 namespace
 {
-	Waifu2x::eWaifu2xError ReadJson(const boost::filesystem::path &info_path, rapidjson::Document &d, std::vector<char> &jsonBuf)
+	Waifu2x::eWaifu2xError ReadJson(const std::filesystem::path &info_path, rapidjson::Document &d, std::vector<char> &jsonBuf)
 	{
 		try
 		{
@@ -174,7 +174,7 @@ cNet::cNet() : mModelScale(0), mInnerScale(0), mNetOffset(0), mInputPlane(0), mH
 cNet::~cNet()
 {}
 
-Waifu2x::eWaifu2xError cNet::GetInfo(const boost::filesystem::path & info_path, Waifu2x::stInfo &info)
+Waifu2x::eWaifu2xError cNet::GetInfo(const std::filesystem::path & info_path, Waifu2x::stInfo &info)
 {
 	rapidjson::Document d;
 	std::vector<char> jsonBuf;
@@ -291,7 +291,7 @@ Waifu2x::eWaifu2xError cNet::GetInfo(const boost::filesystem::path & info_path, 
 
 // モデルファイルからネットワークを構築
 // processでcudnnが指定されなかった場合はcuDNNが呼び出されないように変更する
-Waifu2x::eWaifu2xError cNet::ConstractNet(const Waifu2x::eWaifu2xModelType mode, const boost::filesystem::path &model_path, const boost::filesystem::path &param_path, const Waifu2x::stInfo &info, const std::string &process)
+Waifu2x::eWaifu2xError cNet::ConstractNet(const Waifu2x::eWaifu2xModelType mode, const std::filesystem::path &model_path, const std::filesystem::path &param_path, const Waifu2x::stInfo &info, const std::string &process)
 {
 	Waifu2x::eWaifu2xError ret;
 
@@ -299,9 +299,9 @@ Waifu2x::eWaifu2xError cNet::ConstractNet(const Waifu2x::eWaifu2xModelType mode,
 
 	LoadParamFromInfo(mode, info);
 
-	boost::filesystem::path modelbin_path = model_path;
+	std::filesystem::path modelbin_path = model_path;
 	modelbin_path += ".protobin";
-	boost::filesystem::path caffemodel_path = param_path;
+	std::filesystem::path caffemodel_path = param_path;
 	caffemodel_path += ".caffemodel";
 
 	caffe::NetParameter param_model;
@@ -331,7 +331,7 @@ Waifu2x::eWaifu2xError cNet::ConstractNet(const Waifu2x::eWaifu2xModelType mode,
 		if (!caffe::UpgradeNetAsNeeded(caffemodel_path.string(), &param_caffemodel))
 			return Waifu2x::eWaifu2xError_FailedParseModelFile;
 
-		mNet = boost::shared_ptr<caffe::Net<float>>(new caffe::Net<float>(param_model));
+		mNet = std::shared_ptr<caffe::Net<float>>(new caffe::Net<float>(param_model));
 		mNet->CopyTrainedLayersFrom(param_caffemodel);
 	}
 	else
@@ -437,8 +437,8 @@ Waifu2x::eWaifu2xError cNet::SetParameter(caffe::NetParameter &param, const std:
 	return Waifu2x::eWaifu2xError_OK;
 }
 
-Waifu2x::eWaifu2xError cNet::LoadParameterFromJson(const boost::filesystem::path &model_path, const boost::filesystem::path &param_path
-	, const boost::filesystem::path &modelbin_path, const boost::filesystem::path &caffemodel_path, const std::string &process)
+Waifu2x::eWaifu2xError cNet::LoadParameterFromJson(const std::filesystem::path &model_path, const std::filesystem::path &param_path
+	, const std::filesystem::path &modelbin_path, const std::filesystem::path &caffemodel_path, const std::string &process)
 {
 	Waifu2x::eWaifu2xError ret;
 
@@ -455,7 +455,7 @@ Waifu2x::eWaifu2xError cNet::LoadParameterFromJson(const boost::filesystem::path
 	if (ret != Waifu2x::eWaifu2xError_OK)
 		return ret;
 
-	mNet = boost::shared_ptr<caffe::Net<float>>(new caffe::Net<float>(param));
+	mNet = std::shared_ptr<caffe::Net<float>>(new caffe::Net<float>(param));
 
 	rapidjson::Document d;
 	std::vector<char> jsonBuf;
@@ -509,7 +509,7 @@ Waifu2x::eWaifu2xError cNet::LoadParameterFromJson(const boost::filesystem::path
 	if (inputPlane != outputPlane)
 		return Waifu2x::eWaifu2xError_FailedParseModelFile;
 
-	std::vector<boost::shared_ptr<caffe::Layer<float>>> list;
+	std::vector<std::shared_ptr<caffe::Layer<float>>> list;
 	auto &v = mNet->layers();
 	for (auto &l : v)
 	{
@@ -858,7 +858,7 @@ Waifu2x::eWaifu2xError cNet::ReconstructImage(const bool UseTTA, const int crop_
 	return Waifu2x::eWaifu2xError_OK;
 }
 
-std::string cNet::GetModelName(const boost::filesystem::path &info_path)
+std::string cNet::GetModelName(const std::filesystem::path &info_path)
 {
 	Waifu2x::eWaifu2xError ret;
 

@@ -1,7 +1,7 @@
 #include "stImage.h"
-#include <boost/iostreams/stream.hpp>
-#include <boost/iostreams/device/file_descriptor.hpp>
-#include <boost/algorithm/string.hpp>
+//#include <boost/iostreams/stream.hpp>
+//#include <boost/iostreams/device/file_descriptor.hpp>
+//#include <boost/algorithm/string.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
@@ -11,10 +11,10 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 
-const int YToRGBConvertMode = CV_GRAY2RGB;
-const int YToRGBConverInversetMode = CV_RGB2GRAY;
-const int BGRToYConvertMode = CV_BGR2YUV;
-const int BGRToConvertInverseMode = CV_YUV2BGR;
+const int YToRGBConvertMode = cv::COLOR_GRAY2RGB;
+const int YToRGBConverInversetMode = cv::COLOR_RGB2GRAY;
+const int BGRToYConvertMode = cv::COLOR_BGR2YUV;
+const int BGRToConvertInverseMode = cv::COLOR_YUV2BGR;
 
 // floatな画像をuint8_tな画像に変換する際の四捨五入に使う値
 // https://github.com/nagadomi/waifu2x/commit/797b45ae23665a1c5e3c481c018e48e6f0d0e383
@@ -24,39 +24,22 @@ const double clip_eps32 = 1.0 * 0.5 - (1.0e-7 * 0.5);
 
 const std::vector<stImage::stOutputExtentionElement> stImage::OutputExtentionList =
 {
-	{L".png",{8, 16}, boost::optional<int>(), boost::optional<int>(), boost::optional<int>(), boost::optional<int>()},
-	{L".bmp",{8}, boost::optional<int>(), boost::optional<int>(), boost::optional<int>(), boost::optional<int>()},
+	{L".png",{8, 16}, std::optional<int>(), std::optional<int>(), std::optional<int>(), std::optional<int>()},
+	{L".bmp",{8}, std::optional<int>(), std::optional<int>(), std::optional<int>(), std::optional<int>()},
 	{L".jpg",{8}, 0, 100, 95, cv::IMWRITE_JPEG_QUALITY},
-	{L".jp2",{8, 16}, boost::optional<int>(), boost::optional<int>(), boost::optional<int>(), boost::optional<int>()},
-	{L".sr",{8}, boost::optional<int>(), boost::optional<int>(), boost::optional<int>(), boost::optional<int>()},
-	{L".tif",{8, 16, 32}, boost::optional<int>(), boost::optional<int>(), boost::optional<int>(), boost::optional<int>()},
-	{L".hdr",{8, 16, 32}, boost::optional<int>(), boost::optional<int>(), boost::optional<int>(), boost::optional<int>()},
-	{L".exr",{8, 16, 32}, boost::optional<int>(), boost::optional<int>(), boost::optional<int>(), boost::optional<int>()},
-	{L".ppm",{8, 16}, boost::optional<int>(), boost::optional<int>(), boost::optional<int>(), boost::optional<int>()},
+	{L".jp2",{8, 16}, std::optional<int>(), std::optional<int>(), std::optional<int>(), std::optional<int>()},
+	{L".sr",{8}, std::optional<int>(), std::optional<int>(), std::optional<int>(), std::optional<int>()},
+	{L".tif",{8, 16, 32}, std::optional<int>(), std::optional<int>(), std::optional<int>(), std::optional<int>()},
+	{L".hdr",{8, 16, 32}, std::optional<int>(), std::optional<int>(), std::optional<int>(), std::optional<int>()},
+	{L".exr",{8, 16, 32}, std::optional<int>(), std::optional<int>(), std::optional<int>(), std::optional<int>()},
+	{L".ppm",{8, 16}, std::optional<int>(), std::optional<int>(), std::optional<int>(), std::optional<int>()},
 	{L".webp",{8}, 1, 100, 100, cv::IMWRITE_WEBP_QUALITY},
 	{L".tga",{8}, 0, 1, 0, 0},
 };
 
 
 template<typename BufType>
-static bool readFile(boost::iostreams::stream<boost::iostreams::file_descriptor_source> &is, std::vector<BufType> &buf)
-{
-	if (!is)
-		return false;
-
-	const auto size = is.seekg(0, std::ios::end).tellg();
-	is.seekg(0, std::ios::beg);
-
-	buf.resize((size / sizeof(BufType)) + (size % sizeof(BufType)));
-	is.read(buf.data(), size);
-	if (is.gcount() != size)
-		return false;
-
-	return true;
-}
-
-template<typename BufType>
-static bool readFile(const boost::filesystem::path &path, std::vector<BufType> &buf)
+static bool readFile(const std::filesystem::path& path, std::vector<BufType>& buf)
 {
 	boost::iostreams::stream<boost::iostreams::file_descriptor_source> is;
 
@@ -73,21 +56,7 @@ static bool readFile(const boost::filesystem::path &path, std::vector<BufType> &
 }
 
 template<typename BufType>
-static bool writeFile(boost::iostreams::stream<boost::iostreams::file_descriptor> &os, const std::vector<BufType> &buf)
-{
-	if (!os)
-		return false;
-
-	const auto WriteSize = sizeof(BufType) * buf.size();
-	os.write((const char *)buf.data(), WriteSize);
-	if (os.fail())
-		return false;
-
-	return true;
-}
-
-template<typename BufType>
-static bool writeFile(const boost::filesystem::path &path, std::vector<BufType> &buf)
+static bool writeFile(const std::filesystem::path& path, std::vector<BufType>& buf)
 {
 	boost::iostreams::stream<boost::iostreams::file_descriptor> os;
 
@@ -103,10 +72,10 @@ static bool writeFile(const boost::filesystem::path &path, std::vector<BufType> 
 	return writeFile(os, buf);
 }
 
-static void Waifu2x_stbi_write_func(void *context, void *data, int size)
+static void Waifu2x_stbi_write_func(void* context, void* data, int size)
 {
-	boost::iostreams::stream<boost::iostreams::file_descriptor> *osp = (boost::iostreams::stream<boost::iostreams::file_descriptor> *)context;
-	osp->write((const char *)data, size);
+	boost::iostreams::stream<boost::iostreams::file_descriptor>* osp = (boost::iostreams::stream<boost::iostreams::file_descriptor> *)context;
+	osp->write((const char*)data, size);
 }
 
 int stImage::DepthBitToCVDepth(const int depth_bit)
@@ -164,7 +133,7 @@ double stImage::GetEPS(const int cv_depth)
 }
 
 
-Waifu2x::eWaifu2xError stImage::AlphaMakeBorder(std::vector<cv::Mat> &planes, const cv::Mat &alpha, const int offset)
+Waifu2x::eWaifu2xError stImage::AlphaMakeBorder(std::vector<cv::Mat>& planes, const cv::Mat& alpha, const int offset)
 {
 	// このカーネルと画像の畳込みを行うと、(x, y)を中心とした3×3領域の合計値が求まる
 	const static cv::Mat sum2d_kernel = (cv::Mat_<double>(3, 3) <<
@@ -178,7 +147,7 @@ Waifu2x::eWaifu2xError stImage::AlphaMakeBorder(std::vector<cv::Mat> &planes, co
 	cv::Mat mask_nega;
 	cv::threshold(mask, mask_nega, 0.0, 1.0, cv::THRESH_BINARY_INV); // 反転したマスク（値が1の箇所は完全透明でない有効な画素となる）
 
-	for (auto &p : planes) // 完全に透明なピクセルにあるゴミを取る
+	for (auto& p : planes) // 完全に透明なピクセルにあるゴミを取る
 	{
 		p = p.mul(mask);
 	}
@@ -191,7 +160,7 @@ Waifu2x::eWaifu2xError stImage::AlphaMakeBorder(std::vector<cv::Mat> &planes, co
 		cv::Mat mask_nega_u8;
 		mask_nega.convertTo(mask_nega_u8, CV_8U, 255.0, clip_eps8); // mask_negaのCV_U8版（OpenCVのAPI上必要になる）
 
-		for (auto &p : planes) // 1チャンネルずつ処理
+		for (auto& p : planes) // 1チャンネルずつ処理
 		{
 			// チャンネルの3×3領域内の有効画素の平均値を求める
 			cv::Mat border;
@@ -209,7 +178,7 @@ Waifu2x::eWaifu2xError stImage::AlphaMakeBorder(std::vector<cv::Mat> &planes, co
 	}
 
 	// 画素を0から1にクリッピング
-	for (auto &p : planes)
+	for (auto& p : planes)
 	{
 		cv::threshold(p, p, 1.0, 1.0, cv::THRESH_TRUNC);
 		cv::threshold(p, p, 0.0, 0.0, cv::THRESH_TOZERO);
@@ -219,7 +188,7 @@ Waifu2x::eWaifu2xError stImage::AlphaMakeBorder(std::vector<cv::Mat> &planes, co
 }
 
 // 画像を読み込んで値を0.0f～1.0fの範囲に変換
-Waifu2x::eWaifu2xError stImage::LoadMat(cv::Mat &im, const boost::filesystem::path &input_file)
+Waifu2x::eWaifu2xError stImage::LoadMat(cv::Mat& im, const std::filesystem::path& input_file)
 {
 	cv::Mat original_image;
 
@@ -228,7 +197,7 @@ Waifu2x::eWaifu2xError stImage::LoadMat(cv::Mat &im, const boost::filesystem::pa
 		if (!readFile(input_file, img_data))
 			return Waifu2x::eWaifu2xError_FailedOpenInputFile;
 
-		const boost::filesystem::path ipext(input_file.extension());
+		const std::filesystem::path ipext(input_file.extension());
 		if (!boost::iequals(ipext.string(), ".bmp")) // 特定のファイル形式の場合OpenCVで読むとバグることがあるのでSTBIを優先させる
 		{
 			cv::Mat im(img_data.size(), 1, CV_8U, img_data.data());
@@ -259,10 +228,10 @@ Waifu2x::eWaifu2xError stImage::LoadMat(cv::Mat &im, const boost::filesystem::pa
 	return Waifu2x::eWaifu2xError_OK;
 }
 
-Waifu2x::eWaifu2xError stImage::LoadMatBySTBI(cv::Mat &im, const std::vector<char> &img_data)
+Waifu2x::eWaifu2xError stImage::LoadMatBySTBI(cv::Mat& im, const std::vector<char>& img_data)
 {
 	int x, y, comp;
-	stbi_uc *data = stbi_load_from_memory((const stbi_uc *)img_data.data(), img_data.size(), &x, &y, &comp, 0);
+	stbi_uc* data = stbi_load_from_memory((const stbi_uc*)img_data.data(), img_data.size(), &x, &y, &comp, 0);
 	if (!data)
 		return Waifu2x::eWaifu2xError_FailedOpenInputFile;
 
@@ -315,7 +284,7 @@ Waifu2x::eWaifu2xError stImage::LoadMatBySTBI(cv::Mat &im, const std::vector<cha
 	return Waifu2x::eWaifu2xError_OK;
 }
 
-cv::Mat stImage::ConvertToFloat(const cv::Mat &im)
+cv::Mat stImage::ConvertToFloat(const cv::Mat& im)
 {
 	cv::Mat convert;
 	switch (im.depth())
@@ -354,7 +323,7 @@ void stImage::Clear()
 	mEndImage.release();
 }
 
-Waifu2x::eWaifu2xError stImage::Load(const boost::filesystem::path &input_file)
+Waifu2x::eWaifu2xError stImage::Load(const std::filesystem::path& input_file)
 {
 	Clear();
 
@@ -369,8 +338,8 @@ Waifu2x::eWaifu2xError stImage::Load(const boost::filesystem::path &input_file)
 	mOrgChannel = im.channels();
 	mOrgSize = im.size();
 
-	const boost::filesystem::path ip(input_file);
-	const boost::filesystem::path ipext(ip.extension());
+	const std::filesystem::path ip(input_file);
+	const std::filesystem::path ipext(ip.extension());
 
 	const bool isJpeg = boost::iequals(ipext.string(), ".jpg") || boost::iequals(ipext.string(), ".jpeg");
 
@@ -383,7 +352,7 @@ Waifu2x::eWaifu2xError stImage::Load(const void* source, const int width, const 
 {
 	Clear();
 
-	cv::Mat original_image(cv::Size(width, height), CV_MAKETYPE(CV_8U, channel), (void *)source, stride);
+	cv::Mat original_image(cv::Size(width, height), CV_MAKETYPE(CV_8U, channel), (void*)source, stride);
 
 	if (original_image.channels() >= 3) // RGBなのでBGRにする
 	{
@@ -426,7 +395,7 @@ void stImage::Preprocess(const int input_plane, const int net_offset)
 	ConvertToNetFormat(input_plane, net_offset);
 }
 
-bool stImage::IsOneColor(const cv::Mat & im)
+bool stImage::IsOneColor(const cv::Mat& im)
 {
 	assert(im.channels() == 1);
 
@@ -437,7 +406,7 @@ bool stImage::IsOneColor(const cv::Mat & im)
 	if (Width == 0 && Height == 0)
 		return true;
 
-	const float *ptr = (const float *)im.data;
+	const float* ptr = (const float*)im.data;
 	const float color = ptr[0];
 
 	for (size_t i = 0; i < Height; i++)
@@ -524,7 +493,7 @@ void stImage::ConvertToNetFormat(const int input_plane, const int alpha_offset)
 }
 
 // 画像から輝度の画像を取り出す
-Waifu2x::eWaifu2xError stImage::CreateBrightnessImage(const cv::Mat &float_image, cv::Mat &im)
+Waifu2x::eWaifu2xError stImage::CreateBrightnessImage(const cv::Mat& float_image, cv::Mat& im)
 {
 	if (float_image.channels() > 1)
 	{
@@ -548,29 +517,29 @@ bool stImage::HasAlpha() const
 	return !mTmpImageA.empty();
 }
 
-void stImage::GetScalePaddingedRGB(cv::Mat &im, cv::Size_<int> &size, const int net_offset, const int outer_padding,
+void stImage::GetScalePaddingedRGB(cv::Mat& im, cv::Size_<int>& size, const int net_offset, const int outer_padding,
 	const int crop_w, const int crop_h, const int scale)
 {
 	GetScalePaddingedImage(mTmpImageRGB, im, size, net_offset, outer_padding, crop_w, crop_h, scale);
 }
 
-void stImage::SetReconstructedRGB(cv::Mat &im, const cv::Size_<int> &size, const int inner_scale)
+void stImage::SetReconstructedRGB(cv::Mat& im, const cv::Size_<int>& size, const int inner_scale)
 {
 	SetReconstructedImage(mTmpImageRGB, im, size, inner_scale);
 }
 
-void stImage::GetScalePaddingedA(cv::Mat &im, cv::Size_<int> &size, const int net_offset, const int outer_padding,
+void stImage::GetScalePaddingedA(cv::Mat& im, cv::Size_<int>& size, const int net_offset, const int outer_padding,
 	const int crop_w, const int crop_h, const int scale)
 {
 	GetScalePaddingedImage(mTmpImageA, im, size, net_offset, outer_padding, crop_w, crop_h, scale);
 }
 
-void stImage::SetReconstructedA(cv::Mat &im, const cv::Size_<int> &size, const int inner_scale)
+void stImage::SetReconstructedA(cv::Mat& im, const cv::Size_<int>& size, const int inner_scale)
 {
 	SetReconstructedImage(mTmpImageA, im, size, inner_scale);
 }
 
-void stImage::GetScalePaddingedImage(cv::Mat &in, cv::Mat &out, cv::Size_<int> &size, const int net_offset, const int outer_padding,
+void stImage::GetScalePaddingedImage(cv::Mat& in, cv::Mat& out, cv::Size_<int>& size, const int net_offset, const int outer_padding,
 	const int crop_w, const int crop_h, const int scale)
 {
 	cv::Mat ret;
@@ -597,8 +566,8 @@ void stImage::GetScalePaddingedImage(cv::Mat &in, cv::Mat &out, cv::Size_<int> &
 
 // 入力画像の(Photoshopでいう)キャンバスサイズをoutput_sizeの倍数に変更
 // 画像は左上配置、余白はcv::BORDER_REPLICATEで埋める
-void stImage::PaddingImage(const cv::Mat &input, const int net_offset, const int outer_padding,
-	const int crop_w, const int crop_h, cv::Mat &output)
+void stImage::PaddingImage(const cv::Mat& input, const int net_offset, const int outer_padding,
+	const int crop_w, const int crop_h, cv::Mat& output)
 {
 	const auto pad_w1 = net_offset + outer_padding;
 	const auto pad_h1 = net_offset + outer_padding;
@@ -609,7 +578,7 @@ void stImage::PaddingImage(const cv::Mat &input, const int net_offset, const int
 }
 
 // 拡大、パディングされた画像を設定
-void stImage::SetReconstructedImage(cv::Mat &dst, cv::Mat &src, const cv::Size_<int> &size, const int inner_scale)
+void stImage::SetReconstructedImage(cv::Mat& dst, cv::Mat& src, const cv::Size_<int>& size, const int inner_scale)
 {
 	const cv::Size_<int> s(size * inner_scale);
 
@@ -718,7 +687,7 @@ void stImage::DeconvertFromNetFormat(const int input_plane)
 			if (!mTmpImageA.empty()) // Aもあるので合体
 			{
 				// RGBから1chに戻す
-				cv::cvtColor(mTmpImageA, mTmpImageA, CV_RGB2GRAY);
+				cv::cvtColor(mTmpImageA, mTmpImageA, cv::COLOR_RGB2GRAY);
 
 				planes.push_back(mTmpImageA);
 				mTmpImageA.release();
@@ -775,7 +744,7 @@ void stImage::ShrinkImage(const int width, const int height)
 	}
 }
 
-cv::Mat stImage::DeconvertFromFloat(const cv::Mat &im, const int depth)
+cv::Mat stImage::DeconvertFromFloat(const cv::Mat& im, const int depth)
 {
 	const int cv_depth = DepthBitToCVDepth(depth);
 	const double max_val = GetValumeMaxFromCVDepth(cv_depth);
@@ -793,15 +762,15 @@ cv::Mat stImage::DeconvertFromFloat(const cv::Mat &im, const int depth)
 namespace
 {
 	template<typename T>
-	void AlphaZeroToZero(std::vector<cv::Mat> &planes)
+	void AlphaZeroToZero(std::vector<cv::Mat>& planes)
 	{
 		cv::Mat alpha(planes[3]);
 
-		const T *aptr = (const T *)alpha.data;
+		const T* aptr = (const T*)alpha.data;
 
-		T *ptr0 = (T *)planes[0].data;
-		T *ptr1 = (T *)planes[1].data;
-		T *ptr2 = (T *)planes[2].data;
+		T* ptr0 = (T*)planes[0].data;
+		T* ptr1 = (T*)planes[1].data;
+		T* ptr2 = (T*)planes[2].data;
 
 		const size_t Line = alpha.step1();
 		const size_t Width = alpha.size().width;
@@ -820,7 +789,7 @@ namespace
 	}
 }
 
-void stImage::AlphaCleanImage(cv::Mat &im)
+void stImage::AlphaCleanImage(cv::Mat& im)
 {
 	// 完全透明のピクセルの色を消す(処理の都合上、完全透明のピクセルにも色を付けたから)
 	// モデルによっては画像全域の完全透明の場所にごく小さい値のアルファが広がることがある。それを消すためにcv_depthへ変換してからこの処理を行うことにした
@@ -858,7 +827,7 @@ void stImage::AlphaCleanImage(cv::Mat &im)
 
 
 // 入力画像をzoom_sizeの大きさにcv::INTER_CUBICで拡大し、色情報のみを残す
-Waifu2x::eWaifu2xError stImage::CreateZoomColorImage(const cv::Mat &float_image, const cv::Size_<int> &zoom_size, std::vector<cv::Mat> &cubic_planes)
+Waifu2x::eWaifu2xError stImage::CreateZoomColorImage(const cv::Mat& float_image, const cv::Size_<int>& zoom_size, std::vector<cv::Mat>& cubic_planes)
 {
 	cv::Mat zoom_cubic_image;
 	cv::resize(float_image, zoom_cubic_image, zoom_size, 0.0, 0.0, cv::INTER_CUBIC);
@@ -881,19 +850,19 @@ cv::Mat stImage::GetEndImage() const
 	return mEndImage;
 }
 
-Waifu2x::eWaifu2xError stImage::Save(const boost::filesystem::path &output_file, const boost::optional<int> &output_quality)
+Waifu2x::eWaifu2xError stImage::Save(const std::filesystem::path& output_file, const std::optional<int>& output_quality)
 {
 	return WriteMat(mEndImage, output_file, output_quality);
 }
 
-Waifu2x::eWaifu2xError stImage::WriteMat(const cv::Mat &im, const boost::filesystem::path &output_file, const boost::optional<int> &output_quality)
+Waifu2x::eWaifu2xError stImage::WriteMat(const cv::Mat& im, const std::filesystem::path& output_file, const std::optional<int>& output_quality)
 {
-	const boost::filesystem::path ip(output_file);
+	const std::filesystem::path ip(output_file);
 	const std::string ext = ip.extension().string();
 
 	if (boost::iequals(ext, ".tga"))
 	{
-		unsigned char *data = im.data;
+		unsigned char* data = im.data;
 
 		std::vector<unsigned char> rgbimg;
 		if (im.channels() >= 3 || im.step1() != im.size().width * im.channels()) // RGB用バッファにコピー(あるいはパディングをとる)
@@ -943,8 +912,8 @@ Waifu2x::eWaifu2xError stImage::WriteMat(const cv::Mat &im, const boost::filesys
 
 		// RLE圧縮の設定
 		bool isSet = false;
-		const auto &OutputExtentionList = stImage::OutputExtentionList;
-		for (const auto &elm : OutputExtentionList)
+		const auto& OutputExtentionList = stImage::OutputExtentionList;
+		for (const auto& elm : OutputExtentionList)
 		{
 			if (elm.ext == L".tga")
 			{
@@ -970,13 +939,13 @@ Waifu2x::eWaifu2xError stImage::WriteMat(const cv::Mat &im, const boost::filesys
 
 	try
 	{
-		const boost::filesystem::path op(output_file);
-		const boost::filesystem::path opext(op.extension());
+		const std::filesystem::path op(output_file);
+		const std::filesystem::path opext(op.extension());
 
 		std::vector<int> params;
 
-		const auto &OutputExtentionList = stImage::OutputExtentionList;
-		for (const auto &elm : OutputExtentionList)
+		const auto& OutputExtentionList = stImage::OutputExtentionList;
+		for (const auto& elm : OutputExtentionList)
 		{
 			if (elm.ext == opext)
 			{

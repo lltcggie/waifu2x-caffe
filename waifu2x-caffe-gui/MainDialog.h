@@ -7,8 +7,8 @@
 #include <string>
 #include <thread>
 #include <atomic>
-#include <boost/filesystem.hpp>
-#include <boost/optional.hpp>
+#include <filesystem>
+#include <optional>
 #include "../common/waifu2x.h"
 #include "resource.h"
 #include "tstring.h"
@@ -77,7 +77,7 @@ private:
 
 	static LangStringList langStringList;
 
-	boost::filesystem::path exeDir;
+	std::filesystem::path exeDir;
 	std::vector<int> CropSizeList;
 
 	tstring input_str;
@@ -96,7 +96,7 @@ private:
 
 	bool use_tta;
 
-	boost::optional<int> output_quality;
+	std::optional<int> output_quality;
 	int output_depth;
 
 	int crop_size;
@@ -158,11 +158,11 @@ private:
 
 	bool SyncMember(const bool NotSyncCropSize, const bool silent = false);
 
-	void SetCropSizeList(const boost::filesystem::path &input_path);
+	void SetCropSizeList(const std::filesystem::path& input_path);
 
-	static boost::filesystem::path GetFileName(const boost::filesystem::path &input_path)
+	static std::filesystem::path GetFileName(const std::filesystem::path& input_path)
 	{
-		if (boost::filesystem::is_directory(input_path))
+		if (std::filesystem::is_directory(input_path))
 			return input_path.stem();
 		else
 			return input_path.filename();
@@ -172,7 +172,7 @@ private:
 
 	void ReplaceAddString();
 
-	void AddLogMessage(const TCHAR *msg);
+	void AddLogMessage(const TCHAR* msg);
 
 	void Waifu2xTime();
 
@@ -231,11 +231,11 @@ public:
 
 	void OnModelChange(HWND hWnd, WPARAM wParam, LPARAM lParam, LPVOID lpData);
 
-	LRESULT OnSetInputFilePath(const TCHAR *tPath);
+	LRESULT OnSetInputFilePath(const TCHAR* tPath);
 
 	LRESULT OnSetInputFilePath();
 
-	LRESULT OnSetOutputFilePath(const TCHAR *tPath);
+	LRESULT OnSetOutputFilePath(const TCHAR* tPath);
 
 	// ここで渡されるhWndはIDC_EDITのHWND(コントロールのイベントだから)
 	LRESULT DropInput(HWND hWnd, WPARAM wParam, LPARAM lParam, WNDPROC OrgSubWnd, LPVOID lpData);

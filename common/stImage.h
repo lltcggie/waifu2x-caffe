@@ -28,10 +28,10 @@ public:
 	{
 		std::wstring ext;
 		std::vector<int> depthList;
-		boost::optional<int> imageQualityStart;
-		boost::optional<int> imageQualityEnd;
-		boost::optional<int> imageQualityDefault;
-		boost::optional<int> imageQualitySettingVolume;
+		std::optional<int> imageQualityStart;
+		std::optional<int> imageQualityEnd;
+		std::optional<int> imageQualityDefault;
+		std::optional<int> imageQualitySettingVolume;
 	};
 
 	const static std::vector<stOutputExtentionElement> OutputExtentionList;
@@ -46,7 +46,7 @@ private:
 	static cv::Mat DeconvertFromFloat(const cv::Mat &im, const int depth);
 	static void AlphaCleanImage(cv::Mat &im);
 
-	static Waifu2x::eWaifu2xError WriteMat(const cv::Mat &im, const boost::filesystem::path &output_file, const boost::optional<int> &output_quality);
+	static Waifu2x::eWaifu2xError WriteMat(const cv::Mat &im, const std::filesystem::path &output_file, const std::optional<int> &output_quality);
 
 	// im(1ch)が単色で構成されているか判定
 	static bool IsOneColor(const cv::Mat &im);
@@ -81,9 +81,9 @@ public:
 
 	void Clear();
 
-	static Waifu2x::eWaifu2xError LoadMat(cv::Mat &im, const boost::filesystem::path &input_file);
+	static Waifu2x::eWaifu2xError LoadMat(cv::Mat &im, const std::filesystem::path &input_file);
 
-	Waifu2x::eWaifu2xError Load(const boost::filesystem::path &input_file);
+	Waifu2x::eWaifu2xError Load(const std::filesystem::path &input_file);
 
 	// source: (4チャンネルの場合は)RGBAな画素配列
 	// dest: (4チャンネルの場合は)処理したRGBAな画素配列
@@ -130,5 +130,5 @@ public:
 
 	cv::Mat GetEndImage() const;
 
-	Waifu2x::eWaifu2xError Save(const boost::filesystem::path &output_file, const boost::optional<int> &output_quality);
+	Waifu2x::eWaifu2xError Save(const std::filesystem::path &output_file, const std::optional<int> &output_quality);
 };

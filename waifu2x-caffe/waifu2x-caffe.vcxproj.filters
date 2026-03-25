@@ -30,6 +30,15 @@
     <ClCompile Include="..\common\stImage.cpp">
       <Filter>common</Filter>
     </ClCompile>
+    <ClCompile Include="Test.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="slice_layer.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="axpy_fast_layer.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\common\waifu2x.h">
@@ -40,6 +49,9 @@
     </ClInclude>
     <ClInclude Include="..\common\stImage.h">
       <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="axpy.hpp">
+      <Filter>ソース ファイル</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -327,7 +327,7 @@ private:
 		}
 		catch (...)
 		{
-			boost::filesystem::remove(SavePath);
+			std::filesystem::remove(SavePath);
 		}
 
 		return true;
@@ -550,7 +550,7 @@ Waifu2x::~Waifu2x()
 }
 
 Waifu2x::eWaifu2xError Waifu2x::Init(const eWaifu2xModelType mode, const int noise_level,
-	const boost::filesystem::path &model_dir, const std::string &process, const int GPUNo)
+	const std::filesystem::path &model_dir, const std::string &process, const int GPUNo)
 {
 	Waifu2x::eWaifu2xError ret;
 
@@ -581,38 +581,38 @@ Waifu2x::eWaifu2xError Waifu2x::Init(const eWaifu2xModelType mode, const int noi
 		if (Process == "cudnn")
 		{
 			// exeのディレクトリにcuDNNのアルゴリズムデータ保存
-			boost::filesystem::path cudnn_data_base_dir_path(ExeDir);
+			std::filesystem::path cudnn_data_base_dir_path(ExeDir);
 			if (cudnn_data_base_dir_path.is_relative())
-				cudnn_data_base_dir_path = boost::filesystem::system_complete(cudnn_data_base_dir_path);
+				cudnn_data_base_dir_path = std::filesystem::system_complete(cudnn_data_base_dir_path);
 
-			if (!boost::filesystem::is_directory(cudnn_data_base_dir_path))
+			if (!std::filesystem::is_directory(cudnn_data_base_dir_path))
 				cudnn_data_base_dir_path = cudnn_data_base_dir_path.branch_path();
 
-			if (!boost::filesystem::exists(cudnn_data_base_dir_path))
+			if (!std::filesystem::exists(cudnn_data_base_dir_path))
 			{
 				// exeのディレクトリが取得できなければカレントディレクトリに保存
 
-				cudnn_data_base_dir_path = boost::filesystem::current_path();
+				cudnn_data_base_dir_path = std::filesystem::current_path();
 
 				if (cudnn_data_base_dir_path.is_relative())
-					cudnn_data_base_dir_path = boost::filesystem::system_complete(cudnn_data_base_dir_path);
+					cudnn_data_base_dir_path = std::filesystem::system_complete(cudnn_data_base_dir_path);
 
-				if (!boost::filesystem::exists(cudnn_data_base_dir_path))
+				if (!std::filesystem::exists(cudnn_data_base_dir_path))
 					cudnn_data_base_dir_path = "./";
 			}
 
-			if (boost::filesystem::exists(cudnn_data_base_dir_path))
+			if (std::filesystem::exists(cudnn_data_base_dir_path))
 			{
-				const boost::filesystem::path cudnn_data_dir_path(cudnn_data_base_dir_path / "cudnn_data");
+				const std::filesystem::path cudnn_data_dir_path(cudnn_data_base_dir_path / "cudnn_data");
 
 				bool isOK = false;
-				if (boost::filesystem::exists(cudnn_data_dir_path))
+				if (std::filesystem::exists(cudnn_data_dir_path))
 					isOK = true;
 
 				if (!isOK)
 				{
 					boost::system::error_code error;
-					const bool result = boost::filesystem::create_directory(cudnn_data_dir_path, error);
+					const bool result = std::filesystem::create_directory(cudnn_data_dir_path, error);
 					if (result && !error)
 						isOK = true;
 				}
@@ -628,8 +628,8 @@ Waifu2x::eWaifu2xError Waifu2x::Init(const eWaifu2xModelType mode, const int noi
 						std::string deconv_filename(prop.name);
 						deconv_filename += " deconv ";
 
-						const boost::filesystem::path conv_data_path = cudnn_data_dir_path / conv_filename;
-						const boost::filesystem::path deconv_data_path = cudnn_data_dir_path / deconv_filename;
+						const std::filesystem::path conv_data_path = cudnn_data_dir_path / conv_filename;
+						const std::filesystem::path deconv_data_path = cudnn_data_dir_path / deconv_filename;
 
 						g_ConvCcuDNNAlgorithm.SetDataPath(conv_data_path.string());
 						g_DeconvCcuDNNAlgorithm.SetDataPath(deconv_data_path.string());
@@ -638,8 +638,8 @@ Waifu2x::eWaifu2xError Waifu2x::Init(const eWaifu2xModelType mode, const int noi
 			}
 		}
 
-		const boost::filesystem::path mode_dir_path(GetModeDirPath(model_dir));
-		if (!boost::filesystem::exists(mode_dir_path))
+		const std::filesystem::path mode_dir_path(GetModeDirPath(model_dir));
+		if (!std::filesystem::exists(mode_dir_path))
 			return Waifu2x::eWaifu2xError_FailedOpenModelFile;
 
 		CudaDeviceSet devset(process, mGPUNo);
@@ -661,7 +661,7 @@ Waifu2x::eWaifu2xError Waifu2x::Init(const eWaifu2xModelType mode, const int noi
 		mInputPlane = 0;
 		mMaxNetOffset = 0;
 
-		const boost::filesystem::path info_path = GetInfoPath(mode_dir_path);
+		const std::filesystem::path info_path = GetInfoPath(mode_dir_path);
 
 		stInfo info;
 		ret = cNet::GetInfo(info_path, info);
@@ -693,8 +693,8 @@ Waifu2x::eWaifu2xError Waifu2x::Init(const eWaifu2xModelType mode, const int noi
 				base_name = "noise" + std::to_string(noise_level) + "_model";
 			}
 
-			const boost::filesystem::path model_path = mode_dir_path / (base_name + ".prototxt");
-			const boost::filesystem::path param_path = mode_dir_path / (base_name + ".json");
+			const std::filesystem::path model_path = mode_dir_path / (base_name + ".prototxt");
+			const std::filesystem::path param_path = mode_dir_path / (base_name + ".json");
 
 			ret = mNoiseNet->ConstractNet(Mode, model_path, param_path, info, mProcess);
 			if (ret != Waifu2x::eWaifu2xError_OK)
@@ -708,8 +708,8 @@ Waifu2x::eWaifu2xError Waifu2x::Init(const eWaifu2xModelType mode, const int noi
 		{
 			const std::string base_name = "scale2.0x_model";
 
-			const boost::filesystem::path model_path = mode_dir_path / (base_name + ".prototxt");
-			const boost::filesystem::path param_path = mode_dir_path / (base_name + ".json");
+			const std::filesystem::path model_path = mode_dir_path / (base_name + ".prototxt");
+			const std::filesystem::path param_path = mode_dir_path / (base_name + ".json");
 
 			mScaleNet.reset(new cNet);
 
@@ -736,16 +736,16 @@ Waifu2x::eWaifu2xError Waifu2x::Init(const eWaifu2xModelType mode, const int noi
 	return Waifu2x::eWaifu2xError_OK;
 }
 
-boost::filesystem::path Waifu2x::GetModeDirPath(const boost::filesystem::path &model_dir)
+std::filesystem::path Waifu2x::GetModeDirPath(const std::filesystem::path &model_dir)
 {
-	boost::filesystem::path mode_dir_path(model_dir);
+	std::filesystem::path mode_dir_path(model_dir);
 	if (!mode_dir_path.is_absolute()) // model_dirが相対パスなら絶対パスに直す
 	{
 		// まずはカレントディレクトリ下にあるか探す
-		mode_dir_path = boost::filesystem::absolute(model_dir);
-		if (!boost::filesystem::exists(mode_dir_path) && !ExeDir.empty()) // 無かったらargv[0]から実行ファイルのあるフォルダを推定し、そのフォルダ下にあるか探す
+		mode_dir_path = std::filesystem::absolute(model_dir);
+		if (!std::filesystem::exists(mode_dir_path) && !ExeDir.empty()) // 無かったらargv[0]から実行ファイルのあるフォルダを推定し、そのフォルダ下にあるか探す
 		{
-			boost::filesystem::path a0(ExeDir);
+			std::filesystem::path a0(ExeDir);
 			if (a0.is_absolute())
 				mode_dir_path = a0.branch_path() / model_dir;
 		}
@@ -754,17 +754,17 @@ boost::filesystem::path Waifu2x::GetModeDirPath(const boost::filesystem::path &m
 	return mode_dir_path;
 }
 
-boost::filesystem::path Waifu2x::GetInfoPath(const boost::filesystem::path &mode_dir_path)
+std::filesystem::path Waifu2x::GetInfoPath(const std::filesystem::path &mode_dir_path)
 {
-	const boost::filesystem::path info_path = mode_dir_path / "info.json";
+	const std::filesystem::path info_path = mode_dir_path / "info.json";
 
 	return info_path;
 }
 
-Waifu2x::eWaifu2xError Waifu2x::waifu2x(const boost::filesystem::path &input_file, const boost::filesystem::path &output_file,
-	const boost::optional<double> scale_ratio, const boost::optional<int> scale_width, const boost::optional<int> scale_height, 
+Waifu2x::eWaifu2xError Waifu2x::waifu2x(const std::filesystem::path &input_file, const std::filesystem::path &output_file,
+	const std::optional<double> scale_ratio, const std::optional<int> scale_width, const std::optional<int> scale_height, 
 	const waifu2xCancelFunc cancel_func, const int crop_w, const int crop_h,
-	const boost::optional<int> output_quality, const int output_depth, const bool use_tta,
+	const std::optional<int> output_quality, const int output_depth, const bool use_tta,
 	const int batch_size)
 {
 	Waifu2x::eWaifu2xError ret;
@@ -867,7 +867,7 @@ Waifu2x::eWaifu2xError Waifu2x::waifu2x(const double factor, const void* source,
 	return Waifu2x::eWaifu2xError_OK;
 }
 
-Factor Waifu2x::CalcScaleRatio(const boost::optional<double> scale_ratio, const boost::optional<int> scale_width, const boost::optional<int> scale_height,
+Factor Waifu2x::CalcScaleRatio(const std::optional<double> scale_ratio, const std::optional<int> scale_width, const std::optional<int> scale_height,
 	const stImage &image)
 {
 	if (scale_ratio)
@@ -1155,24 +1155,24 @@ const std::string& Waifu2x::used_process() const
 	return mProcess;
 }
 
-std::string Waifu2x::GetModelName(const boost::filesystem::path & model_dir)
+std::string Waifu2x::GetModelName(const std::filesystem::path & model_dir)
 {
-	const boost::filesystem::path mode_dir_path(GetModeDirPath(model_dir));
-	if (!boost::filesystem::exists(mode_dir_path))
+	const std::filesystem::path mode_dir_path(GetModeDirPath(model_dir));
+	if (!std::filesystem::exists(mode_dir_path))
 		return std::string();
 
-	const boost::filesystem::path info_path = mode_dir_path / "info.json";
+	const std::filesystem::path info_path = mode_dir_path / "info.json";
 
 	return cNet::GetModelName(info_path);
 }
 
-bool Waifu2x::GetInfo(const boost::filesystem::path &model_dir, stInfo &info)
+bool Waifu2x::GetInfo(const std::filesystem::path &model_dir, stInfo &info)
 {
-	const boost::filesystem::path mode_dir_path(GetModeDirPath(model_dir));
-	if (!boost::filesystem::exists(mode_dir_path))
+	const std::filesystem::path mode_dir_path(GetModeDirPath(model_dir));
+	if (!std::filesystem::exists(mode_dir_path))
 		return false;
 
-	const boost::filesystem::path info_path = mode_dir_path / "info.json";
+	const std::filesystem::path info_path = mode_dir_path / "info.json";
 
 	return cNet::GetInfo(info_path, info) == Waifu2x::eWaifu2xError_OK;
 }
